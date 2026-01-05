@@ -1,0 +1,9 @@
+streamlit
+pandas
+numpy
+openpyxl
+matplotlib
+rapidfuzz
+sentence-transformers
+torch
+faiss-cpu
