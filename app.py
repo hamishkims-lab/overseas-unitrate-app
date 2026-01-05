@@ -415,40 +415,39 @@ factor      = load_excel_from_repo("Factor.xlsx")  # ✅ 대소문자 정확히!
 st.sidebar.header("⚙️ 설정")
 st.sidebar.caption("①~⑥ 순서대로 설정하세요.")
 
+# ✅ (숨김 처리) ②, ④는 UI에 노출하지 않고 내부 고정값 사용
+DEFAULT_W_STR = 0.3
+DEFAULT_TOP_K_SEM = 200
+
+w_str = DEFAULT_W_STR
+w_sem = 1.0 - w_str
+top_k_sem = DEFAULT_TOP_K_SEM
+
 # ① 실적단가 필터링 - 국가 (다중선택 + 빈칸 맨 아래)
 all_currencies = sorted([c for c in cost_db["통화"].astype(str).str.upper().unique() if c.strip()])
 if "" in cost_db["통화"].astype(str).unique().tolist():
     all_currencies = all_currencies + [""]  # 빈칸은 마지막에
+
 selected_currencies = st.sidebar.multiselect(
     "① 실적단가 필터링 - 국가",
     options=all_currencies,
     default=all_currencies,  # 기본 전체 선택
     help="실적국가(통화)만 사용할 수 있습니다. 미선택 시 전체 사용."
 )
+
 # 필터 적용 (아무 것도 선택하지 않으면 전체)
 if selected_currencies:
-    cost_db = cost_db[cost_db["통화"].astype(str).str.upper().isin([s for s in selected_currencies if s != ""] + ([] if "" not in selected_currencies else [""]))]
-
-# ② 매칭 기준 - 문자열 가중치
-w_str = st.sidebar.slider(
-    "② 매칭 기준 - 문자열 가중치",
-    min_value=0.0, max_value=1.0, value=0.3, step=0.1,
-    help="하이브리드 점수 = (문자열가중치 × 문자열유사도) + (의미가중치 × 임베딩유사도)."
-)
-w_sem = 1.0 - w_str
+    cost_db = cost_db[
+        cost_db["통화"].astype(str).str.upper().isin(
+            [s for s in selected_currencies if s != ""] + ([] if "" not in selected_currencies else [""])
+        )
+    ]
 
 # ③ Threshold
 sim_threshold = st.sidebar.slider(
     "③ Threshold (컷 기준, %)",
     min_value=0, max_value=100, value=60, step=5,
     help="매칭 인정 최소 점수 기준입니다."
-)
-
-# ④ 의미기반 후보 Top-K
-top_k_sem = st.sidebar.slider(
-    "④ 의미기반 후보 Top-K (FAISS)",
-    min_value=50, max_value=1000, value=200, step=50,
-    help="의미 유사도(임베딩)로 1차 후보를 가져오는 개수입니다. 크면 정확도는 다소 ↑, 속도/메모리는 ↓."
 )
 
 # ⑤ 상/하위 컷 비율
@@ -499,13 +498,11 @@ if "grid_results" in st.session_state:
     st.sidebar.markdown("**추천 파라미터 (F1 최고):**")
     st.sidebar.json(st.session_state["best_params"])
 
+    # ✅ ②/④는 숨김이므로 '적용'은 ③(threshold)만 반영(혼란 방지)
     if st.sidebar.button("⬇️ 추천 파라미터 적용"):
         sel = st.session_state["best_params"]
-        top_k_sem = sel["top_k"]
         sim_threshold = sel["threshold"]
-        w_str = sel["string_weight"]
-        w_sem = sel["semantic_weight"]
-        st.sidebar.success("추천 파라미터가 적용되었습니다 ✅")
+        st.sidebar.success("추천 파라미터가 적용되었습니다 ✅ (Threshold만 반영)")
 
 missing_exchange = exchange[exchange["통화"].astype(str).str.upper()==target_currency].empty
 missing_factor   = factor[factor["국가"].astype(str).str.upper()==target_currency].empty
@@ -513,6 +510,7 @@ if missing_exchange:
     st.sidebar.error(f"선택한 산출통화 '{target_currency}'에 대한 환율 정보가 exchange.xlsx에 없습니다.")
 if missing_factor:
     st.sidebar.error(f"선택한 산출통화 '{target_currency}'에 대한 지수 정보가 Factor.xlsx에 없습니다.")
+
 
 # =========================
 # 업로드 & 실행
@@ -656,3 +654,4 @@ st.markdown("""
    - 산출통화로 환산된 BOQ별 **최종 단가 + 산출근거 + 로그**  
 """)
 st.markdown("</div>", unsafe_allow_html=True)
+
