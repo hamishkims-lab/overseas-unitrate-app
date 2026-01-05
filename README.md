@@ -1,2 +1,5 @@
 # overseas-unitrate-app
-DATA BASE
+streamlit
+pandas
+numpy
+openpyxl
