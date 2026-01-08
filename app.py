@@ -443,25 +443,25 @@ if selected_currencies:
         )
     ]
 
-# ③ Threshold
+# ② Threshold
 sim_threshold = st.sidebar.slider(
-    "③ Threshold (컷 기준, %)",
+    "② Threshold (컷 기준, %)",
     min_value=0, max_value=100, value=60, step=5,
     help="매칭 인정 최소 점수 기준입니다."
 )
 
-# ⑤ 상/하위 컷 비율
+# ③ 상/하위 컷 비율
 cut_ratio = st.sidebar.slider(
-    "⑤ 상/하위 컷 비율 (%)",
+    "③ 상/하위 컷 비율 (%)",
     min_value=0, max_value=30, value=20, step=5,
     help="보정단가 분포의 양끝단 극단값을 제거하는 비율입니다. 표본 수가 5개 이하이면 적용되지 않습니다."
 ) / 100.0
 
-# ⑥ 산출통화 (Factor.xlsx 기준) + 환율/지수 존재 검증
+# ④ 산출통화 (Factor.xlsx 기준) + 환율/지수 존재 검증
 target_options = sorted(factor["국가"].astype(str).str.upper().unique().tolist())
 default_idx = target_options.index("KRW") if "KRW" in target_options else 0
 target_currency = st.sidebar.selectbox(
-    "⑥ 산출통화",
+    "④ 산출통화",
     options=target_options,
     index=default_idx,
     help="최종 산출 통화(국가 지수 기준)를 선택합니다."
@@ -654,4 +654,5 @@ st.markdown("""
    - 산출통화로 환산된 BOQ별 **최종 단가 + 산출근거 + 로그**  
 """)
 st.markdown("</div>", unsafe_allow_html=True)
+
 
