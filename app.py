@@ -600,7 +600,7 @@ if run_btn:
 
         with st.spinner("임베딩/인덱스 준비 및 계산 중..."):
             result_df, log_df = match_items_faiss(
-                cost_db=cost_db,
+                cost_db=cost_db_run,
                 boq=boq,
                 price_index=price_index,
                 exchange=exchange,
@@ -710,6 +710,7 @@ st.markdown("""
    - 산출통화로 환산된 BOQ별 **최종 단가 + 산출근거 + 로그**  
 """)
 st.markdown("</div>", unsafe_allow_html=True)
+
 
 
 
