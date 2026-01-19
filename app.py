@@ -406,7 +406,8 @@ def load_excel_from_repo(filename: str) -> pd.DataFrame:
 cost_db     = load_excel_from_repo("cost_db.xlsx")
 price_index = load_excel_from_repo("price_index.xlsx")
 exchange    = load_excel_from_repo("exchange.xlsx")
-factor      = load_excel_from_repo("Factor.xlsx")  # ✅ 대소문자 정확히!
+factor      = load_excel_from_repo("Factor.xlsx") 
+feature_master = load_excel_from_repo("feature_master_FID.xlsx") # ✅ 대소문자 정확히!
 
 
 # =========================
@@ -442,6 +443,57 @@ if selected_currencies:
             [s for s in selected_currencies if s != ""] + ([] if "" not in selected_currencies else [""])
         )
     ]
+
+st.sidebar.markdown("---")
+st.sidebar.subheader("🏷️ 프로젝트 특성 필터")
+
+# feature_master(176개) 기준 옵션 생성
+fm = feature_master.copy()
+for c in ["특성ID","대공종","중공종","소공종","Cost Driver Type","Cost Driver Method","Cost Driver Condition"]:
+    fm[c] = fm[c].astype(str)
+
+# 각 특성ID가 project_feature_long에 몇 개 현장으로 매핑되는지 계산
+site_cnt = (
+    project_feature_long.groupby("특성ID")["현장코드"]
+    .nunique()
+    .astype(int)
+    .to_dict()
+)
+
+fm["현장수"] = fm["특성ID"].map(site_cnt).fillna(0).astype(int)
+
+# UI에 보여줄 라벨 만들기
+fm["라벨"] = fm.apply(
+    lambda r: f'{r["특성ID"]} | {r["대공종"]}/{r["중공종"]}/{r["소공종"]} | {r["Cost Driver Type"]}/{r["Cost Driver Method"]}/{r["Cost Driver Condition"]} | 현장 {r["현장수"]}개',
+    axis=1
+)
+
+label_to_id = dict(zip(fm["라벨"], fm["특성ID"]))
+options = fm["라벨"].tolist()
+
+selected_labels = st.sidebar.multiselect(
+    "특성 선택 (176개 전체)",
+    options=options,
+    default=[]
+)
+
+selected_feature_ids = [label_to_id[x] for x in selected_labels]
+
+# 선택된 특성ID → 현장코드 후보
+if selected_feature_ids:
+    allowed_sites = (
+        project_feature_long[
+            project_feature_long["특성ID"].astype(str).isin([str(x) for x in selected_feature_ids])
+        ]["현장코드"]
+        .astype(str)
+        .unique()
+        .tolist()
+    )
+else:
+    allowed_sites = None
+
+if allowed_sites is not None:
+    st.sidebar.caption(f"필터링 대상 현장: {len(allowed_sites)}개")
 
 # ② Threshold
 sim_threshold = st.sidebar.slider(
@@ -537,6 +589,10 @@ if run_btn:
         st.error("산출통화에 필요한 환율/지수 정보가 없습니다. Sidebar의 오류 메시지를 확인하세요.")
     else:
         boq = pd.read_excel(boq_file, engine="openpyxl")
+    if allowed_sites is not None:
+        cost_db_run = cost_db[cost_db["현장코드"].astype(str).isin(allowed_sites)].copy()
+    else:
+        cost_db_run = cost_db.copy()
 
         # 진행률 표시 요소
         progress = st.progress(0.0)
@@ -654,6 +710,7 @@ st.markdown("""
    - 산출통화로 환산된 BOQ별 **최종 단가 + 산출근거 + 로그**  
 """)
 st.markdown("</div>", unsafe_allow_html=True)
+
 
 
 
