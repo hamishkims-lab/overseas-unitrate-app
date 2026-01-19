@@ -407,12 +407,6 @@ cost_db     = load_excel_from_repo("cost_db.xlsx")
 price_index = load_excel_from_repo("price_index.xlsx")
 exchange    = load_excel_from_repo("exchange.xlsx")
 factor      = load_excel_from_repo("Factor.xlsx")  # ✅ 대소문자 정확히!
-# =========================
-# cost_db 컬럼 표준화 (빠른 대응용)
-# =========================
-cost_db = cost_db.rename(columns={
-    "외주계약단가": "Unit Price"
-})
 
 
 # =========================
@@ -660,6 +654,7 @@ st.markdown("""
    - 산출통화로 환산된 BOQ별 **최종 단가 + 산출근거 + 로그**  
 """)
 st.markdown("</div>", unsafe_allow_html=True)
+
 
 
 
