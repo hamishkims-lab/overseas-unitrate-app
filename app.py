@@ -407,6 +407,7 @@ cost_db     = load_excel_from_repo("cost_db.xlsx")
 price_index = load_excel_from_repo("price_index.xlsx")
 exchange    = load_excel_from_repo("exchange.xlsx")
 factor      = load_excel_from_repo("Factor.xlsx") 
+project_feature_long = load_excel_from_repo("project_feature_long.xlsx")
 feature_master = load_excel_from_repo("feature_master_FID.xlsx") # ✅ 대소문자 정확히!
 
 
@@ -710,6 +711,7 @@ st.markdown("""
    - 산출통화로 환산된 BOQ별 **최종 단가 + 산출근거 + 로그**  
 """)
 st.markdown("</div>", unsafe_allow_html=True)
+
 
 
 
