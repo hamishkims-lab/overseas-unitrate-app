@@ -416,6 +416,8 @@ feature_master = load_excel_from_repo("feature_master_FID.xlsx") # ✅ 대소문
 auto_sites = None
 matched_feature_ids = []
 selected_site_codes = None
+if "selected_feature_ids" not in st.session_state:
+    st.session_state["selected_feature_ids"] = []
 
 
 # =========================
@@ -463,40 +465,48 @@ if not use_site_filter:
         ]
 
 # =========================
-# (D) 사이드바: 자동 후보 현장 + 수동 추가/제외 (최종 선택 현장)
+# 사이드바: 자동 후보 vs 기타 현장 구분 + 추가/제외
 # =========================
 selected_site_codes = None
 
 if use_site_filter:
     st.sidebar.markdown("---")
-    st.sidebar.subheader("🏗️ 실적 현장 선택 (자동+수동)")
+    st.sidebar.subheader("🏗️ 실적 현장 선택 (자동 후보 + 수동 조정)")
 
-    # cost_db에 존재하는 전체 현장 목록
     site_df = cost_db[["현장코드", "현장명"]].dropna().astype(str).drop_duplicates()
     site_df["label"] = site_df["현장코드"] + " | " + site_df["현장명"]
-    all_site_labels = site_df["label"].sort_values().tolist()
 
-    # BOQ/특성 선택 전: 전체 선택(원하면 []로 바꿔도 됨)
-    if auto_sites is None:
-        default_labels = all_site_labels
-        st.sidebar.caption("BOQ/특성 선택 전이라 전체 현장을 기본 선택합니다.")
-    else:
-        default_labels = site_df[site_df["현장코드"].isin([str(x) for x in auto_sites])]["label"].tolist()
-        st.sidebar.caption(f"자동 후보 현장 {len(default_labels)}개를 기본 선택했습니다. (수동 추가/제외 가능)")
+    # 전체 현장
+    all_sites = site_df["현장코드"].tolist()
+    code_to_label = dict(zip(site_df["현장코드"], site_df["label"]))
 
-    selected_site_labels = st.sidebar.multiselect(
-        "사용할 실적 현장",
-        options=all_site_labels,
-        default=default_labels
+    auto_codes = [str(x) for x in (auto_sites or [])]
+    auto_codes = [c for c in auto_codes if c in code_to_label]  # DB에 존재하는 것만
+
+    auto_labels = [code_to_label[c] for c in auto_codes]
+    other_labels = [code_to_label[c] for c in all_sites if c not in set(auto_codes)]
+
+    st.sidebar.caption(f"자동 후보 현장: {len(auto_labels)}개 / 기타 현장: {len(other_labels)}개")
+
+    # 1) 자동 후보(기본 선택, 여기서 빼면 제외)
+    selected_auto_labels = st.sidebar.multiselect(
+        "자동 후보 현장(기본 선택, 제외 가능)",
+        options=auto_labels,
+        default=auto_labels
     )
 
+    # 2) 기타 현장(추가로 포함 가능)
+    selected_extra_labels = st.sidebar.multiselect(
+        "기타 현장(추가 포함 가능)",
+        options=other_labels,
+        default=[]
+    )
+
+    # 최종 현장코드
+    selected_site_labels = selected_auto_labels + selected_extra_labels
     selected_site_codes = [x.split(" | ")[0] for x in selected_site_labels]
+
     st.sidebar.caption(f"최종 선택 현장: {len(selected_site_codes)}개")
-
-
-st.sidebar.markdown("---")
-st.sidebar.subheader("🏷️ 프로젝트 특성 필터")
-
 # feature_master(176개) 기준 옵션 생성
 fm = feature_master.copy()
 for c in ["특성ID","대공종","중공종","소공종","Cost Driver Type","Cost Driver Method","Cost Driver Condition"]:
@@ -629,68 +639,145 @@ with st.container():
     st.markdown("</div>", unsafe_allow_html=True)
 
 # =========================
-# (C) BOQ 업로드 아래: 프로젝트 특성 선택(UI) → auto_sites 생성
+# BOQ 업로드 아래: 프로젝트 특성 선택(계층형 + 검색) + 장바구니
 # =========================
-auto_sites = None
-matched_feature_ids = []
+auto_sites = None  # 최종 자동 후보 현장(OR)
+fm = feature_master.copy()
+cols6 = ["대공종","중공종","소공종","Cost Driver Type","Cost Driver Method","Cost Driver Condition"]
+for c in ["특성ID"] + cols6:
+    fm[c] = fm[c].astype(str).fillna("").str.strip()
+
+if "selected_feature_ids" not in st.session_state:
+    st.session_state["selected_feature_ids"] = []
 
 if use_site_filter:
     if boq_file is not None:
         st.markdown("<div class='gs-card'>", unsafe_allow_html=True)
-        st.markdown("### 🏷️ BOQ 기준 프로젝트 특성 선택")
+        st.markdown("### 🏷️ BOQ 기준 프로젝트 특성 선택 (다중 선택 가능)")
 
-        fm = feature_master.copy()
-        cols6 = ["대공종","중공종","소공종","Cost Driver Type","Cost Driver Method","Cost Driver Condition"]
-        for c in ["특성ID"] + cols6:
-            fm[c] = fm[c].astype(str).fillna("").str.strip()
+        tab_h, tab_s = st.tabs(["🔽 단계별 선택", "🔎 검색으로 선택"])
 
-        c1, c2, c3 = st.columns(3)
+        # -------------------------
+        # 1) 단계별(연동) 선택
+        # -------------------------
+        with tab_h:
+            # 대공종
+            da_opts = sorted([x for x in fm["대공종"].unique().tolist() if x and x.lower() != "nan"])
+            sel_da = st.selectbox("대공종", ["(선택)"] + da_opts)
 
-        # 1) 대공종, 중공종
-        with c1:
-            opt_da = sorted([x for x in fm["대공종"].unique().tolist() if x and x.lower() != "nan"])
-            sel_da = st.multiselect("대공종", opt_da, default=[])
-            fm1 = fm[fm["대공종"].isin(sel_da)] if sel_da else fm
+            fm1 = fm[fm["대공종"] == sel_da] if sel_da != "(선택)" else fm
 
-            opt_joong = sorted([x for x in fm1["중공종"].unique().tolist() if x and x.lower() != "nan"])
-            sel_joong = st.multiselect("중공종", opt_joong, default=[])
-            fm2 = fm1[fm1["중공종"].isin(sel_joong)] if sel_joong else fm1
+            # 중공종
+            joong_opts = sorted([x for x in fm1["중공종"].unique().tolist() if x and x.lower() != "nan"])
+            sel_joong = st.selectbox("중공종", ["(선택)"] + joong_opts)
 
-        # 2) 소공종, Type
-        with c2:
-            opt_so = sorted([x for x in fm2["소공종"].unique().tolist() if x and x.lower() != "nan"])
-            sel_so = st.multiselect("소공종", opt_so, default=[])
-            fm3 = fm2[fm2["소공종"].isin(sel_so)] if sel_so else fm2
+            fm2 = fm1[fm1["중공종"] == sel_joong] if sel_joong != "(선택)" else fm1
 
-            opt_type = sorted([x for x in fm3["Cost Driver Type"].unique().tolist() if x and x.lower() != "nan"])
-            sel_type = st.multiselect("Cost Driver Type", opt_type, default=[])
-            fm4 = fm3[fm3["Cost Driver Type"].isin(sel_type)] if sel_type else fm3
+            # 소공종
+            so_opts = sorted([x for x in fm2["소공종"].unique().tolist() if x and x.lower() != "nan"])
+            sel_so = st.selectbox("소공종", ["(선택)"] + so_opts)
 
-        # 3) Method, Condition
-        with c3:
-            opt_method = sorted([x for x in fm4["Cost Driver Method"].unique().tolist() if x and x.lower() != "nan"])
-            sel_method = st.multiselect("Cost Driver Method", opt_method, default=[])
-            fm5 = fm4[fm4["Cost Driver Method"].isin(sel_method)] if sel_method else fm4
+            fm3 = fm2[fm2["소공종"] == sel_so] if sel_so != "(선택)" else fm2
 
-            opt_cond = sorted([x for x in fm5["Cost Driver Condition"].unique().tolist() if x and x.lower() != "nan"])
-            sel_cond = st.multiselect("Cost Driver Condition", opt_cond, default=[])
-            fm6 = fm5[fm5["Cost Driver Condition"].isin(sel_cond)] if sel_cond else fm5
+            # Type
+            type_opts = sorted([x for x in fm3["Cost Driver Type"].unique().tolist() if x and x.lower() != "nan"])
+            sel_type = st.selectbox("Cost Driver Type", ["(선택)"] + type_opts)
 
-        # 드릴다운 결과 특성ID
-        matched_feature_ids = sorted(fm6["특성ID"].unique().tolist())
-        st.caption(f"매칭된 특성ID: {len(matched_feature_ids)}개")
+            fm4 = fm3[fm3["Cost Driver Type"] == sel_type] if sel_type != "(선택)" else fm3
 
-        # auto_sites 생성 (특성ID → 현장코드)
-        if matched_feature_ids:
+            # Method
+            method_opts = sorted([x for x in fm4["Cost Driver Method"].unique().tolist() if x and x.lower() != "nan"])
+            sel_method = st.selectbox("Cost Driver Method", ["(선택)"] + method_opts)
+
+            fm5 = fm4[fm4["Cost Driver Method"] == sel_method] if sel_method != "(선택)" else fm4
+
+            # Condition
+            cond_opts = sorted([x for x in fm5["Cost Driver Condition"].unique().tolist() if x and x.lower() != "nan"])
+            sel_cond = st.selectbox("Cost Driver Condition", ["(선택)"] + cond_opts)
+
+            fm6 = fm5[fm5["Cost Driver Condition"] == sel_cond] if sel_cond != "(선택)" else fm5
+
+            candidates = fm6.copy()
+
+            st.caption(f"현재 조합 후보: {len(candidates)}개")
+            # 완전히 좁혀졌을 때(보통 1개) 추가 버튼 활성화
+            if len(candidates) == 1:
+                row = candidates.iloc[0]
+                fid = row["특성ID"]
+                label = f'{fid} | {row["대공종"]}/{row["중공종"]}/{row["소공종"]} | {row["Cost Driver Type"]}/{row["Cost Driver Method"]}/{row["Cost Driver Condition"]}'
+                st.success("특성 1개로 결정됨")
+                if st.button("➕ 이 특성을 리스트에 추가"):
+                    if fid not in st.session_state["selected_feature_ids"]:
+                        st.session_state["selected_feature_ids"].append(fid)
+                    st.toast("추가 완료")
+            elif len(candidates) > 1:
+                st.info("아직 후보가 여러 개입니다. 조건을 더 선택해서 1개로 좁혀주세요.")
+            else:
+                st.warning("해당 조합의 특성이 없습니다.")
+
+        # -------------------------
+        # 2) 검색으로 선택
+        # -------------------------
+        with tab_s:
+            q = st.text_input("키워드 검색 (대/중/소/Type/Method/Condition에서 포함 검색)")
+            if q.strip():
+                qn = q.strip().lower()
+                hits = fm[
+                    fm[cols6].apply(lambda r: " ".join(r.values.astype(str)).lower(), axis=1).str.contains(qn, na=False)
+                ].copy()
+
+                st.caption(f"검색 결과: {len(hits)}개")
+                # 너무 많으면 상위 200개만
+                hits = hits.head(200)
+
+                hits["label"] = hits.apply(
+                    lambda r: f'{r["특성ID"]} | {r["대공종"]}/{r["중공종"]}/{r["소공종"]} | {r["Cost Driver Type"]}/{r["Cost Driver Method"]}/{r["Cost Driver Condition"]}',
+                    axis=1
+                )
+
+                chosen = st.multiselect("검색 결과에서 추가할 특성 선택", options=hits["label"].tolist(), default=[])
+                if st.button("➕ 선택한 특성들을 리스트에 추가"):
+                    label_to_id = dict(zip(hits["label"], hits["특성ID"]))
+                    for lab in chosen:
+                        fid = label_to_id[lab]
+                        if fid not in st.session_state["selected_feature_ids"]:
+                            st.session_state["selected_feature_ids"].append(fid)
+                    st.toast("추가 완료")
+
+        # -------------------------
+        # 3) 장바구니(선택된 특성 리스트) + 삭제
+        # -------------------------
+        st.markdown("#### ✅ 선택된 특성 리스트")
+        if st.session_state["selected_feature_ids"]:
+            # 리스트 표시(최대 50개만)
+            show_ids = st.session_state["selected_feature_ids"][:50]
+            st.write(show_ids)
+
+            del_ids = st.multiselect("리스트에서 제거할 특성 선택", options=st.session_state["selected_feature_ids"], default=[])
+            c_del1, c_del2 = st.columns(2)
+            with c_del1:
+                if st.button("🗑️ 선택 제거"):
+                    st.session_state["selected_feature_ids"] = [x for x in st.session_state["selected_feature_ids"] if x not in del_ids]
+            with c_del2:
+                if st.button("🧹 전체 초기화"):
+                    st.session_state["selected_feature_ids"] = []
+        else:
+            st.info("아직 선택된 특성이 없습니다. 위에서 특성을 추가해 주세요.")
+
+        # -------------------------
+        # 4) 선택된 특성ID(OR) → auto_sites
+        # -------------------------
+        selected_feature_ids = st.session_state["selected_feature_ids"]
+        if selected_feature_ids:
             auto_sites = (
                 project_feature_long[
-                    project_feature_long["특성ID"].astype(str).isin([str(x) for x in matched_feature_ids])
+                    project_feature_long["특성ID"].astype(str).isin([str(x) for x in selected_feature_ids])
                 ]["현장코드"].astype(str).unique().tolist()
             )
         else:
             auto_sites = []
 
-        st.success(f"자동 필터링 후보 현장: {len(auto_sites)}개")
+        st.success(f"자동 필터링 후보 현장(OR): {len(auto_sites)}개")
         if len(auto_sites) <= 20:
             st.write("후보 현장코드:", auto_sites)
 
@@ -839,6 +926,7 @@ st.markdown("""
    - 산출통화로 환산된 BOQ별 **최종 단가 + 산출근거 + 로그**  
 """)
 st.markdown("</div>", unsafe_allow_html=True)
+
 
 
 
