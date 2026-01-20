@@ -591,19 +591,25 @@ if run_btn:
     elif missing_exchange or missing_factor:
         st.error("산출통화에 필요한 환율/지수 정보가 없습니다. Sidebar의 오류 메시지를 확인하세요.")
     else:
+        # 1) BOQ 로드
         boq = pd.read_excel(boq_file, engine="openpyxl")
-    if allowed_sites is not None:
-        cost_db_run = cost_db[cost_db["현장코드"].astype(str).isin([str(x) for x in allowed_sites])].copy()
-    else:
-        cost_db_run = cost_db.copy()
 
-# (디버그) 실제로 줄었는지 확인
-    st.sidebar.caption(f"실행용 cost_db 행수: {len(cost_db_run):,} / 전체 {len(cost_db):,}")
+        # 2) 프로젝트 특성 필터 적용
+        if allowed_sites is not None:
+            cost_db_run = cost_db[
+                cost_db["현장코드"].astype(str).isin([str(x) for x in allowed_sites])
+            ].copy()
+        else:
+            cost_db_run = cost_db.copy()
 
-# 진행률 표시 요소
+        # (디버그) 실제로 줄었는지 확인
+        st.sidebar.caption(f"실행용 cost_db 행수: {len(cost_db_run):,} / 전체 {len(cost_db):,}")
+
+        # 3) 진행률 표시 요소
         progress = st.progress(0.0)
         prog_text = st.empty()
 
+        # 4) 산출 실행
         with st.spinner("임베딩/인덱스 준비 및 계산 중..."):
             result_df, log_df = match_items_faiss(
                 cost_db=cost_db_run,
@@ -638,13 +644,11 @@ if run_btn:
         with tab2:
             df_disp = log_df.copy()
 
-            # 숫자열 변환(임시 시리즈로만 사용)
             try:
                 numeric = df_disp["최종단가(보정후)"].str.replace(",", "", regex=False).astype(float)
             except Exception:
                 numeric = pd.to_numeric(df_disp["최종단가(보정후)"], errors="coerce")
 
-            # 포함 표본의 BOQ별 평균
             include_mask = df_disp["포함여부"] == "포함"
             avg_map = (
                 pd.DataFrame({"BOQ 항목": df_disp["BOQ 항목"], "_num": numeric, "포함여부": include_mask})
@@ -675,7 +679,6 @@ if run_btn:
             else:
                 st.dataframe(df_disp, use_container_width=True)
 
-            # 다운로드
             bio = io.BytesIO()
             with pd.ExcelWriter(bio, engine="openpyxl") as writer:
                 result_df.to_excel(writer, index=False, sheet_name="boq_with_price")
@@ -716,6 +719,7 @@ st.markdown("""
    - 산출통화로 환산된 BOQ별 **최종 단가 + 산출근거 + 로그**  
 """)
 st.markdown("</div>", unsafe_allow_html=True)
+
 
 
 
