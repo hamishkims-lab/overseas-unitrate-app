@@ -366,6 +366,13 @@ def load_excel_from_repo(filename: str) -> pd.DataFrame:
     return pd.read_excel(path, engine="openpyxl")
 
 cost_db     = load_excel_from_repo("cost_db.xlsx")
+# =========================
+# (A) 현장코드 정규화 컬럼 사전 생성 (매우 중요)
+# =========================
+cost_db["현장코드_norm"] = cost_db["현장코드"].apply(norm_site_code)
+
+project_feature_long["현장코드_norm"] = project_feature_long["현장코드"].apply(norm_site_code)
+project_feature_long["특성ID"] = project_feature_long["특성ID"].astype(str).str.strip()
 price_index = load_excel_from_repo("price_index.xlsx")
 exchange    = load_excel_from_repo("exchange.xlsx")
 factor      = load_excel_from_repo("Factor.xlsx")
@@ -487,18 +494,22 @@ if use_site_filter:
         # =========================
         # BOQ 업로드 아래: auto_sites 계산
         # =========================
-        if st.session_state["selected_feature_ids"]:
+        selected_fids = [str(x).strip() for x in st.session_state["selected_feature_ids"]]
+
+        if selected_fids:
             auto_sites = (
                 project_feature_long[
-                    project_feature_long["특성ID"].astype(str).isin(
-                        [str(x) for x in st.session_state["selected_feature_ids"]]
-                    )
-                ]["현장코드"].astype(str).unique().tolist()
+                    project_feature_long["특성ID"].astype(str).str.strip().isin(selected_fids)
+                ]["현장코드_norm"]
+                .dropna()
+                .astype(str)
+                .unique()
+                .tolist()
             )
         else:
             auto_sites = []
-        
-        st.session_state["auto_sites"] = auto_sites
+
+st.session_state["auto_sites"] = auto_sites
         
         # =========================
         # 사이드바 자동후보 즉시 선택 반영(자동선택)
@@ -542,24 +553,20 @@ if use_site_filter:
     auto_sites = st.session_state.get("auto_sites", [])
 
     # 1) cost_db에서 전체 현장 목록 만들기
-    site_df = cost_db[["현장코드", "현장명"]].copy()
-    site_df = site_df.dropna(subset=["현장코드"])
-
-    site_df["현장코드"] = site_df["현장코드"].apply(norm_site_code)
+    site_df = cost_db[["현장코드_norm", "현장명"]].copy()
+    site_df = site_df.dropna(subset=["현장코드_norm"])
     site_df["현장명"] = site_df["현장명"].astype(str).fillna("").str.strip()
     site_df.loc[site_df["현장명"].isin(["", "nan", "None"]), "현장명"] = "(현장명없음)"
-
-    site_df = site_df.drop_duplicates(subset=["현장코드"])
-    site_df["label"] = site_df["현장코드"] + " | " + site_df["현장명"]
-
-    all_codes = site_df["현장코드"].tolist()
-    code_to_label = dict(zip(site_df["현장코드"], site_df["label"]))
+    site_df = site_df.drop_duplicates(subset=["현장코드_norm"])
+    site_df["label"] = site_df["현장코드_norm"] + " | " + site_df["현장명"]
+    
+    all_codes = site_df["현장코드_norm"].tolist()
+    code_to_label = dict(zip(site_df["현장코드_norm"], site_df["label"]))
 
     # 2) auto_sites -> auto_codes (존재하는 코드만)
     auto_codes_raw = [norm_site_code(x) for x in (auto_sites or [])]
-    auto_codes = [c for c in auto_codes_raw if c in code_to_label]
-
-    auto_labels = [code_to_label[c] for c in auto_codes]
+    auto_codes = st.session_state.get("auto_sites", [])
+    auto_labels = [code_to_label[c] for c in auto_codes if c in code_to_label]
     other_labels = [code_to_label[c] for c in all_codes if c not in set(auto_codes)]
 
     st.sidebar.caption(f"자동 후보 {len(auto_labels)}개 / 기타 {len(other_labels)}개")
@@ -570,7 +577,7 @@ if use_site_filter:
     selected_auto_labels = st.sidebar.multiselect(
         "자동 후보(제외 가능)",
         options=auto_labels,
-        default=[x for x in default_auto if x in auto_labels],  # 옵션에 없는 건 제거
+        default=auto_labels,   # ✅ 자동후보를 바로 선택 상태로
         key="selected_auto_labels"
     )
     selected_auto_codes = [x.split(" | ")[0] for x in selected_auto_labels]
@@ -668,6 +675,7 @@ if run_btn:
             log_df.to_excel(writer, index=False, sheet_name="calculation_log")
         bio.seek(0)
         st.download_button("⬇️ Excel 다운로드", data=bio.read(), file_name="result_unitrate.xlsx")
+
 
 
 
