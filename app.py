@@ -512,6 +512,10 @@ selected_site_codes = None
 if use_site_filter:
     st.sidebar.markdown("---")
     st.sidebar.subheader("🏗️ 실적 현장 선택")
+    
+if st.sidebar.button("🧹 강제 초기화(디버그)"):
+    st.session_state.clear()
+    st.rerun()
 
     auto_sites = st.session_state.get("auto_sites", [])
 
@@ -635,4 +639,5 @@ if run_btn:
             log_df.to_excel(writer, index=False, sheet_name="calculation_log")
         bio.seek(0)
         st.download_button("⬇️ Excel 다운로드", data=bio.read(), file_name="result_unitrate.xlsx")
+
 
