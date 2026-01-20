@@ -121,20 +121,30 @@ def file_fingerprint(df: pd.DataFrame, cols: list) -> str:
     return hasher.hexdigest()
 
 def norm_site_code(x) -> str:
-    """
-    현장코드 정규화:
-    - 공백 제거
-    - 190590.0 같은 소수 표현 제거
-    - 숫자/문자 혼용 대비
-    """
     if x is None:
         return ""
+
     s = str(x).strip()
+
+    # ✅ 양끝 따옴표 제거 (", ', `)
+    s = s.strip('"\''"`")
+
     # 190590.0 형태 처리
     if s.endswith(".0"):
         s = s[:-2]
+
     # 혹시 남아있는 소수점 제거
-    s = s.split(".")[0]
+    s = s.split(".")[0].strip()
+
+    # ✅ 숫자만 남김 (따옴표/공백/문자 섞임 방지)
+    s_digits = "".join(ch for ch in s if ch.isdigit())
+    if s_digits:
+        s = s_digits
+
+    # (선택) 6자리면 zfill
+    if s.isdigit() and len(s) < 6:
+        s = s.zfill(6)
+
     return s
 
 
@@ -511,6 +521,7 @@ if use_site_filter:
 
     # 2) auto_sites → auto_codes (cost_db에 존재하는 코드만)
     auto_codes_raw = [norm_site_code(x) for x in (auto_sites or [])]
+    st.sidebar.write("auto_codes_raw repr:", [repr(x) for x in auto_codes_raw])
     auto_codes = [c for c in auto_codes_raw if c in code_to_label]
 
     auto_labels = [code_to_label[c] for c in auto_codes]
@@ -918,6 +929,7 @@ st.markdown("""
    - 산출통화로 환산된 BOQ별 **최종 단가 + 산출근거 + 로그**  
 """)
 st.markdown("</div>", unsafe_allow_html=True)
+
 
 
 
