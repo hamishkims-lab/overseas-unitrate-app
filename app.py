@@ -505,12 +505,12 @@ if use_site_filter:
     code_to_label = dict(zip(site_df["현장코드"], site_df["label"]))
     all_codes = site_df["현장코드"].tolist()
 
-    auto_codes_raw = [norm_site_code(x) for x in (auto_sites or [])]
-    auto_codes = [c for c in auto_codes_raw if c in code_to_label]
-
+    # code_to_label 키 샘플
+    st.sidebar.write("cost_db 현장코드 샘플:", list(code_to_label.keys())[:15])
+    
     missing_auto = [c for c in auto_codes_raw if c not in code_to_label]
-    if missing_auto:
-        st.sidebar.warning(f"cost_db에 없는 자동후보 코드: {missing_auto[:10]}")
+    st.sidebar.write("missing_auto:", missing_auto)
+    st.sidebar.write("auto 매칭 개수:", len(auto_codes_raw) - len(missing_auto))
 
     # ✅ 자동 후보가 바뀔 때 "기본 선택"을 동기화할지 옵션
     sync_auto = st.sidebar.checkbox("특성 변경 시 자동 후보로 선택 갱신", value=True)
@@ -937,6 +937,7 @@ st.markdown("""
    - 산출통화로 환산된 BOQ별 **최종 단가 + 산출근거 + 로그**  
 """)
 st.markdown("</div>", unsafe_allow_html=True)
+
 
 
 
