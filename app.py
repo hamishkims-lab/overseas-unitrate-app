@@ -814,8 +814,7 @@ if run_btn:
         # =========================
         if use_site_filter and selected_site_codes is not None:
             cost_db_run = cost_db[
-                cost_db["현장코드"].astype(str).isin([str(x) for x in selected_site_codes])
-            ].copy()
+                cost_db_run = cost_db[cost_db["현장코드"].apply(norm_site_code).isin(selected_site_codes)].copy()
         else:
             cost_db_run = cost_db.copy()
 
@@ -935,6 +934,7 @@ st.markdown("""
    - 산출통화로 환산된 BOQ별 **최종 단가 + 산출근거 + 로그**  
 """)
 st.markdown("</div>", unsafe_allow_html=True)
+
 
 
 
