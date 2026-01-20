@@ -533,24 +533,32 @@ selected_site_codes = None
 if use_site_filter:
     st.sidebar.markdown("---")
     st.sidebar.subheader("🏗️ 실적 현장 선택")
-    
-if st.sidebar.button("🧹 강제 초기화(디버그)"):
-    st.session_state.clear()
-    st.rerun()
 
+    # ✅ (선택) 디버그 초기화 버튼: 누르면 상태만 지우고 rerun
+    if st.sidebar.button("🧹 강제 초기화(디버그)"):
+        for k in ["selected_auto_labels", "selected_extra_labels", "auto_sites", "selected_feature_ids"]:
+            if k in st.session_state:
+                del st.session_state[k]
+        st.rerun()
+
+    # ✅ 항상 auto_sites를 읽고 UI를 그려야 함 (버튼 if 밖!)
     auto_sites = st.session_state.get("auto_sites", [])
 
+    # 1) cost_db에서 전체 현장 목록 만들기
     site_df = cost_db[["현장코드", "현장명"]].copy()
     site_df = site_df.dropna(subset=["현장코드"])
+
     site_df["현장코드"] = site_df["현장코드"].apply(norm_site_code)
     site_df["현장명"] = site_df["현장명"].astype(str).fillna("").str.strip()
     site_df.loc[site_df["현장명"].isin(["", "nan", "None"]), "현장명"] = "(현장명없음)"
+
     site_df = site_df.drop_duplicates(subset=["현장코드"])
     site_df["label"] = site_df["현장코드"] + " | " + site_df["현장명"]
 
     all_codes = site_df["현장코드"].tolist()
     code_to_label = dict(zip(site_df["현장코드"], site_df["label"]))
 
+    # 2) auto_sites -> auto_codes (존재하는 코드만)
     auto_codes_raw = [norm_site_code(x) for x in (auto_sites or [])]
     auto_codes = [c for c in auto_codes_raw if c in code_to_label]
 
@@ -559,6 +567,8 @@ if st.sidebar.button("🧹 강제 초기화(디버그)"):
 
     st.sidebar.caption(f"자동 후보 {len(auto_labels)}개 / 기타 {len(other_labels)}개")
 
+    # ✅ 중요: default를 session_state로 “자동 갱신”시키려면,
+    # auto_labels가 바뀌었을 때 key를 삭제해야 함 (BOQ 아래에서 처리하는 게 베스트)
     selected_auto_labels = st.sidebar.multiselect(
         "자동 후보(제외 가능)",
         options=auto_labels,
@@ -660,6 +670,7 @@ if run_btn:
             log_df.to_excel(writer, index=False, sheet_name="calculation_log")
         bio.seek(0)
         st.download_button("⬇️ Excel 다운로드", data=bio.read(), file_name="result_unitrate.xlsx")
+
 
 
 
