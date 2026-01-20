@@ -812,13 +812,18 @@ if run_btn:
         # =========================
         # (E) run_btn 실행 시: 최종 현장 필터 적용  ✅ 여기!
         # =========================
-        if use_site_filter and selected_site_codes is not None:
-            cost_db_run = cost_db[
-                cost_db_run = cost_db[cost_db["현장코드"].apply(norm_site_code).isin(selected_site_codes)].copy()
-        else:
-            cost_db_run = cost_db.copy()
+    if use_site_filter and selected_site_codes is not None:
+        cost_db_run = cost_db[
+            cost_db["현장코드"].apply(norm_site_code).isin(
+                [norm_site_code(x) for x in selected_site_codes]
+            )
+        ].copy()
+    else:
+        cost_db_run = cost_db.copy()
 
-        st.sidebar.caption(f"실행용 cost_db 행수: {len(cost_db_run):,} / 전체 {len(cost_db):,}")
+    st.sidebar.caption(
+        f"실행용 cost_db 행수: {len(cost_db_run):,} / 전체 {len(cost_db):,}"
+    )
 
         # 2) 진행률 표시 요소 (E블록 다음)
         progress = st.progress(0.0)
@@ -934,6 +939,7 @@ st.markdown("""
    - 산출통화로 환산된 BOQ별 **최종 단가 + 산출근거 + 로그**  
 """)
 st.markdown("</div>", unsafe_allow_html=True)
+
 
 
 
