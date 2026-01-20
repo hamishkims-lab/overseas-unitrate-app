@@ -600,7 +600,7 @@ if run_btn:
 # (디버그) 실제로 줄었는지 확인
     st.sidebar.caption(f"실행용 cost_db 행수: {len(cost_db_run):,} / 전체 {len(cost_db):,}")
 
-        # 진행률 표시 요소
+# 진행률 표시 요소
         progress = st.progress(0.0)
         prog_text = st.empty()
 
@@ -716,6 +716,7 @@ st.markdown("""
    - 산출통화로 환산된 BOQ별 **최종 단가 + 산출근거 + 로그**  
 """)
 st.markdown("</div>", unsafe_allow_html=True)
+
 
 
 
