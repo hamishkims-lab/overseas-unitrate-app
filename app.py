@@ -490,6 +490,26 @@ if use_site_filter:
 
         st.session_state["auto_sites"] = auto_sites
 
+        # =========================
+        # ✅ auto_sites 변경 시: 사이드바 선택 UI 강제 갱신
+        # =========================
+        new_auto_sites = [norm_site_code(x) for x in (auto_sites or [])]
+        old_auto_sites = [norm_site_code(x) for x in st.session_state.get("auto_sites", [])]
+        
+        # 값이 바뀐 경우에만 갱신
+        if set(new_auto_sites) != set(old_auto_sites):
+            st.session_state["auto_sites"] = new_auto_sites
+        
+            # 사이드바 multiselect가 이전 선택을 고정하고 있어서,
+            # key를 삭제해야 default=auto_labels가 다시 적용됨
+            for k in ["selected_auto_labels_simple", "selected_extra_labels_simple"]:
+                if k in st.session_state:
+                    del st.session_state[k]
+        
+            st.rerun()
+        else:
+            st.session_state["auto_sites"] = new_auto_sites
+
         prev = st.session_state.get("_prev_auto_sites", None)
         if prev != auto_sites:
             st.session_state["_prev_auto_sites"] = auto_sites
@@ -640,6 +660,7 @@ if run_btn:
             log_df.to_excel(writer, index=False, sheet_name="calculation_log")
         bio.seek(0)
         st.download_button("⬇️ Excel 다운로드", data=bio.read(), file_name="result_unitrate.xlsx")
+
 
 
 
