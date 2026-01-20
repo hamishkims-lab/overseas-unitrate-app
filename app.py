@@ -503,9 +503,11 @@ if use_site_filter:
     site_df["label"] = site_df["현장코드"] + " | " + site_df["현장명"]
     all_labels = site_df["label"].sort_values().tolist()
     code_to_label = dict(zip(site_df["현장코드"], site_df["label"]))
-    all_codes = site_df["현장코드"].tolist()
-
-    # code_to_label 키 샘플
+    # ✅ auto_sites → auto_codes_raw (반드시 먼저 정의)
+    auto_codes_raw = [norm_site_code(x) for x in (auto_sites or [])]
+    
+    # ✅ 디버그: 실제 매칭 여부 확인
+    st.sidebar.write("auto_codes_raw:", auto_codes_raw)
     st.sidebar.write("cost_db 현장코드 샘플:", list(code_to_label.keys())[:15])
     
     missing_auto = [c for c in auto_codes_raw if c not in code_to_label]
@@ -937,6 +939,7 @@ st.markdown("""
    - 산출통화로 환산된 BOQ별 **최종 단가 + 산출근거 + 로그**  
 """)
 st.markdown("</div>", unsafe_allow_html=True)
+
 
 
 
