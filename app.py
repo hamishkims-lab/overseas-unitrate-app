@@ -417,6 +417,13 @@ feature_master = load_excel_from_repo("feature_master_FID.xlsx") # ✅ 대소문
 st.sidebar.header("⚙️ 설정")
 st.sidebar.caption("①~⑥ 순서대로 설정하세요.")
 
+# ✅ 현장 필터 사용 여부 (국가 필터 대체)
+use_site_filter = st.sidebar.checkbox(
+    "현장 필터 사용(추천)",
+    value=True,
+    help="프로젝트 특성 기반으로 현장을 자동 선택하고, 수동으로 추가/제외합니다."
+)
+
 # ✅ (숨김 처리) ②, ④는 UI에 노출하지 않고 내부 고정값 사용
 DEFAULT_W_STR = 0.3
 DEFAULT_TOP_K_SEM = 200
@@ -425,25 +432,60 @@ w_str = DEFAULT_W_STR
 w_sem = 1.0 - w_str
 top_k_sem = DEFAULT_TOP_K_SEM
 
-# ① 실적단가 필터링 - 국가 (다중선택 + 빈칸 맨 아래)
-all_currencies = sorted([c for c in cost_db["통화"].astype(str).str.upper().unique() if c.strip()])
-if "" in cost_db["통화"].astype(str).unique().tolist():
-    all_currencies = all_currencies + [""]  # 빈칸은 마지막에
+# ① 실적단가 필터링 - 국가 (현장 필터 미사용 시에만)
+if not use_site_filter:
 
-selected_currencies = st.sidebar.multiselect(
-    "① 실적단가 필터링 - 국가",
-    options=all_currencies,
-    default=all_currencies,  # 기본 전체 선택
-    help="실적국가(통화)만 사용할 수 있습니다. 미선택 시 전체 사용."
-)
+    all_currencies = sorted([c for c in cost_db["통화"].astype(str).str.upper().unique() if c.strip()])
+    if "" in cost_db["통화"].astype(str).unique().tolist():
+        all_currencies = all_currencies + [""]
 
-# 필터 적용 (아무 것도 선택하지 않으면 전체)
-if selected_currencies:
-    cost_db = cost_db[
-        cost_db["통화"].astype(str).str.upper().isin(
-            [s for s in selected_currencies if s != ""] + ([] if "" not in selected_currencies else [""])
-        )
-    ]
+    selected_currencies = st.sidebar.multiselect(
+        "① 실적단가 필터링 - 국가",
+        options=all_currencies,
+        default=all_currencies,
+        help="실적국가(통화)만 사용할 수 있습니다. 미선택 시 전체 사용."
+    )
+
+    # 필터 적용
+    if selected_currencies:
+        cost_db = cost_db[
+            cost_db["통화"].astype(str).str.upper().isin(
+                [s for s in selected_currencies if s != ""] +
+                ([] if "" not in selected_currencies else [""])
+            )
+        ]
+
+# =========================
+# (D) 사이드바: 자동 후보 현장 + 수동 추가/제외 (최종 선택 현장)
+# =========================
+selected_site_codes = None
+
+if use_site_filter:
+    st.sidebar.markdown("---")
+    st.sidebar.subheader("🏗️ 실적 현장 선택 (자동+수동)")
+
+    # cost_db에 존재하는 전체 현장 목록
+    site_df = cost_db[["현장코드", "현장명"]].dropna().astype(str).drop_duplicates()
+    site_df["label"] = site_df["현장코드"] + " | " + site_df["현장명"]
+    all_site_labels = site_df["label"].sort_values().tolist()
+
+    # BOQ/특성 선택 전: 전체 선택(원하면 []로 바꿔도 됨)
+    if auto_sites is None:
+        default_labels = all_site_labels
+        st.sidebar.caption("BOQ/특성 선택 전이라 전체 현장을 기본 선택합니다.")
+    else:
+        default_labels = site_df[site_df["현장코드"].isin([str(x) for x in auto_sites])]["label"].tolist()
+        st.sidebar.caption(f"자동 후보 현장 {len(default_labels)}개를 기본 선택했습니다. (수동 추가/제외 가능)")
+
+    selected_site_labels = st.sidebar.multiselect(
+        "사용할 실적 현장",
+        options=all_site_labels,
+        default=default_labels
+    )
+
+    selected_site_codes = [x.split(" | ")[0] for x in selected_site_labels]
+    st.sidebar.caption(f"최종 선택 현장: {len(selected_site_codes)}개")
+
 
 st.sidebar.markdown("---")
 st.sidebar.subheader("🏷️ 프로젝트 특성 필터")
@@ -579,6 +621,76 @@ with st.container():
     )
     st.markdown("</div>", unsafe_allow_html=True)
 
+# =========================
+# (C) BOQ 업로드 아래: 프로젝트 특성 선택(UI) → auto_sites 생성
+# =========================
+auto_sites = None
+matched_feature_ids = []
+
+if use_site_filter:
+    if boq_file is not None:
+        st.markdown("<div class='gs-card'>", unsafe_allow_html=True)
+        st.markdown("### 🏷️ BOQ 기준 프로젝트 특성 선택")
+
+        fm = feature_master.copy()
+        cols6 = ["대공종","중공종","소공종","Cost Driver Type","Cost Driver Method","Cost Driver Condition"]
+        for c in ["특성ID"] + cols6:
+            fm[c] = fm[c].astype(str).fillna("").str.strip()
+
+        c1, c2, c3 = st.columns(3)
+
+        # 1) 대공종, 중공종
+        with c1:
+            opt_da = sorted([x for x in fm["대공종"].unique().tolist() if x and x.lower() != "nan"])
+            sel_da = st.multiselect("대공종", opt_da, default=[])
+            fm1 = fm[fm["대공종"].isin(sel_da)] if sel_da else fm
+
+            opt_joong = sorted([x for x in fm1["중공종"].unique().tolist() if x and x.lower() != "nan"])
+            sel_joong = st.multiselect("중공종", opt_joong, default=[])
+            fm2 = fm1[fm1["중공종"].isin(sel_joong)] if sel_joong else fm1
+
+        # 2) 소공종, Type
+        with c2:
+            opt_so = sorted([x for x in fm2["소공종"].unique().tolist() if x and x.lower() != "nan"])
+            sel_so = st.multiselect("소공종", opt_so, default=[])
+            fm3 = fm2[fm2["소공종"].isin(sel_so)] if sel_so else fm2
+
+            opt_type = sorted([x for x in fm3["Cost Driver Type"].unique().tolist() if x and x.lower() != "nan"])
+            sel_type = st.multiselect("Cost Driver Type", opt_type, default=[])
+            fm4 = fm3[fm3["Cost Driver Type"].isin(sel_type)] if sel_type else fm3
+
+        # 3) Method, Condition
+        with c3:
+            opt_method = sorted([x for x in fm4["Cost Driver Method"].unique().tolist() if x and x.lower() != "nan"])
+            sel_method = st.multiselect("Cost Driver Method", opt_method, default=[])
+            fm5 = fm4[fm4["Cost Driver Method"].isin(sel_method)] if sel_method else fm4
+
+            opt_cond = sorted([x for x in fm5["Cost Driver Condition"].unique().tolist() if x and x.lower() != "nan"])
+            sel_cond = st.multiselect("Cost Driver Condition", opt_cond, default=[])
+            fm6 = fm5[fm5["Cost Driver Condition"].isin(sel_cond)] if sel_cond else fm5
+
+        # 드릴다운 결과 특성ID
+        matched_feature_ids = sorted(fm6["특성ID"].unique().tolist())
+        st.caption(f"매칭된 특성ID: {len(matched_feature_ids)}개")
+
+        # auto_sites 생성 (특성ID → 현장코드)
+        if matched_feature_ids:
+            auto_sites = (
+                project_feature_long[
+                    project_feature_long["특성ID"].astype(str).isin([str(x) for x in matched_feature_ids])
+                ]["현장코드"].astype(str).unique().tolist()
+            )
+        else:
+            auto_sites = []
+
+        st.success(f"자동 필터링 후보 현장: {len(auto_sites)}개")
+        if len(auto_sites) <= 20:
+            st.write("후보 현장코드:", auto_sites)
+
+        st.markdown("</div>", unsafe_allow_html=True)
+    else:
+        st.info("BOQ 업로드 후 프로젝트 특성을 선택할 수 있습니다.")
+
 run_btn = st.sidebar.button("🚀 산출 실행", help="현재 설정과 업로드한 BOQ로 단가를 산출합니다. 진행률이 표시됩니다.")
 
 
@@ -594,25 +706,26 @@ if run_btn:
         # 1) BOQ 로드
         boq = pd.read_excel(boq_file, engine="openpyxl")
 
-        # 2) 프로젝트 특성 필터 적용
-        if allowed_sites is not None:
+        # =========================
+        # (E) run_btn 실행 시: 최종 현장 필터 적용  ✅ 여기!
+        # =========================
+        if use_site_filter and selected_site_codes is not None:
             cost_db_run = cost_db[
-                cost_db["현장코드"].astype(str).isin([str(x) for x in allowed_sites])
+                cost_db["현장코드"].astype(str).isin([str(x) for x in selected_site_codes])
             ].copy()
         else:
             cost_db_run = cost_db.copy()
 
-        # (디버그) 실제로 줄었는지 확인
         st.sidebar.caption(f"실행용 cost_db 행수: {len(cost_db_run):,} / 전체 {len(cost_db):,}")
 
-        # 3) 진행률 표시 요소
+        # 2) 진행률 표시 요소 (E블록 다음)
         progress = st.progress(0.0)
         prog_text = st.empty()
 
-        # 4) 산출 실행
+        # 3) 산출 실행
         with st.spinner("임베딩/인덱스 준비 및 계산 중..."):
             result_df, log_df = match_items_faiss(
-                cost_db=cost_db_run,
+                cost_db=cost_db_run,   # 🔥 여기 반드시 cost_db_run
                 boq=boq,
                 price_index=price_index,
                 exchange=exchange,
@@ -719,6 +832,7 @@ st.markdown("""
    - 산출통화로 환산된 BOQ별 **최종 단가 + 산출근거 + 로그**  
 """)
 st.markdown("</div>", unsafe_allow_html=True)
+
 
 
 
