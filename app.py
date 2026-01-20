@@ -804,35 +804,32 @@ if run_btn:
     if boq_file is None:
         st.warning("BOQ 파일을 업로드해 주세요.")
     elif missing_exchange or missing_factor:
-        st.error("산출통화에 필요한 환율/지수 정보가 없습니다. Sidebar의 오류 메시지를 확인하세요.")
+        st.error("산출통화에 필요한 환율/지수 정보가 없습니다.")
     else:
         # 1) BOQ 로드
         boq = pd.read_excel(boq_file, engine="openpyxl")
 
-        # =========================
-        # (E) run_btn 실행 시: 최종 현장 필터 적용  ✅ 여기!
-        # =========================
-    if use_site_filter and selected_site_codes is not None:
-        cost_db_run = cost_db[
-            cost_db["현장코드"].apply(norm_site_code).isin(
-                [norm_site_code(x) for x in selected_site_codes]
-            )
-        ].copy()
-    else:
-        cost_db_run = cost_db.copy()
+        # 2) 최종 현장 필터 적용 (E)
+        if use_site_filter and selected_site_codes is not None:
+            cost_db_run = cost_db[
+                cost_db["현장코드"].apply(norm_site_code).isin(
+                    [norm_site_code(x) for x in selected_site_codes]
+                )
+            ].copy()
+        else:
+            cost_db_run = cost_db.copy()
 
-    st.sidebar.caption(
-        f"실행용 cost_db 행수: {len(cost_db_run):,} / 전체 {len(cost_db):,}"
-    )
+        st.sidebar.caption(
+            f"실행용 cost_db 행수: {len(cost_db_run):,} / 전체 {len(cost_db):,}"
+        )
 
-        # 2) 진행률 표시 요소 (E블록 다음)
+        # 🔴 이 줄의 들여쓰기가 핵심
         progress = st.progress(0.0)
         prog_text = st.empty()
 
-        # 3) 산출 실행
         with st.spinner("임베딩/인덱스 준비 및 계산 중..."):
             result_df, log_df = match_items_faiss(
-                cost_db=cost_db_run,   # 🔥 여기 반드시 cost_db_run
+                cost_db=cost_db_run,
                 boq=boq,
                 price_index=price_index,
                 exchange=exchange,
@@ -840,7 +837,8 @@ if run_btn:
                 sim_threshold=sim_threshold,
                 cut_ratio=cut_ratio,
                 target_currency=target_currency,
-                w_str=w_str, w_sem=w_sem,
+                w_str=w_str,
+                w_sem=w_sem,
                 top_k_sem=top_k_sem,
                 progress=progress,
                 prog_text=prog_text,
@@ -939,6 +937,7 @@ st.markdown("""
    - 산출통화로 환산된 BOQ별 **최종 단가 + 산출근거 + 로그**  
 """)
 st.markdown("</div>", unsafe_allow_html=True)
+
 
 
 
