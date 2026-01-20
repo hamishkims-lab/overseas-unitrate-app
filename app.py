@@ -487,7 +487,7 @@ if not use_site_filter:
         ]
 
 # =========================
-# 사이드바: 실적 현장 선택 (자동 후보를 기본으로 동기화 + 수동 추가/제외)
+# 사이드바: 실적 현장 선택 (자동 후보 + 추가/제외)
 # =========================
 selected_site_codes = None
 
@@ -495,76 +495,55 @@ if use_site_filter:
     st.sidebar.markdown("---")
     st.sidebar.subheader("🏗️ 실적 현장 선택")
 
+    # 1) cost_db에서 전체 현장 목록 만들기 (현장명 없어도 유지)
     site_df = cost_db[["현장코드", "현장명"]].copy()
+    site_df = site_df.dropna(subset=["현장코드"])
+
     site_df["현장코드"] = site_df["현장코드"].apply(norm_site_code)
-    site_df["현장명"] = site_df["현장명"].astype(str).str.strip()
-    site_df = site_df.dropna().drop_duplicates()
+    site_df["현장명"] = site_df["현장명"].astype(str).fillna("").str.strip()
+    site_df.loc[site_df["현장명"].isin(["", "nan", "None"]), "현장명"] = "(현장명없음)"
 
+    site_df = site_df.drop_duplicates(subset=["현장코드"])
     site_df["label"] = site_df["현장코드"] + " | " + site_df["현장명"]
-    all_labels = site_df["label"].sort_values().tolist()
+
+    all_codes = site_df["현장코드"].tolist()
     code_to_label = dict(zip(site_df["현장코드"], site_df["label"]))
-    # ✅ auto_sites → auto_codes_raw (반드시 먼저 정의)
+
+    # 2) auto_sites → auto_codes (cost_db에 존재하는 코드만)
     auto_codes_raw = [norm_site_code(x) for x in (auto_sites or [])]
-    
-    # ✅ 디버그: 실제 매칭 여부 확인
-    st.sidebar.write("auto_codes_raw:", auto_codes_raw)
-    st.sidebar.write("cost_db 현장코드 샘플:", list(code_to_label.keys())[:15])
-    
-    missing_auto = [c for c in auto_codes_raw if c not in code_to_label]
-    st.sidebar.write("missing_auto:", missing_auto)
-    st.sidebar.write("auto 매칭 개수:", len(auto_codes_raw) - len(missing_auto))
+    auto_codes = [c for c in auto_codes_raw if c in code_to_label]
 
-    # ✅ 자동 후보가 바뀔 때 "기본 선택"을 동기화할지 옵션
-    sync_auto = st.sidebar.checkbox("특성 변경 시 자동 후보로 선택 갱신", value=True)
-
-    # session_state로 현장 선택 유지
-    if "selected_site_labels" not in st.session_state:
-        # 최초: 자동 후보가 있으면 자동 후보, 없으면 전체
-        st.session_state["selected_site_labels"] = [code_to_label[c] for c in (auto_codes if auto_codes else all_codes)]
-
-    if sync_auto:
-        # 자동 후보 기반으로 초기화(단, 사용자가 제외/추가한 건 반영하기 위해 아래에서 조정)
-        base_codes = set(auto_codes) if auto_codes else set(all_codes)
-    else:
-        # 동기화 끄면 기존 선택 유지
-        base_codes = set([lab.split(" | ")[0] for lab in st.session_state["selected_site_labels"]])
-
-    # 사용자가 따로 추가/제외한 것 반영
-    excluded = set(st.session_state.get("excluded_site_codes", []))
-    manual_add = set(st.session_state.get("manual_site_codes", []))
-
-    final_codes = (base_codes - excluded) | manual_add
-    final_labels = [code_to_label[c] for c in all_codes if c in final_codes]
-
-    # 자동/기타 구분 표시
     auto_labels = [code_to_label[c] for c in auto_codes]
     other_labels = [code_to_label[c] for c in all_codes if c not in set(auto_codes)]
 
     st.sidebar.caption(f"자동 후보 {len(auto_labels)}개 / 기타 {len(other_labels)}개")
 
-    # 1) 자동 후보(기본 포함, 제외 가능)
+    # ✅ 디버그(원인확정용): 필요 없으면 나중에 삭제
+    missing_auto = [c for c in auto_codes_raw if c not in code_to_label]
+    if auto_codes_raw:
+        st.sidebar.write("auto_codes_raw:", auto_codes_raw)
+        st.sidebar.write("missing_auto:", missing_auto)
+
+    # 3) 자동 후보(기본 선택, 제외 가능)
     selected_auto_labels = st.sidebar.multiselect(
         "자동 후보(제외 가능)",
         options=auto_labels,
-        default=[lab for lab in auto_labels if lab in final_labels],
-        key="selected_auto_labels"
+        default=auto_labels,
+        key="selected_auto_labels_simple"
     )
-    # 여기서 빠진 자동후보는 excluded로 저장
-    selected_auto_codes = set([lab.split(" | ")[0] for lab in selected_auto_labels])
-    st.session_state["excluded_site_codes"] = [c for c in auto_codes if c not in selected_auto_codes]
+    selected_auto_codes = [x.split(" | ")[0] for x in selected_auto_labels]
 
-    # 2) 기타 현장(추가 가능)
+    # 4) 기타 현장(추가 가능)
     selected_extra_labels = st.sidebar.multiselect(
         "기타 현장(추가 가능)",
         options=other_labels,
-        default=[lab for lab in other_labels if lab.split(" | ")[0] in manual_add],
-        key="selected_extra_labels"
+        default=[],
+        key="selected_extra_labels_simple"
     )
-    st.session_state["manual_site_codes"] = [lab.split(" | ")[0] for lab in selected_extra_labels]
+    selected_extra_codes = [x.split(" | ")[0] for x in selected_extra_labels]
 
-    # 최종 선택
-    selected_site_codes = sorted(list((selected_auto_codes | set(st.session_state["manual_site_codes"]))))
-
+    # 5) 최종 선택 현장코드
+    selected_site_codes = sorted(list(set(selected_auto_codes + selected_extra_codes)))
     st.sidebar.caption(f"최종 선택 현장: {len(selected_site_codes)}개")
 
 # feature_master(176개) 기준 옵션 생성
@@ -939,6 +918,7 @@ st.markdown("""
    - 산출통화로 환산된 BOQ별 **최종 단가 + 산출근거 + 로그**  
 """)
 st.markdown("</div>", unsafe_allow_html=True)
+
 
 
 
