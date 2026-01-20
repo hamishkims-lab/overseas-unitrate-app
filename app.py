@@ -490,23 +490,29 @@ if use_site_filter:
 
         st.session_state["auto_sites"] = auto_sites
 
+        # ✅ auto_sites → 사이드바 자동후보를 "즉시 선택 상태"로 강제 갱신
         # =========================
-        # ✅ auto_sites 변경 시: 사이드바 선택 UI 강제 갱신
-        # =========================
-        new_auto_sites = [norm_site_code(x) for x in (auto_sites or [])]
-        old_auto_sites = [norm_site_code(x) for x in st.session_state.get("auto_sites", [])]
+        # auto_sites(현장코드) -> auto_labels(현장코드|현장명)로 변환하려면
+        # cost_db 기반 site_df/코드맵이 필요하니, 여기서도 간단히 동일하게 만듦.
         
-        # 값이 바뀐 경우에만 갱신
-        if set(new_auto_sites) != set(old_auto_sites):
-            st.session_state["auto_sites"] = new_auto_sites
+        site_df = cost_db[["현장코드", "현장명"]].copy().dropna(subset=["현장코드"])
+        site_df["현장코드"] = site_df["현장코드"].apply(norm_site_code)
+        site_df["현장명"] = site_df["현장명"].astype(str).fillna("").str.strip()
+        site_df.loc[site_df["현장명"].isin(["", "nan", "None"]), "현장명"] = "(현장명없음)"
+        site_df = site_df.drop_duplicates(subset=["현장코드"])
+        site_df["label"] = site_df["현장코드"] + " | " + site_df["현장명"]
         
-            # 사이드바 multiselect가 이전 선택을 고정하고 있어서,
-            # key를 삭제해야 default=auto_labels가 다시 적용됨
-            for k in ["selected_auto_labels_simple", "selected_extra_labels_simple"]:
-                if k in st.session_state:
-                    del st.session_state[k]
+        code_to_label = dict(zip(site_df["현장코드"], site_df["label"]))
         
-            st.rerun()
+        auto_codes = [norm_site_code(x) for x in (auto_sites or [])]
+        auto_labels = [code_to_label[c] for c in auto_codes if c in code_to_label]
+        
+        # ✅ 사이드바 멀티셀렉트 선택값을 auto_labels로 "강제 세팅"
+        st.session_state["selected_auto_labels"] = auto_labels
+        
+        # (기존에 기타현장 선택이 있더라도 유지하고 싶으면 그대로 두면 됨)
+        st.rerun()
+
         else:
             st.session_state["auto_sites"] = new_auto_sites
 
@@ -567,12 +573,13 @@ if use_site_filter:
 
     st.sidebar.caption(f"자동 후보 {len(auto_labels)}개 / 기타 {len(other_labels)}개")
 
-    # ✅ 중요: default를 session_state로 “자동 갱신”시키려면,
-    # auto_labels가 바뀌었을 때 key를 삭제해야 함 (BOQ 아래에서 처리하는 게 베스트)
+    # default는 session_state에 있으면 그걸 쓰고, 없으면 auto_labels
+    default_auto = st.session_state.get("selected_auto_labels", auto_labels)
+    
     selected_auto_labels = st.sidebar.multiselect(
         "자동 후보(제외 가능)",
         options=auto_labels,
-        default=auto_labels,
+        default=[x for x in default_auto if x in auto_labels],  # 옵션에 없는 건 제거
         key="selected_auto_labels"
     )
     selected_auto_codes = [x.split(" | ")[0] for x in selected_auto_labels]
@@ -670,6 +677,7 @@ if run_btn:
             log_df.to_excel(writer, index=False, sheet_name="calculation_log")
         bio.seek(0)
         st.download_button("⬇️ Excel 다운로드", data=bio.read(), file_name="result_unitrate.xlsx")
+
 
 
 
