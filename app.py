@@ -482,7 +482,7 @@ if use_site_filter:
         else:
             st.info("선택된 특성이 없습니다.")
     else:
-    st.info("BOQ 업로드 후 프로젝트 특성을 선택할 수 있습니다.")
+        st.info("BOQ 업로드 후 프로젝트 특성을 선택할 수 있습니다.")
 
         # =========================
         # BOQ 업로드 아래: auto_sites 계산
@@ -668,6 +668,7 @@ if run_btn:
             log_df.to_excel(writer, index=False, sheet_name="calculation_log")
         bio.seek(0)
         st.download_button("⬇️ Excel 다운로드", data=bio.read(), file_name="result_unitrate.xlsx")
+
 
 
 
