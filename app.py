@@ -11,7 +11,8 @@ import streamlit as st
 from rapidfuzz import fuzz
 from sentence_transformers import SentenceTransformer
 
-st.sidebar.error("✅ DEPLOY CHECK: app.py loaded")
+st.sidebar.error("✅ DEPLOY CHECK: app.py 로드됨")
+st.write("✅ DEPLOY CHECK: app.py 로드됨")
 
 # ============ FAISS ============
 try:
@@ -641,6 +642,7 @@ if run_btn:
             log_df.to_excel(writer, index=False, sheet_name="calculation_log")
         bio.seek(0)
         st.download_button("⬇️ Excel 다운로드", data=bio.read(), file_name="result_unitrate.xlsx")
+
 
 
 
