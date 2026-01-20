@@ -493,8 +493,10 @@ if selected_feature_ids:
 else:
     allowed_sites = None
 
+
+
 if allowed_sites is not None:
-    st.sidebar.caption(f"필터링 대상 현장: {len(allowed_sites)}개")
+    st.sidebar.write("현장코드(예시):", allowed_sites[:10])
 
 # ② Threshold
 sim_threshold = st.sidebar.slider(
@@ -711,6 +713,7 @@ st.markdown("""
    - 산출통화로 환산된 BOQ별 **최종 단가 + 산출근거 + 로그**  
 """)
 st.markdown("</div>", unsafe_allow_html=True)
+
 
 
 
