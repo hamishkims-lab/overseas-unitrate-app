@@ -478,23 +478,25 @@ if use_site_filter:
         else:
             st.info("선택된 특성이 없습니다.")
 
-        # auto_sites 계산
+        # =========================
+        # BOQ 업로드 아래: auto_sites 계산
+        # =========================
         if st.session_state["selected_feature_ids"]:
             auto_sites = (
                 project_feature_long[
-                    project_feature_long["특성ID"].astype(str).isin([str(x) for x in st.session_state["selected_feature_ids"]])
+                    project_feature_long["특성ID"].astype(str).isin(
+                        [str(x) for x in st.session_state["selected_feature_ids"]]
+                    )
                 ]["현장코드"].astype(str).unique().tolist()
             )
         else:
             auto_sites = []
-
-        st.session_state["auto_sites"] = auto_sites
-
-        # ✅ auto_sites → 사이드바 자동후보를 "즉시 선택 상태"로 강제 갱신
-        # =========================
-        # auto_sites(현장코드) -> auto_labels(현장코드|현장명)로 변환하려면
-        # cost_db 기반 site_df/코드맵이 필요하니, 여기서도 간단히 동일하게 만듦.
         
+        st.session_state["auto_sites"] = auto_sites
+        
+        # =========================
+        # 사이드바 자동후보 즉시 선택 반영
+        # =========================
         site_df = cost_db[["현장코드", "현장명"]].copy().dropna(subset=["현장코드"])
         site_df["현장코드"] = site_df["현장코드"].apply(norm_site_code)
         site_df["현장명"] = site_df["현장명"].astype(str).fillna("").str.strip()
@@ -504,13 +506,13 @@ if use_site_filter:
         
         code_to_label = dict(zip(site_df["현장코드"], site_df["label"]))
         
-        auto_codes = [norm_site_code(x) for x in (auto_sites or [])]
+        auto_codes = [norm_site_code(x) for x in auto_sites]
         auto_labels = [code_to_label[c] for c in auto_codes if c in code_to_label]
         
-        # ✅ 사이드바 멀티셀렉트 선택값을 auto_labels로 "강제 세팅"
+        # ✅ 사이드바 multiselect 선택값 강제 세팅
         st.session_state["selected_auto_labels"] = auto_labels
         
-        # (기존에 기타현장 선택이 있더라도 유지하고 싶으면 그대로 두면 됨)
+        # ✅ 사이드바를 새 auto_sites 기준으로 다시 그림
         st.rerun()
 
         else:
@@ -677,6 +679,7 @@ if run_btn:
             log_df.to_excel(writer, index=False, sheet_name="calculation_log")
         bio.seek(0)
         st.download_button("⬇️ Excel 다운로드", data=bio.read(), file_name="result_unitrate.xlsx")
+
 
 
 
