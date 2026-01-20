@@ -120,6 +120,23 @@ def file_fingerprint(df: pd.DataFrame, cols: list) -> str:
     hasher.update(head.encode()); hasher.update(tail.encode())
     return hasher.hexdigest()
 
+def norm_site_code(x) -> str:
+    """
+    현장코드 정규화:
+    - 공백 제거
+    - 190590.0 같은 소수 표현 제거
+    - 숫자/문자 혼용 대비
+    """
+    if x is None:
+        return ""
+    s = str(x).strip()
+    # 190590.0 형태 처리
+    if s.endswith(".0"):
+        s = s[:-2]
+    # 혹시 남아있는 소수점 제거
+    s = s.split(".")[0]
+    return s
+
 
 # =========================
 # 보정 로직 (CPI/환율/지수)
@@ -478,13 +495,22 @@ if use_site_filter:
     st.sidebar.markdown("---")
     st.sidebar.subheader("🏗️ 실적 현장 선택")
 
-    site_df = cost_db[["현장코드", "현장명"]].dropna().astype(str).drop_duplicates()
+    site_df = cost_db[["현장코드", "현장명"]].copy()
+    site_df["현장코드"] = site_df["현장코드"].apply(norm_site_code)
+    site_df["현장명"] = site_df["현장명"].astype(str).str.strip()
+    site_df = site_df.dropna().drop_duplicates()
+
     site_df["label"] = site_df["현장코드"] + " | " + site_df["현장명"]
     all_labels = site_df["label"].sort_values().tolist()
     code_to_label = dict(zip(site_df["현장코드"], site_df["label"]))
     all_codes = site_df["현장코드"].tolist()
 
-    auto_codes = [str(x) for x in (auto_sites or []) if str(x) in code_to_label]
+    auto_codes_raw = [norm_site_code(x) for x in (auto_sites or [])]
+    auto_codes = [c for c in auto_codes_raw if c in code_to_label]
+
+    missing_auto = [c for c in auto_codes_raw if c not in code_to_label]
+    if missing_auto:
+        st.sidebar.warning(f"cost_db에 없는 자동후보 코드: {missing_auto[:10]}")
 
     # ✅ 자동 후보가 바뀔 때 "기본 선택"을 동기화할지 옵션
     sync_auto = st.sidebar.checkbox("특성 변경 시 자동 후보로 선택 갱신", value=True)
@@ -909,6 +935,7 @@ st.markdown("""
    - 산출통화로 환산된 BOQ별 **최종 단가 + 산출근거 + 로그**  
 """)
 st.markdown("</div>", unsafe_allow_html=True)
+
 
 
 
