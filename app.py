@@ -405,7 +405,11 @@ top_k_sem = DEFAULT_TOP_K_SEM
 # =========================
 with st.container():
     st.markdown("<div class='gs-card'>", unsafe_allow_html=True)
-    boq_file = st.file_uploader("📤 BOQ 파일 업로드", type=["xlsx"])
+    boq_file = st.file_uploader(
+        "📤 BOQ 파일 업로드",
+        type=["xlsx"],
+        help="BOQ는 최소한 '내역', 'Unit' 컬럼이 필요합니다."
+    )
     st.markdown("</div>", unsafe_allow_html=True)
 
 
@@ -477,6 +481,8 @@ if use_site_filter:
                     st.session_state["selected_feature_ids"] = []
         else:
             st.info("선택된 특성이 없습니다.")
+    else:
+    st.info("BOQ 업로드 후 프로젝트 특성을 선택할 수 있습니다.")
 
         # =========================
         # BOQ 업로드 아래: auto_sites 계산
@@ -495,7 +501,7 @@ if use_site_filter:
         st.session_state["auto_sites"] = auto_sites
         
         # =========================
-        # 사이드바 자동후보 즉시 선택 반영
+        # 사이드바 자동후보 즉시 선택 반영(자동선택)
         # =========================
         site_df = cost_db[["현장코드", "현장명"]].copy().dropna(subset=["현장코드"])
         site_df["현장코드"] = site_df["현장코드"].apply(norm_site_code)
@@ -505,34 +511,17 @@ if use_site_filter:
         site_df["label"] = site_df["현장코드"] + " | " + site_df["현장명"]
         
         code_to_label = dict(zip(site_df["현장코드"], site_df["label"]))
-        
         auto_codes = [norm_site_code(x) for x in auto_sites]
         auto_labels = [code_to_label[c] for c in auto_codes if c in code_to_label]
         
-        # ✅ 사이드바 multiselect 선택값 강제 세팅
+        # ✅ 사이드바 multiselect의 default를 “자동후보로 강제”
         st.session_state["selected_auto_labels"] = auto_labels
         
-        # ✅ 사이드바를 새 auto_sites 기준으로 다시 그림
-        st.rerun()
-
-        else:
-            st.session_state["auto_sites"] = new_auto_sites
-
-        prev = st.session_state.get("_prev_auto_sites", None)
-        if prev != auto_sites:
-            st.session_state["_prev_auto_sites"] = auto_sites
-            st.rerun()
-
         st.success(f"자동 후보 현장: {len(auto_sites)}개")
-      
         if len(auto_sites) <= 30:
             st.write(auto_sites)
 
-        st.markdown("</div>", unsafe_allow_html=True)
-        else:
-        st.info("BOQ 업로드 후 프로젝트 특성을 선택할 수 있습니다.")
-
-
+       
 # =========================
 # (3) 사이드바: 실적 현장 선택 (auto_sites가 session에 저장된 이후에!)
 # =========================
@@ -679,6 +668,7 @@ if run_btn:
             log_df.to_excel(writer, index=False, sheet_name="calculation_log")
         bio.seek(0)
         st.download_button("⬇️ Excel 다운로드", data=bio.read(), file_name="result_unitrate.xlsx")
+
 
 
 
