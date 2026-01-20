@@ -399,18 +399,6 @@ w_sem = 1.0 - w_str
 top_k_sem = DEFAULT_TOP_K_SEM
 
 
-# (현장 필터 사용 안할 때만) 국가(통화) 필터
-if not use_site_filter:
-    all_currencies = sorted([c for c in cost_db["통화"].astype(str).str.upper().unique() if c.strip()])
-    selected_currencies = st.sidebar.multiselect(
-        "① 실적단가 필터링 - 국가",
-        options=all_currencies,
-        default=all_currencies
-    )
-    if selected_currencies:
-        cost_db = cost_db[cost_db["통화"].astype(str).str.upper().isin(selected_currencies)]
-
-
 # =========================
 # (1) BOQ 업로드 (먼저!)
 # =========================
@@ -500,7 +488,14 @@ if use_site_filter:
             auto_sites = []
 
         st.session_state["auto_sites"] = auto_sites
+
+        prev = st.session_state.get("_prev_auto_sites", None)
+        if prev != auto_sites:
+            st.session_state["_prev_auto_sites"] = auto_sites
+            st.rerun()
+
         st.success(f"자동 후보 현장: {len(auto_sites)}개")
+      
         if len(auto_sites) <= 30:
             st.write(auto_sites)
 
@@ -640,3 +635,4 @@ if run_btn:
             log_df.to_excel(writer, index=False, sheet_name="calculation_log")
         bio.seek(0)
         st.download_button("⬇️ Excel 다운로드", data=bio.read(), file_name="result_unitrate.xlsx")
+
