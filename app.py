@@ -527,7 +527,7 @@ if use_site_filter:
             st.write(auto_sites)
 
         st.markdown("</div>", unsafe_allow_html=True)
-    else:
+        else:
         st.info("BOQ 업로드 후 프로젝트 특성을 선택할 수 있습니다.")
 
 
@@ -677,6 +677,7 @@ if run_btn:
             log_df.to_excel(writer, index=False, sheet_name="calculation_log")
         bio.seek(0)
         st.download_button("⬇️ Excel 다운로드", data=bio.read(), file_name="result_unitrate.xlsx")
+
 
 
 
