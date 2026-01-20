@@ -583,7 +583,7 @@ run_btn = st.sidebar.button("🚀 산출 실행", help="현재 설정과 업로�
 
 
 # =========================
-# Main
+# ✅ 프로젝트 특성 필터 적용 (현장코드 기준)
 # =========================
 if run_btn:
     if boq_file is None:
@@ -593,9 +593,12 @@ if run_btn:
     else:
         boq = pd.read_excel(boq_file, engine="openpyxl")
     if allowed_sites is not None:
-        cost_db_run = cost_db[cost_db["현장코드"].astype(str).isin(allowed_sites)].copy()
+        cost_db_run = cost_db[cost_db["현장코드"].astype(str).isin([str(x) for x in allowed_sites])].copy()
     else:
         cost_db_run = cost_db.copy()
+
+# (디버그) 실제로 줄었는지 확인
+    st.sidebar.caption(f"실행용 cost_db 행수: {len(cost_db_run):,} / 전체 {len(cost_db):,}")
 
         # 진행률 표시 요소
         progress = st.progress(0.0)
@@ -713,6 +716,7 @@ st.markdown("""
    - 산출통화로 환산된 BOQ별 **최종 단가 + 산출근거 + 로그**  
 """)
 st.markdown("</div>", unsafe_allow_html=True)
+
 
 
 
