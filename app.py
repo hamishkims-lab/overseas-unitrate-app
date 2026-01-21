@@ -534,7 +534,7 @@ st.session_state["auto_sites"] = auto_sites
 
        
 # =========================
-# 사이드바: 실적 현장 선택 (자동 후보 + 제거만 가능)
+# 사이드바: 실적 현장 선택
 # =========================
 selected_site_codes = None
 
@@ -542,17 +542,8 @@ if use_site_filter:
     st.sidebar.markdown("---")
     st.sidebar.subheader("🏗️ 실적 현장 선택")
 
-    # (선택) 디버그 초기화 버튼
-    if st.sidebar.button("🧹 강제 초기화(디버그)"):
-        for k in ["selected_auto_labels", "selected_extra_labels", "auto_sites"]:
-            if k in st.session_state:
-                del st.session_state[k]
-        st.rerun()
-
-    # ✅ 여기부터는 절대 들여쓰기 더 들어가면 안 됨
     auto_sites = st.session_state.get("auto_sites", [])
 
-    # 1) 전체 현장 목록
     site_df = cost_db[["현장코드_norm", "현장명"]].copy()
     site_df = site_df.dropna(subset=["현장코드_norm"])
 
@@ -565,15 +556,12 @@ if use_site_filter:
     all_codes = site_df["현장코드_norm"].tolist()
     code_to_label = dict(zip(site_df["현장코드_norm"], site_df["label"]))
 
-    # 2) 자동 후보 (이미 norm된 코드)
     auto_codes = [c for c in auto_sites if c in code_to_label]
-
     auto_labels = [code_to_label[c] for c in auto_codes]
     other_labels = [code_to_label[c] for c in all_codes if c not in set(auto_codes)]
 
     st.sidebar.caption(f"자동 후보 {len(auto_labels)}개 / 기타 {len(other_labels)}개")
 
-    # 3) 자동 후보 → 바로 선택된 상태로 표시 (X로 제거만)
     selected_auto_labels = st.sidebar.multiselect(
         "자동 후보(제외 가능)",
         options=auto_labels,
@@ -581,7 +569,6 @@ if use_site_filter:
         key="selected_auto_labels"
     )
 
-    # 4) 기타 현장 추가
     selected_extra_labels = st.sidebar.multiselect(
         "기타 현장(추가 가능)",
         options=other_labels,
@@ -599,7 +586,6 @@ if use_site_filter:
     )
 
     st.sidebar.caption(f"최종 선택 현장: {len(selected_site_codes)}개")
-
 
 # =========================
 # 기타 슬라이더/통화 선택
@@ -682,6 +668,7 @@ if run_btn:
             log_df.to_excel(writer, index=False, sheet_name="calculation_log")
         bio.seek(0)
         st.download_button("⬇️ Excel 다운로드", data=bio.read(), file_name="result_unitrate.xlsx")
+
 
 
 
