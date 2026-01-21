@@ -11,7 +11,6 @@ import streamlit as st
 from rapidfuzz import fuzz
 from sentence_transformers import SentenceTransformer
 
-
 # ============ FAISS ============
 try:
     import faiss  # faiss-cpu
@@ -370,12 +369,7 @@ price_index = load_excel_from_repo("price_index.xlsx")
 exchange    = load_excel_from_repo("exchange.xlsx")
 factor      = load_excel_from_repo("Factor.xlsx")
 project_feature_long = load_excel_from_repo("project_feature_long.xlsx")
-feature_master       = load_excel_from_repo("feature_master_FID.xlsx")
-
-# ✅ norm 컬럼은 로드 이후 생성
-cost_db["현장코드_norm"] = cost_db["현장코드"].apply(norm_site_code)
-project_feature_long["현장코드_norm"] = project_feature_long["현장코드"].apply(norm_site_code)
-project_feature_long["특성ID"] = project_feature_long["특성ID"].astype(str).str.strip()
+feature_master = load_excel_from_repo("feature_master_FID.xlsx")
 
 
 # =========================
@@ -410,11 +404,7 @@ top_k_sem = DEFAULT_TOP_K_SEM
 # =========================
 with st.container():
     st.markdown("<div class='gs-card'>", unsafe_allow_html=True)
-    boq_file = st.file_uploader(
-        "📤 BOQ 파일 업로드",
-        type=["xlsx"],
-        help="BOQ는 최소한 '내역', 'Unit' 컬럼이 필요합니다."
-    )
+    boq_file = st.file_uploader("📤 BOQ 파일 업로드", type=["xlsx"])
     st.markdown("</div>", unsafe_allow_html=True)
 
 
@@ -472,28 +462,6 @@ if use_site_filter:
         merged_ids = sorted(list(dict.fromkeys(kept_ids + new_ids)))
 
         st.session_state["selected_feature_ids"] = merged_ids
-        # =========================
-        # ✅ auto_sites 계산 (선택된 특성ID 기반)
-        # =========================
-        selected_fids = [str(x).strip() for x in st.session_state["selected_feature_ids"]]
-        
-        if selected_fids:
-            auto_sites = (
-                project_feature_long[
-                    project_feature_long["특성ID"].isin(selected_fids)
-                ]["현장코드_norm"]
-                .dropna()
-                .astype(str)
-                .unique()
-                .tolist()
-            )
-        else:
-            auto_sites = []
-        
-        st.session_state["auto_sites"] = auto_sites
-        st.success(f"자동 후보 현장: {len(auto_sites)}개")
-        if len(auto_sites) <= 30:
-            st.write(auto_sites)
 
         st.markdown("#### ✅ 선택된 특성ID")
         if merged_ids:
@@ -508,87 +476,75 @@ if use_site_filter:
                     st.session_state["selected_feature_ids"] = []
         else:
             st.info("선택된 특성이 없습니다.")
-    else:
-        st.info("BOQ 업로드 후 프로젝트 특성을 선택할 수 있습니다.")
 
-        # =========================
-        # BOQ 업로드 아래: auto_sites 계산
-        # =========================
-        selected_fids = [str(x).strip() for x in st.session_state["selected_feature_ids"]]
-
-        if selected_fids:
+        # auto_sites 계산
+        if st.session_state["selected_feature_ids"]:
             auto_sites = (
                 project_feature_long[
-                    project_feature_long["특성ID"].astype(str).str.strip().isin(selected_fids)
-                ]["현장코드_norm"]
-                .dropna()
-                .astype(str)
-                .unique()
-                .tolist()
+                    project_feature_long["특성ID"].astype(str).isin([str(x) for x in st.session_state["selected_feature_ids"]])
+                ]["현장코드"].astype(str).unique().tolist()
             )
         else:
             auto_sites = []
 
-st.session_state["auto_sites"] = auto_sites
-        
-        # =========================
-        # 사이드바 자동후보 즉시 선택 반영(자동선택)
-        # =========================
-        site_df["현장코드"] = site_df["현장코드"].apply(norm_site_code)
-        site_df["현장명"] = site_df["현장명"].astype(str).fillna("").str.strip()
-        site_df.loc[site_df["현장명"].isin(["", "nan", "None"]), "현장명"] = "(현장명없음)"
-        site_df = site_df.drop_duplicates(subset=["현장코드"])
-        site_df["label"] = site_df["현장코드"] + " | " + site_df["현장명"]
-        
-        code_to_label = dict(zip(site_df["현장코드"], site_df["label"]))
-        auto_codes = [norm_site_code(x) for x in auto_sites]
-        auto_labels = [code_to_label[c] for c in auto_codes if c in code_to_label]
-        
+        st.session_state["auto_sites"] = auto_sites
 
-        
+        prev = st.session_state.get("_prev_auto_sites", None)
+        if prev != auto_sites:
+            st.session_state["_prev_auto_sites"] = auto_sites
+            st.rerun()
+
         st.success(f"자동 후보 현장: {len(auto_sites)}개")
+      
         if len(auto_sites) <= 30:
             st.write(auto_sites)
 
-       
-    # =========================
-# 사이드바: 실적 현장 선택
+        st.markdown("</div>", unsafe_allow_html=True)
+    else:
+        st.info("BOQ 업로드 후 프로젝트 특성을 선택할 수 있습니다.")
+
+
+# =========================
+# (3) 사이드바: 실적 현장 선택 (auto_sites가 session에 저장된 이후에!)
 # =========================
 selected_site_codes = None
 
 if use_site_filter:
     st.sidebar.markdown("---")
     st.sidebar.subheader("🏗️ 실적 현장 선택")
+    
+if st.sidebar.button("🧹 강제 초기화(디버그)"):
+    st.session_state.clear()
+    st.rerun()
 
     auto_sites = st.session_state.get("auto_sites", [])
 
-    site_df = cost_db[["현장코드_norm", "현장명"]].copy()
-    site_df = site_df.dropna(subset=["현장코드_norm"])
-
+    site_df = cost_db[["현장코드", "현장명"]].copy()
+    site_df = site_df.dropna(subset=["현장코드"])
+    site_df["현장코드"] = site_df["현장코드"].apply(norm_site_code)
     site_df["현장명"] = site_df["현장명"].astype(str).fillna("").str.strip()
     site_df.loc[site_df["현장명"].isin(["", "nan", "None"]), "현장명"] = "(현장명없음)"
+    site_df = site_df.drop_duplicates(subset=["현장코드"])
+    site_df["label"] = site_df["현장코드"] + " | " + site_df["현장명"]
 
-    site_df = site_df.drop_duplicates(subset=["현장코드_norm"])
-    site_df["label"] = site_df["현장코드_norm"] + " | " + site_df["현장명"]
+    all_codes = site_df["현장코드"].tolist()
+    code_to_label = dict(zip(site_df["현장코드"], site_df["label"]))
 
-    all_codes = site_df["현장코드_norm"].tolist()
-    code_to_label = dict(zip(site_df["현장코드_norm"], site_df["label"]))
+    auto_codes_raw = [norm_site_code(x) for x in (auto_sites or [])]
+    auto_codes = [c for c in auto_codes_raw if c in code_to_label]
 
-    auto_codes = [c for c in auto_sites if c in code_to_label]
     auto_labels = [code_to_label[c] for c in auto_codes]
     other_labels = [code_to_label[c] for c in all_codes if c not in set(auto_codes)]
 
     st.sidebar.caption(f"자동 후보 {len(auto_labels)}개 / 기타 {len(other_labels)}개")
 
-    # ✅ auto_labels가 바뀌면 key를 바꿔서 default가 새로 반영되게 함
-    auto_key = "selected_auto_labels_" + str(hash(tuple(auto_labels)))
-    
     selected_auto_labels = st.sidebar.multiselect(
         "자동 후보(제외 가능)",
         options=auto_labels,
         default=auto_labels,
-        key=auto_key
+        key="selected_auto_labels"
     )
+    selected_auto_codes = [x.split(" | ")[0] for x in selected_auto_labels]
 
     selected_extra_labels = st.sidebar.multiselect(
         "기타 현장(추가 가능)",
@@ -596,114 +552,91 @@ if use_site_filter:
         default=[],
         key="selected_extra_labels"
     )
+    selected_extra_codes = [x.split(" | ")[0] for x in selected_extra_labels]
 
-    selected_site_codes = sorted(
-        list(
-            set(
-                [x.split(" | ")[0] for x in selected_auto_labels]
-                + [x.split(" | ")[0] for x in selected_extra_labels]
-            )
-        )
-    )
-
+    selected_site_codes = sorted(list(set(selected_auto_codes + selected_extra_codes)))
     st.sidebar.caption(f"최종 선택 현장: {len(selected_site_codes)}개")
-    
-    # =========================
-    # 기타 슬라이더/통화 선택
-    # =========================
-    sim_threshold = st.sidebar.slider("② Threshold (컷 기준, %)", 0, 100, 60, 5)
-    cut_ratio = st.sidebar.slider("③ 상/하위 컷 비율 (%)", 0, 30, 20, 5) / 100.0
-    
-    target_options = sorted(factor["국가"].astype(str).str.upper().unique().tolist())
-    default_idx = target_options.index("KRW") if "KRW" in target_options else 0
-    target_currency = st.sidebar.selectbox("④ 산출통화", options=target_options, index=default_idx)
-    
-    missing_exchange = exchange[exchange["통화"].astype(str).str.upper()==target_currency].empty
-    missing_factor   = factor[factor["국가"].astype(str).str.upper()==target_currency].empty
-    if missing_exchange:
-        st.sidebar.error(f"선택한 산출통화 '{target_currency}'에 대한 환율 정보가 exchange.xlsx에 없습니다.")
-    if missing_factor:
-        st.sidebar.error(f"선택한 산출통화 '{target_currency}'에 대한 지수 정보가 Factor.xlsx에 없습니다.")
-    
-    
-    # =========================
-    # Run 버튼
-    # =========================
-    run_btn = st.sidebar.button("🚀 산출 실행")
-    
-    if run_btn:
-        if boq_file is None:
-            st.warning("BOQ 파일을 업로드해 주세요.")
-        elif missing_exchange or missing_factor:
-            st.error("산출통화에 필요한 환율/지수 정보가 없습니다.")
+
+
+# =========================
+# 기타 슬라이더/통화 선택
+# =========================
+sim_threshold = st.sidebar.slider("② Threshold (컷 기준, %)", 0, 100, 60, 5)
+cut_ratio = st.sidebar.slider("③ 상/하위 컷 비율 (%)", 0, 30, 20, 5) / 100.0
+
+target_options = sorted(factor["국가"].astype(str).str.upper().unique().tolist())
+default_idx = target_options.index("KRW") if "KRW" in target_options else 0
+target_currency = st.sidebar.selectbox("④ 산출통화", options=target_options, index=default_idx)
+
+missing_exchange = exchange[exchange["통화"].astype(str).str.upper()==target_currency].empty
+missing_factor   = factor[factor["국가"].astype(str).str.upper()==target_currency].empty
+if missing_exchange:
+    st.sidebar.error(f"선택한 산출통화 '{target_currency}'에 대한 환율 정보가 exchange.xlsx에 없습니다.")
+if missing_factor:
+    st.sidebar.error(f"선택한 산출통화 '{target_currency}'에 대한 지수 정보가 Factor.xlsx에 없습니다.")
+
+
+# =========================
+# Run 버튼
+# =========================
+run_btn = st.sidebar.button("🚀 산출 실행")
+
+if run_btn:
+    if boq_file is None:
+        st.warning("BOQ 파일을 업로드해 주세요.")
+    elif missing_exchange or missing_factor:
+        st.error("산출통화에 필요한 환율/지수 정보가 없습니다.")
+    else:
+        boq = pd.read_excel(boq_file, engine="openpyxl")
+
+        if use_site_filter and selected_site_codes is not None:
+            cost_db_run = cost_db[
+                cost_db["현장코드"].apply(norm_site_code).isin([norm_site_code(x) for x in selected_site_codes])
+            ].copy()
         else:
-            boq = pd.read_excel(boq_file, engine="openpyxl")
-    
-            if use_site_filter and selected_site_codes is not None:
-                cost_db_run = cost_db[
-                    cost_db["현장코드"].apply(norm_site_code).isin([norm_site_code(x) for x in selected_site_codes])
-                ].copy()
-            else:
-                cost_db_run = cost_db.copy()
-    
-            st.sidebar.caption(f"실행용 cost_db 행수: {len(cost_db_run):,} / 전체 {len(cost_db):,}")
-    
-            progress = st.progress(0.0)
-            prog_text = st.empty()
-    
-            with st.spinner("임베딩/인덱스 준비 및 계산 중..."):
-                result_df, log_df = match_items_faiss(
-                    cost_db=cost_db_run,
-                    boq=boq,
-                    price_index=price_index,
-                    exchange=exchange,
-                    factor=factor,
-                    sim_threshold=sim_threshold,
-                    cut_ratio=cut_ratio,
-                    target_currency=target_currency,
-                    w_str=w_str,
-                    w_sem=w_sem,
-                    top_k_sem=top_k_sem,
-                    progress=progress,
-                    prog_text=prog_text,
-                )
-    
-            progress.progress(1.0)
-            prog_text.text("산출 진행률: 완료")
-    
-            st.success("✅ 완료! 결과 확인 및 다운로드 가능")
-    
-            tab1, tab2 = st.tabs(["📄 BOQ 결과", "🧾 산출 로그"])
-    
-            with tab1:
-                if "통화" in result_df.columns:
-                    result_df = result_df.drop(columns=["통화"])
-                st.dataframe(result_df, use_container_width=True)
-    
-            with tab2:
-                st.dataframe(log_df, use_container_width=True)
-    
-            bio = io.BytesIO()
-            with pd.ExcelWriter(bio, engine="openpyxl") as writer:
-                result_df.to_excel(writer, index=False, sheet_name="boq_with_price")
-                log_df.to_excel(writer, index=False, sheet_name="calculation_log")
-            bio.seek(0)
-            st.download_button("⬇️ Excel 다운로드", data=bio.read(), file_name="result_unitrate.xlsx")
+            cost_db_run = cost_db.copy()
 
+        st.sidebar.caption(f"실행용 cost_db 행수: {len(cost_db_run):,} / 전체 {len(cost_db):,}")
 
+        progress = st.progress(0.0)
+        prog_text = st.empty()
 
+        with st.spinner("임베딩/인덱스 준비 및 계산 중..."):
+            result_df, log_df = match_items_faiss(
+                cost_db=cost_db_run,
+                boq=boq,
+                price_index=price_index,
+                exchange=exchange,
+                factor=factor,
+                sim_threshold=sim_threshold,
+                cut_ratio=cut_ratio,
+                target_currency=target_currency,
+                w_str=w_str,
+                w_sem=w_sem,
+                top_k_sem=top_k_sem,
+                progress=progress,
+                prog_text=prog_text,
+            )
 
+        progress.progress(1.0)
+        prog_text.text("산출 진행률: 완료")
 
+        st.success("✅ 완료! 결과 확인 및 다운로드 가능")
 
+        tab1, tab2 = st.tabs(["📄 BOQ 결과", "🧾 산출 로그"])
 
+        with tab1:
+            if "통화" in result_df.columns:
+                result_df = result_df.drop(columns=["통화"])
+            st.dataframe(result_df, use_container_width=True)
 
+        with tab2:
+            st.dataframe(log_df, use_container_width=True)
 
-
-
-
-
-
-
-
-
+        bio = io.BytesIO()
+        with pd.ExcelWriter(bio, engine="openpyxl") as writer:
+            result_df.to_excel(writer, index=False, sheet_name="boq_with_price")
+            log_df.to_excel(writer, index=False, sheet_name="calculation_log")
+        bio.seek(0)
+        st.download_button("⬇️ Excel 다운로드", data=bio.read(), file_name="result_unitrate.xlsx")
 
