@@ -366,18 +366,16 @@ def load_excel_from_repo(filename: str) -> pd.DataFrame:
     return pd.read_excel(path, engine="openpyxl")
 
 cost_db     = load_excel_from_repo("cost_db.xlsx")
-# =========================
-# (A) 현장코드 정규화 컬럼 사전 생성 (매우 중요)
-# =========================
-cost_db["현장코드_norm"] = cost_db["현장코드"].apply(norm_site_code)
-
-project_feature_long["현장코드_norm"] = project_feature_long["현장코드"].apply(norm_site_code)
-project_feature_long["특성ID"] = project_feature_long["특성ID"].astype(str).str.strip()
 price_index = load_excel_from_repo("price_index.xlsx")
 exchange    = load_excel_from_repo("exchange.xlsx")
 factor      = load_excel_from_repo("Factor.xlsx")
 project_feature_long = load_excel_from_repo("project_feature_long.xlsx")
-feature_master = load_excel_from_repo("feature_master_FID.xlsx")
+feature_master       = load_excel_from_repo("feature_master_FID.xlsx")
+
+# ✅ norm 컬럼은 로드 이후 생성
+cost_db["현장코드_norm"] = cost_db["현장코드"].apply(norm_site_code)
+project_feature_long["현장코드_norm"] = project_feature_long["현장코드"].apply(norm_site_code)
+project_feature_long["특성ID"] = project_feature_long["특성ID"].astype(str).str.strip()
 
 
 # =========================
@@ -474,6 +472,28 @@ if use_site_filter:
         merged_ids = sorted(list(dict.fromkeys(kept_ids + new_ids)))
 
         st.session_state["selected_feature_ids"] = merged_ids
+        # =========================
+        # ✅ auto_sites 계산 (선택된 특성ID 기반)
+        # =========================
+        selected_fids = [str(x).strip() for x in st.session_state["selected_feature_ids"]]
+        
+        if selected_fids:
+            auto_sites = (
+                project_feature_long[
+                    project_feature_long["특성ID"].isin(selected_fids)
+                ]["현장코드_norm"]
+                .dropna()
+                .astype(str)
+                .unique()
+                .tolist()
+            )
+        else:
+            auto_sites = []
+        
+        st.session_state["auto_sites"] = auto_sites
+        st.success(f"자동 후보 현장: {len(auto_sites)}개")
+        if len(auto_sites) <= 30:
+            st.write(auto_sites)
 
         st.markdown("#### ✅ 선택된 특성ID")
         if merged_ids:
@@ -524,8 +544,7 @@ st.session_state["auto_sites"] = auto_sites
         auto_codes = [norm_site_code(x) for x in auto_sites]
         auto_labels = [code_to_label[c] for c in auto_codes if c in code_to_label]
         
-        # ✅ 사이드바 multiselect의 default를 “자동후보로 강제”
-        st.session_state["selected_auto_labels"] = auto_labels
+
         
         st.success(f"자동 후보 현장: {len(auto_sites)}개")
         if len(auto_sites) <= 30:
@@ -561,11 +580,14 @@ if use_site_filter:
 
     st.sidebar.caption(f"자동 후보 {len(auto_labels)}개 / 기타 {len(other_labels)}개")
 
+    # ✅ auto_labels가 바뀌면 key를 바꿔서 default가 새로 반영되게 함
+    auto_key = "selected_auto_labels_" + str(hash(tuple(auto_labels)))
+    
     selected_auto_labels = st.sidebar.multiselect(
         "자동 후보(제외 가능)",
         options=auto_labels,
         default=auto_labels,
-        key="selected_auto_labels"
+        key=auto_key
     )
 
     selected_extra_labels = st.sidebar.multiselect(
@@ -667,6 +689,7 @@ if use_site_filter:
                 log_df.to_excel(writer, index=False, sheet_name="calculation_log")
             bio.seek(0)
             st.download_button("⬇️ Excel 다운로드", data=bio.read(), file_name="result_unitrate.xlsx")
+
 
 
 
