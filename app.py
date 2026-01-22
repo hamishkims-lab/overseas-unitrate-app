@@ -505,33 +505,36 @@ if use_site_filter:
         # ✅ auto_sites 변경 시: 사이드바 선택 UI 강제 갱신 (안전 버전)
         # =========================
         # 1) 표준화 + 정렬(순서 안정화)
-        new_auto_sites = sorted({norm_site_code(x) for x in (auto_sites or []) if norm_site_code(x)})
+        new_auto_sites = sorted({
+            norm_site_code(x)
+            for x in (auto_sites or [])
+            if norm_site_code(x)
+        })
 
         # 2) 이전 값(표준화 + 정렬)
-        old_auto_sites = sorted({norm_site_code(x) for x in (st.session_state.get("auto_sites", []) or []) if norm_site_code(x)})
+        old_auto_sites = sorted({
+            norm_site_code(x)
+            for x in (st.session_state.get("auto_sites", []) or [])
+            if norm_site_code(x)
+        })
 
         # 3) 변경된 경우에만 session 업데이트 + 사이드바 multiselect key 제거 + rerun 1회
         if new_auto_sites != old_auto_sites:
             st.session_state["auto_sites"] = new_auto_sites
 
-            # ✅ 실제 사이드바 multiselect key 이름과 동일해야 함
-            for k in [
-            "selected_auto_labels",
-            "selected_extra_labels",
-            "auto_sites",
-            "selected_feature_ids",
-        ]:
-            if k in st.session_state:
-                del st.session_state[k]
+            # ✅ 사이드바 multiselect key만 제거 (default 갱신 목적)
+            for k in ["selected_auto_labels", "selected_extra_labels"]:
+                if k in st.session_state:
+                    del st.session_state[k]
 
             st.rerun()
         else:
             st.session_state["auto_sites"] = new_auto_sites
 
-        st.success(f"자동 후보 현장: {len(auto_sites)}개")
-      
-        if len(auto_sites) <= 30:
-            st.write(auto_sites)
+        st.success(f"자동 후보 현장: {len(new_auto_sites)}개")
+
+        if len(new_auto_sites) <= 30:
+            st.write(new_auto_sites)
 
         st.markdown("</div>", unsafe_allow_html=True)
     else:
@@ -683,6 +686,7 @@ if run_btn:
             log_df.to_excel(writer, index=False, sheet_name="calculation_log")
         bio.seek(0)
         st.download_button("⬇️ Excel 다운로드", data=bio.read(), file_name="result_unitrate.xlsx")
+
 
 
 
