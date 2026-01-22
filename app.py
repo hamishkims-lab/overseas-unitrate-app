@@ -583,25 +583,39 @@ if use_site_filter:
 
     st.sidebar.caption(f"자동 후보 {len(auto_labels)}개 / 기타 {len(other_labels)}개")
 
-    # ✅ 중요: default를 session_state로 “자동 갱신”시키려면,
-    # auto_labels가 바뀌었을 때 key를 삭제해야 함 (BOQ 아래에서 처리하는 게 베스트)
+    # =========================
+    # ✅ auto 후보가 바뀌면: 사이드바 자동 후보를 "즉시 전체 선택" 상태로 세팅
+    #    (사용자는 체크 해제로 제외 가능)
+    # =========================
+    auto_sig = "|".join(auto_labels)  # auto 후보가 달라지면 시그니처도 달라짐
+
+    # 1) auto 후보가 바뀐 최초 1회에만 '전체 선택'으로 초기화
+    if st.session_state.get("_auto_sig") != auto_sig:
+        st.session_state["_auto_sig"] = auto_sig
+        st.session_state["selected_auto_labels"] = list(auto_labels)
+
+    # 2) 키가 아예 없으면(최초 진입 등) 기본값 세팅
+    if "selected_auto_labels" not in st.session_state:
+        st.session_state["selected_auto_labels"] = list(auto_labels)
+    if "selected_extra_labels" not in st.session_state:
+        st.session_state["selected_extra_labels"] = []
+
+    # 3) default를 쓰지 말고 session_state 값으로 렌더링
     selected_auto_labels = st.sidebar.multiselect(
         "자동 후보(제외 가능)",
         options=auto_labels,
-        default=auto_labels,
-        key="selected_auto_labels"
+        key="selected_auto_labels",
     )
     selected_auto_codes = [x.split(" | ")[0] for x in selected_auto_labels]
 
     selected_extra_labels = st.sidebar.multiselect(
         "기타 현장(추가 가능)",
         options=other_labels,
-        default=[],
-        key="selected_extra_labels"
+        key="selected_extra_labels",
     )
     selected_extra_codes = [x.split(" | ")[0] for x in selected_extra_labels]
 
-    selected_site_codes = sorted(list(set(selected_auto_codes + selected_extra_codes)))
+    selected_site_codes = sorted(set(selected_auto_codes + selected_extra_codes))
     st.sidebar.caption(f"최종 선택 현장: {len(selected_site_codes)}개")
 
 
@@ -686,6 +700,7 @@ if run_btn:
             log_df.to_excel(writer, index=False, sheet_name="calculation_log")
         bio.seek(0)
         st.download_button("⬇️ Excel 다운로드", data=bio.read(), file_name="result_unitrate.xlsx")
+
 
 
 
