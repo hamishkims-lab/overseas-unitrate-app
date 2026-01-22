@@ -343,6 +343,17 @@ def match_items_faiss(
         reason_text = f"{len(currencies)}개국({', '.join(currencies)}) {len(kept)}개 내역 근거"
 
         final_price = float(kept["__adj_price"].mean()) if not kept.empty else None
+        # -------- 로그(최소) 기록 --------
+        logs.append({
+            "BOQ_내역": boq_item,
+            "BOQ_Unit": boq_unit,
+            "후보수_sem": int(len(cand_df)),
+            "후보수_unit일치": int(len(unit_df)) if isinstance(unit_df, pd.DataFrame) else 0,
+            "후보수_threshold통과": int(len(unit_df)) if isinstance(unit_df, pd.DataFrame) else 0,
+            "후보수_kept": int(len(kept)) if isinstance(kept, pd.DataFrame) else 0,
+            "사용통화": ", ".join(currencies) if isinstance(currencies, list) else "",
+            "FinalPrice(평균)": float(final_price) if final_price is not None else None,
+        })
 
         res_row = dict(boq_row)
         res_row["Final Price"] = f"{final_price:,.2f}" if final_price is not None else None
@@ -491,29 +502,31 @@ if use_site_filter:
         st.session_state["auto_sites"] = auto_sites
 
         # =========================
-        # ✅ auto_sites 변경 시: 사이드바 선택 UI 강제 갱신
+        # ✅ auto_sites 변경 시: 사이드바 선택 UI 강제 갱신 (안전 버전)
         # =========================
-        new_auto_sites = [norm_site_code(x) for x in (auto_sites or [])]
-        old_auto_sites = [norm_site_code(x) for x in st.session_state.get("auto_sites", [])]
-        
-        # 값이 바뀐 경우에만 갱신
-        if set(new_auto_sites) != set(old_auto_sites):
+        # 1) 표준화 + 정렬(순서 안정화)
+        new_auto_sites = sorted({norm_site_code(x) for x in (auto_sites or []) if norm_site_code(x)})
+
+        # 2) 이전 값(표준화 + 정렬)
+        old_auto_sites = sorted({norm_site_code(x) for x in (st.session_state.get("auto_sites", []) or []) if norm_site_code(x)})
+
+        # 3) 변경된 경우에만 session 업데이트 + 사이드바 multiselect key 제거 + rerun 1회
+        if new_auto_sites != old_auto_sites:
             st.session_state["auto_sites"] = new_auto_sites
-        
-            # 사이드바 multiselect가 이전 선택을 고정하고 있어서,
-            # key를 삭제해야 default=auto_labels가 다시 적용됨
-            for k in ["selected_auto_labels_simple", "selected_extra_labels_simple"]:
-                if k in st.session_state:
-                    del st.session_state[k]
-        
+
+            # ✅ 실제 사이드바 multiselect key 이름과 동일해야 함
+            for k in [
+            "selected_auto_labels",
+            "selected_extra_labels",
+            "auto_sites",
+            "selected_feature_ids",
+        ]:
+            if k in st.session_state:
+                del st.session_state[k]
+
             st.rerun()
         else:
             st.session_state["auto_sites"] = new_auto_sites
-
-        prev = st.session_state.get("_prev_auto_sites", None)
-        if prev != auto_sites:
-            st.session_state["_prev_auto_sites"] = auto_sites
-            st.rerun()
 
         st.success(f"자동 후보 현장: {len(auto_sites)}개")
       
@@ -670,6 +683,7 @@ if run_btn:
             log_df.to_excel(writer, index=False, sheet_name="calculation_log")
         bio.seek(0)
         st.download_button("⬇️ Excel 다운로드", data=bio.read(), file_name="result_unitrate.xlsx")
+
 
 
 
