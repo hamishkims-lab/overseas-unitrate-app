@@ -705,63 +705,134 @@ if missing_factor:
 
 
 # =========================
-# Run 버튼 (계산은 버튼에서만, 화면은 session_state 있으면 항상 표시)
+# Run / Auto Recompute
+# =========================
+# ✅ 자동 재산출 토글(사이드바)
+auto_recompute = st.sidebar.checkbox(
+    "조건 변경 시 자동 재산출",
+    value=True,
+    help="현장/Threshold/컷비율/산출통화 등을 바꾸면 자동으로 다시 산출합니다. (기존 로그 편집값은 초기화됩니다.)",
+    key="auto_recompute",
+)
+
+def boq_file_signature(uploaded_file) -> str:
+    """BOQ 파일이 바뀌었는지 감지하기 위한 간단 서명(해시)."""
+    if uploaded_file is None:
+        return "no_boq"
+    try:
+        b = uploaded_file.getvalue()
+        # 너무 크면 앞/뒤 일부만 해시
+        if len(b) > 2_000_000:
+            b = b[:1_000_000] + b[-1_000_000:]
+        return hashlib.md5(b).hexdigest()
+    except Exception:
+        # fallback
+        return f"{getattr(uploaded_file, 'name', 'boq')}_{getattr(uploaded_file, 'size', '')}"
+
+def make_params_signature() -> str:
+    payload = {
+        "boq": boq_file_signature(boq_file),
+        "use_site_filter": bool(use_site_filter),
+        "selected_site_codes": sorted([norm_site_code(x) for x in (selected_site_codes or [])]),
+        "sim_threshold": float(sim_threshold),
+        "cut_ratio": float(cut_ratio),
+        "target_currency": str(target_currency),
+        "w_str": float(w_str),
+        "w_sem": float(w_sem),
+        "top_k_sem": int(top_k_sem),
+    }
+    s = json.dumps(payload, ensure_ascii=False, sort_keys=True)
+    return hashlib.md5(s.encode("utf-8")).hexdigest()
+
+def run_calculation_and_store(run_sig: str):
+    """'산출 실행'과 동일한 효과: 계산 → session_state 저장 → 편집값 초기화"""
+    if boq_file is None:
+        st.warning("BOQ 파일을 업로드해 주세요.")
+        return
+    if missing_exchange or missing_factor:
+        st.error("산출통화에 필요한 환율/지수 정보가 없습니다.")
+        return
+
+    boq = pd.read_excel(boq_file, engine="openpyxl")
+
+    if use_site_filter and selected_site_codes is not None:
+        cost_db_run = cost_db[
+            cost_db["현장코드"].apply(norm_site_code).isin([norm_site_code(x) for x in selected_site_codes])
+        ].copy()
+    else:
+        cost_db_run = cost_db.copy()
+
+    st.sidebar.caption(f"실행용 cost_db 행수: {len(cost_db_run):,} / 전체 {len(cost_db):,}")
+
+    progress = st.progress(0.0)
+    prog_text = st.empty()
+
+    with st.spinner("임베딩/인덱스 준비 및 계산 중..."):
+        result_df, log_df = match_items_faiss(
+            cost_db=cost_db_run,
+            boq=boq,
+            price_index=price_index,
+            exchange=exchange,
+            factor=factor,
+            sim_threshold=sim_threshold,
+            cut_ratio=cut_ratio,
+            target_currency=target_currency,
+            w_str=w_str,
+            w_sem=w_sem,
+            top_k_sem=top_k_sem,
+            progress=progress,
+            prog_text=prog_text,
+        )
+
+    progress.progress(1.0)
+    prog_text.text("산출 진행률: 완료")
+    st.success("✅ 완료! 결과 확인 및 다운로드 가능")
+
+    # ✅ 계산 결과 저장 (rerun 되어도 유지)
+    st.session_state["boq_df"] = boq
+    st.session_state["result_df_base"] = result_df.copy()
+    st.session_state["log_df_base"] = log_df.copy()
+    st.session_state["log_df_edited"] = log_df.copy()   # ✅ 편집값 초기화(재산출=실행과 동일효과)
+    st.session_state.pop("result_df_adjusted", None)    # ✅ 조정 결과 초기화
+    st.session_state["has_results"] = True
+
+    # ✅ 이번 실행 조건 서명 저장
+    st.session_state["last_run_sig"] = run_sig
+
+
+# =========================
+# (1) 실행 트리거 결정
 # =========================
 run_btn = st.sidebar.button("🚀 산출 실행")
 
-# 1) 버튼을 눌렀을 때만 계산 수행 + session_state 저장
-if run_btn:
-    if boq_file is None:
-        st.warning("BOQ 파일을 업로드해 주세요.")
-    elif missing_exchange or missing_factor:
-        st.error("산출통화에 필요한 환율/지수 정보가 없습니다.")
-    else:
-        boq = pd.read_excel(boq_file, engine="openpyxl")
+current_sig = make_params_signature()
+last_sig = st.session_state.get("last_run_sig", None)
 
-        if use_site_filter and selected_site_codes is not None:
-            cost_db_run = cost_db[
-                cost_db["현장코드"].apply(norm_site_code).isin([norm_site_code(x) for x in selected_site_codes])
-            ].copy()
-        else:
-            cost_db_run = cost_db.copy()
+needs_rerun = (last_sig is not None and current_sig != last_sig)
 
-        st.sidebar.caption(f"실행용 cost_db 행수: {len(cost_db_run):,} / 전체 {len(cost_db):,}")
+# 자동 재산출 OFF인데 조건 바뀐 경우 → 경고
+if st.session_state.get("has_results", False) and needs_rerun and not auto_recompute:
+    st.sidebar.warning("⚠️ 조건이 변경되었습니다. 다시 산출 실행이 필요합니다.")
 
-        progress = st.progress(0.0)
-        prog_text = st.empty()
+# 자동 재산출 ON이고, 결과가 이미 있고, 조건 바뀌면 → 자동 실행
+auto_run = st.session_state.get("has_results", False) and needs_rerun and auto_recompute
 
-        with st.spinner("임베딩/인덱스 준비 및 계산 중..."):
-            result_df, log_df = match_items_faiss(
-                cost_db=cost_db_run,
-                boq=boq,
-                price_index=price_index,
-                exchange=exchange,
-                factor=factor,
-                sim_threshold=sim_threshold,
-                cut_ratio=cut_ratio,
-                target_currency=target_currency,
-                w_str=w_str,
-                w_sem=w_sem,
-                top_k_sem=top_k_sem,
-                progress=progress,
-                prog_text=prog_text,
-            )
+# 최초 실행(결과 없음)인데 auto_recompute 켜져 있어도, 버튼 없이 자동 실행은 부담될 수 있어 기본은 안 함
+# 원하면 아래 조건을 확장해서 'BOQ 업로드 시 자동 1회 실행'도 가능
 
-        progress.progress(1.0)
-        prog_text.text("산출 진행률: 완료")
-        st.success("✅ 완료! 결과 확인 및 다운로드 가능")
+# =========================
+# (2) 버튼 실행 또는 자동 실행
+# =========================
+if run_btn or auto_run:
+    # 자동 재산출이면 사용자 편집이 초기화될 수 있으니 안내
+    if auto_run:
+        st.sidebar.info("ℹ️ 조건 변경 감지 → 자동 재산출 중 (로그 편집값은 초기화됩니다)")
+    run_calculation_and_store(current_sig)
 
-        # ✅ 계산 결과를 session_state에 저장 (rerun 되어도 유지)
-        st.session_state["boq_df"] = boq
-        st.session_state["result_df_base"] = result_df.copy()
-        st.session_state["log_df_base"] = log_df.copy()
-        st.session_state["has_results"] = True
 
-        # 편집본이 있으면 최신 계산 기준으로 리셋(원하면 이 줄은 지워도 됨)
-        st.session_state["log_df_edited"] = log_df.copy()
-        st.session_state.pop("result_df_adjusted", None)
-
-# 2) 버튼을 안 눌러도, 결과가 있으면 항상 결과/로그 UI를 보여줌
+# =========================
+# (3) 결과 화면: 결과가 있으면 항상 표시
+# =========================
 if st.session_state.get("has_results", False):
     boq = st.session_state["boq_df"]
     result_df = st.session_state["result_df_base"]
@@ -793,7 +864,6 @@ if st.session_state.get("has_results", False):
             out_prices.append((int(boq_id), f"{final_price:,.2f}", reason_text, top_work))
 
         upd = pd.DataFrame(out_prices, columns=["BOQ_ID", "Final Price", "산출근거", "근거공종(최빈)"])
-
         base = base.drop(columns=[c for c in ["Final Price", "산출근거", "근거공종(최빈)"] if c in base.columns], errors="ignore")
         base = base.merge(upd, on="BOQ_ID", how="left")
         return base
@@ -808,124 +878,31 @@ if st.session_state.get("has_results", False):
 
         log_all = st.session_state["log_df_edited"]
 
-        # ✅ BOQ 선택 옵션을 "ID | 내역" 형태로 보기 좋게
         boq_ids = sorted(log_all["BOQ_ID"].dropna().astype(int).unique().tolist())
+        sel_id = st.selectbox("편집할 BOQ 선택", options=boq_ids, key="sel_boq_id")
 
-        # result_df_base에 BOQ_ID가 있고 BOQ 원문 내역 컬럼(예: '내역')이 있다고 가정
-        base_for_label = st.session_state["result_df_base"].copy()
-        # BOQ 원 내역 컬럼명이 다르면 여기만 바꿔주세요.
-        boq_text_col = "내역" if "내역" in base_for_label.columns else "BOQ_내역"
+        log_view = log_all[log_all["BOQ_ID"].astype(int) == int(sel_id)].copy()
 
-        id_to_text = (
-            base_for_label.dropna(subset=["BOQ_ID"])
-            .assign(BOQ_ID=lambda d: d["BOQ_ID"].astype(int))
-            .set_index("BOQ_ID")[boq_text_col]
-            .astype(str)
-            .to_dict()
-        )
-
-        def fmt_boq_id(x: int) -> str:
-            t = id_to_text.get(int(x), "")
-            t = (t[:60] + "…") if len(t) > 60 else t
-            return f"{int(x)} | {t}"
-
-        sel_id = st.selectbox(
-            "편집할 BOQ 선택",
-            options=boq_ids,
-            format_func=fmt_boq_id,
-            key="sel_boq_id",
-        )
-
-        # ✅ 선택된 BOQ 후보만
-        log_view_full = log_all[log_all["BOQ_ID"].astype(int) == int(sel_id)].copy()
-
-        # -------------------------
-        # ✅ 화면 표시용 컬럼 구성/순서 (BOQ정보는 숨김)
-        # -------------------------
-        display_cols = [
-            "Include", "DefaultInclude",
-            "내역", "Unit",
-            "Unit Price", "통화",
-            "__adj_price", "산출통화",
-            "__cpi_ratio", "__fx_ratio", "__fac_ratio", "__latest_ym",
-            "__hyb",
-            "공종코드", "공종명",
-            "현장코드", "현장명",
-            "협력사코드", "협력사명",
-        ]
-
-        # 없는 컬럼 대비(안전)
-        for c in display_cols:
-            if c not in log_view_full.columns:
-                log_view_full[c] = None
-
-        log_view = log_view_full[display_cols].copy()
-
-        # ✅ 내역 폭 넓히기 + 라벨 바꾸기(가독성)
         edited_view = st.data_editor(
             log_view,
             use_container_width=True,
             hide_index=True,
             column_config={
-                "Include": st.column_config.CheckboxColumn("포함(평균 반영)", help="체크 해제하면 평균단가 산출에서 제외"),
-                "DefaultInclude": st.column_config.CheckboxColumn("기본포함", help="초기 자동 포함 여부(컷 로직 결과)"),
-
-                "내역": st.column_config.TextColumn("내역", width="large"),
-                "Unit": st.column_config.TextColumn("Unit"),
-
-                "Unit Price": st.column_config.NumberColumn("원단가(Unit Price)", format="%.4f"),
-                "통화": st.column_config.TextColumn("원통화"),
-
-                "__adj_price": st.column_config.NumberColumn("산출단가(보정후)", format="%.4f"),
-                "산출통화": st.column_config.TextColumn("산출통화"),
-
-                "__cpi_ratio": st.column_config.NumberColumn("CPI 보정", format="%.6f"),
-                "__fx_ratio": st.column_config.NumberColumn("환율 보정", format="%.6f"),
-                "__fac_ratio": st.column_config.NumberColumn("Factor 보정", format="%.6f"),
-                "__latest_ym": st.column_config.TextColumn("CPI 최신월"),
-
+                "Include": st.column_config.CheckboxColumn("포함", help="평균단가 산출 포함/제외"),
+                "__adj_price": st.column_config.NumberColumn("산출단가(산출통화 기준)", format="%.4f"),
                 "__hyb": st.column_config.NumberColumn("유사도점수", format="%.2f"),
-
-                "공종코드": st.column_config.TextColumn("공종코드"),
-                "공종명": st.column_config.TextColumn("공종명"),
-
-                "현장코드": st.column_config.TextColumn("현장코드"),
-                "현장명": st.column_config.TextColumn("현장명"),
-
-                "협력사코드": st.column_config.TextColumn("협력사코드"),
-                "협력사명": st.column_config.TextColumn("협력사명"),
             },
-            # ✅ Include만 편집 가능
             disabled=[c for c in log_view.columns if c not in ["Include"]],
             key="log_editor",
         )
-
-        # -------------------------
-        # ✅ 편집 반영: 원본(log_all)의 Include만 업데이트
-        # -------------------------
-        log_all_updated = log_all.copy()
-        mask = log_all_updated["BOQ_ID"].astype(int) == int(sel_id)
-
-        # 행수 불일치 방지(안전)
-        if mask.sum() == len(edited_view):
-            log_all_updated.loc[mask, "Include"] = edited_view["Include"].values
-            st.session_state["log_df_edited"] = log_all_updated
-
-            # 편집 즉시 결과 재계산
-            st.session_state["result_df_adjusted"] = recompute_result_from_log(st.session_state["log_df_edited"])
-        else:
-            st.warning("로그 행수가 일치하지 않아 Include 반영을 건너뛰었습니다. 다시 선택해 주세요.")
 
         # BOQ_ID 단위로 Include만 반영
         log_all_updated = log_all.copy()
         mask = log_all_updated["BOQ_ID"].astype(int) == int(sel_id)
 
-        # 행수 불일치 방지(안전)
         if mask.sum() == len(edited_view):
             log_all_updated.loc[mask, "Include"] = edited_view["Include"].values
             st.session_state["log_df_edited"] = log_all_updated
-
-            # 편집 즉시 결과 재계산
             st.session_state["result_df_adjusted"] = recompute_result_from_log(st.session_state["log_df_edited"])
         else:
             st.warning("로그 행수가 일치하지 않아 Include 반영을 건너뛰었습니다. 다시 선택해 주세요.")
@@ -946,6 +923,7 @@ if st.session_state.get("has_results", False):
         out_log.to_excel(writer, index=False, sheet_name="calculation_log")
     bio.seek(0)
     st.download_button("⬇️ Excel 다운로드", data=bio.read(), file_name="result_unitrate.xlsx")
+
 
 
 
