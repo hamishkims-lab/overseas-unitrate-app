@@ -703,10 +703,11 @@ if missing_factor:
 
 
 # =========================
-# Run 버튼
+# Run 버튼 (계산은 버튼에서만, 화면은 session_state 있으면 항상 표시)
 # =========================
 run_btn = st.sidebar.button("🚀 산출 실행")
 
+# 1) 버튼을 눌렀을 때만 계산 수행 + session_state 저장
 if run_btn:
     if boq_file is None:
         st.warning("BOQ 파일을 업로드해 주세요.")
@@ -746,115 +747,114 @@ if run_btn:
 
         progress.progress(1.0)
         prog_text.text("산출 진행률: 완료")
-
         st.success("✅ 완료! 결과 확인 및 다운로드 가능")
 
-        # -------------------------
-        # 세션에 저장(편집/재계산을 위해)
-        # -------------------------
+        # ✅ 계산 결과를 session_state에 저장 (rerun 되어도 유지)
+        st.session_state["boq_df"] = boq
         st.session_state["result_df_base"] = result_df.copy()
         st.session_state["log_df_base"] = log_df.copy()
+        st.session_state["has_results"] = True
 
-        # -------------------------
-        # 로그 Include 기준으로 결과 재계산 함수
-        # -------------------------
-        def recompute_result_from_log(boq_df: pd.DataFrame, edited_log: pd.DataFrame) -> pd.DataFrame:
-            base = st.session_state["result_df_base"].copy()
+        # 편집본이 있으면 최신 계산 기준으로 리셋(원하면 이 줄은 지워도 됨)
+        st.session_state["log_df_edited"] = log_df.copy()
+        st.session_state.pop("result_df_adjusted", None)
 
-            # 기본값: Final Price/근거공종/산출근거를 로그로 다시 계산
-            out_prices = []
-            for boq_id, g in edited_log.groupby("BOQ_ID"):
-                g2 = g[g["Include"] == True].copy()
-                if g2.empty:
-                    out_prices.append((boq_id, None, "매칭 후보 없음(또는 전부 제외)", ""))
-                    continue
+# 2) 버튼을 안 눌러도, 결과가 있으면 항상 결과/로그 UI를 보여줌
+if st.session_state.get("has_results", False):
+    boq = st.session_state["boq_df"]
+    result_df = st.session_state["result_df_base"]
+    log_df = st.session_state["log_df_base"]
 
-                final_price = float(pd.to_numeric(g2["__adj_price"], errors="coerce").mean())
+    # -------------------------
+    # 로그 Include 기준으로 결과 재계산 함수
+    # -------------------------
+    def recompute_result_from_log(edited_log: pd.DataFrame) -> pd.DataFrame:
+        base = st.session_state["result_df_base"].copy()
 
-                currencies = sorted(g2["통화"].astype(str).str.upper().unique().tolist())
-                reason_text = f"{len(currencies)}개국({', '.join(currencies)}) {len(g2)}개 내역 근거"
+        out_prices = []
+        for boq_id, g in edited_log.groupby("BOQ_ID"):
+            g2 = g[g["Include"] == True].copy()
+            if g2.empty:
+                out_prices.append((int(boq_id), None, "매칭 후보 없음(또는 전부 제외)", ""))
+                continue
 
-                vc = g2["공종코드"].astype(str).value_counts()
-                top_code = vc.index[0] if len(vc) else ""
-                top_cnt = int(vc.iloc[0]) if len(vc) else 0
-                top_work = f"{top_code} ({top_cnt}/{len(g2)})" if top_code else ""
+            final_price = float(pd.to_numeric(g2["__adj_price"], errors="coerce").mean())
 
-                out_prices.append((int(boq_id), f"{final_price:,.2f}", reason_text, top_work))
+            currencies = sorted(g2["통화"].astype(str).str.upper().unique().tolist())
+            reason_text = f"{len(currencies)}개국({', '.join(currencies)}) {len(g2)}개 내역 근거"
 
-            upd = pd.DataFrame(out_prices, columns=["BOQ_ID", "Final Price", "산출근거", "근거공종(최빈)"])
+            vc = g2["공종코드"].astype(str).value_counts()
+            top_code = vc.index[0] if len(vc) else ""
+            top_cnt = int(vc.iloc[0]) if len(vc) else 0
+            top_work = f"{top_code} ({top_cnt}/{len(g2)})" if top_code else ""
 
-            # BOQ_ID 기준으로 업데이트
-            base = base.drop(columns=[c for c in ["Final Price", "산출근거", "근거공종(최빈)"] if c in base.columns], errors="ignore")
-            base = base.merge(upd, on="BOQ_ID", how="left")
+            out_prices.append((int(boq_id), f"{final_price:,.2f}", reason_text, top_work))
 
-            return base
+        upd = pd.DataFrame(out_prices, columns=["BOQ_ID", "Final Price", "산출근거", "근거공종(최빈)"])
 
-        tab1, tab2 = st.tabs(["📄 BOQ 결과", "🧾 산출 로그(편집 가능)"])
+        base = base.drop(columns=[c for c in ["Final Price", "산출근거", "근거공종(최빈)"] if c in base.columns], errors="ignore")
+        base = base.merge(upd, on="BOQ_ID", how="left")
+        return base
 
-        with tab2:
-            st.caption("✅ 체크 해제하면 평균단가 산출에서 제외됩니다. 체크하면 포함됩니다.")
+    tab1, tab2 = st.tabs(["📄 BOQ 결과", "🧾 산출 로그(편집 가능)"])
 
-            # 편집용 로그 DF: 없으면 base 사용
-            if "log_df_edited" not in st.session_state:
-                st.session_state["log_df_edited"] = st.session_state["log_df_base"].copy()
+    with tab2:
+        st.caption("✅ 체크 해제하면 평균단가 산출에서 제외됩니다. 체크하면 포함됩니다.")
 
-            # BOQ 선택 필터(너무 길면 편집 어려워서)
-            log_all = st.session_state["log_df_edited"]
-            boq_ids = sorted(log_all["BOQ_ID"].dropna().astype(int).unique().tolist())
-            sel_id = st.selectbox("편집할 BOQ_ID 선택", options=boq_ids)
+        if "log_df_edited" not in st.session_state:
+            st.session_state["log_df_edited"] = log_df.copy()
 
-            log_view = log_all[log_all["BOQ_ID"].astype(int) == int(sel_id)].copy()
+        log_all = st.session_state["log_df_edited"]
 
-            # data_editor로 Include 편집
-            edited_view = st.data_editor(
-                log_view,
-                use_container_width=True,
-                hide_index=True,
-                column_config={
-                    "Include": st.column_config.CheckboxColumn("Include", help="평균단가 산출 포함/제외"),
-                    "__adj_price": st.column_config.NumberColumn("__adj_price", format="%.2f"),
-                    "__hyb": st.column_config.NumberColumn("__hyb", format="%.2f"),
-                },
-                disabled=[c for c in log_view.columns if c not in ["Include"]],
-                key=f"log_editor_{sel_id}",
-            )
+        boq_ids = sorted(log_all["BOQ_ID"].dropna().astype(int).unique().tolist())
+        sel_id = st.selectbox("편집할 BOQ_ID 선택", options=boq_ids, key="sel_boq_id")
 
-            # 편집 내용을 전체 로그에 반영
-            # (BOQ_ID + 내역 + 현장코드 + Unit Price 등으로 조인하면 제일 안전하지만,
-            #  여기선 index 기반으로 BOQ 단위 덮어쓰기 방식 사용)
-            log_all_updated = log_all.copy()
-            mask = log_all_updated["BOQ_ID"].astype(int) == int(sel_id)
-            # 같은 행수 가정(동일 BOQ_ID로 만든 로그는 고정)
+        log_view = log_all[log_all["BOQ_ID"].astype(int) == int(sel_id)].copy()
+
+        edited_view = st.data_editor(
+            log_view,
+            use_container_width=True,
+            hide_index=True,
+            column_config={
+                "Include": st.column_config.CheckboxColumn("Include", help="평균단가 산출 포함/제외"),
+                "__adj_price": st.column_config.NumberColumn("__adj_price", format="%.2f"),
+                "__hyb": st.column_config.NumberColumn("__hyb", format="%.2f"),
+            },
+            disabled=[c for c in log_view.columns if c not in ["Include"]],
+            key="log_editor",  # ✅ 고정 key (BOQ_ID 바꿔도 화면 유지)
+        )
+
+        # BOQ_ID 단위로 Include만 반영
+        log_all_updated = log_all.copy()
+        mask = log_all_updated["BOQ_ID"].astype(int) == int(sel_id)
+
+        # 행수 불일치 방지(안전)
+        if mask.sum() == len(edited_view):
             log_all_updated.loc[mask, "Include"] = edited_view["Include"].values
-
             st.session_state["log_df_edited"] = log_all_updated
 
             # 편집 즉시 결과 재계산
-            st.session_state["result_df_adjusted"] = recompute_result_from_log(boq, st.session_state["log_df_edited"])
+            st.session_state["result_df_adjusted"] = recompute_result_from_log(st.session_state["log_df_edited"])
+        else:
+            st.warning("로그 행수가 일치하지 않아 Include 반영을 건너뛰었습니다. 다시 선택해 주세요.")
 
-        with tab1:
-            # 조정된 결과가 있으면 그걸 보여줌
-            show_df = st.session_state.get("result_df_adjusted", st.session_state["result_df_base"]).copy()
+    with tab1:
+        show_df = st.session_state.get("result_df_adjusted", result_df).copy()
+        if "통화" in show_df.columns:
+            show_df = show_df.drop(columns=["통화"])
+        st.dataframe(show_df, use_container_width=True)
 
-            # 기존처럼 통화 컬럼 숨김(있으면)
-            if "통화" in show_df.columns:
-                show_df = show_df.drop(columns=["통화"])
+    # 다운로드도 조정값 기준
+    out_result = st.session_state.get("result_df_adjusted", result_df).copy()
+    out_log = st.session_state.get("log_df_edited", log_df).copy()
 
-            st.dataframe(show_df, use_container_width=True)
+    bio = io.BytesIO()
+    with pd.ExcelWriter(bio, engine="openpyxl") as writer:
+        out_result.to_excel(writer, index=False, sheet_name="boq_with_price")
+        out_log.to_excel(writer, index=False, sheet_name="calculation_log")
+    bio.seek(0)
+    st.download_button("⬇️ Excel 다운로드", data=bio.read(), file_name="result_unitrate.xlsx")
 
-        # -------------------------
-        # 다운로드도 "조정된 결과" 기준으로
-        # -------------------------
-        out_result = st.session_state.get("result_df_adjusted", st.session_state["result_df_base"]).copy()
-        out_log = st.session_state.get("log_df_edited", st.session_state["log_df_base"]).copy()
-
-        bio = io.BytesIO()
-        with pd.ExcelWriter(bio, engine="openpyxl") as writer:
-            out_result.to_excel(writer, index=False, sheet_name="boq_with_price")
-            out_log.to_excel(writer, index=False, sheet_name="calculation_log")
-        bio.seek(0)
-
-        st.download_button("⬇️ Excel 다운로드", data=bio.read(), file_name="result_unitrate.xlsx")
 
 
 
