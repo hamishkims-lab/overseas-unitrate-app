@@ -878,34 +878,119 @@ if st.session_state.get("has_results", False):
 
         log_all = st.session_state["log_df_edited"]
 
+        # ✅ BOQ 선택을 "ID | 내역"으로 표시
         boq_ids = sorted(log_all["BOQ_ID"].dropna().astype(int).unique().tolist())
-        sel_id = st.selectbox("편집할 BOQ 선택", options=boq_ids, key="sel_boq_id")
 
-        log_view = log_all[log_all["BOQ_ID"].astype(int) == int(sel_id)].copy()
+        # result_df_base에서 BOQ_ID별 내역 텍스트 가져오기(있으면 더 정확)
+        base_for_label = st.session_state.get("result_df_base", pd.DataFrame()).copy()
+        boq_text_col = "내역" if ("내역" in base_for_label.columns) else None
 
+        id_to_text = {}
+        if boq_text_col and ("BOQ_ID" in base_for_label.columns):
+            id_to_text = (
+                base_for_label.dropna(subset=["BOQ_ID"])
+                .assign(BOQ_ID=lambda d: d["BOQ_ID"].astype(int))
+                .set_index("BOQ_ID")[boq_text_col]
+                .astype(str)
+                .to_dict()
+            )
+        else:
+            # fallback: log_df의 BOQ_내역 사용
+            tmp_map = (
+                log_all.dropna(subset=["BOQ_ID"])
+                .assign(BOQ_ID=lambda d: d["BOQ_ID"].astype(int))
+                .groupby("BOQ_ID")["BOQ_내역"].first()
+                .astype(str)
+                .to_dict()
+            )
+            id_to_text = tmp_map
+
+        def fmt_boq_id(x: int) -> str:
+            t = id_to_text.get(int(x), "")
+            t = (t[:60] + "…") if len(t) > 60 else t
+            return f"{int(x)} | {t}"
+
+        sel_id = st.selectbox(
+            "편집할 BOQ 선택",
+            options=boq_ids,
+            format_func=fmt_boq_id,
+            key="sel_boq_id"
+        )
+
+        # ✅ 선택된 BOQ 후보만
+        log_view_full = log_all[log_all["BOQ_ID"].astype(int) == int(sel_id)].copy()
+
+        # -------------------------
+        # ✅ 화면 표시용 컬럼(열 순서 고정)
+        # - 산출단가(__adj_price)은 앞쪽 유지
+        # - 산출근거: 물가 → 환율 → 국가 순
+        # - BOQ_ID/BOQ_내역/BOQ_Unit은 화면에서 숨김(다운로드에는 남아있음)
+        # -------------------------
+        display_cols = [
+            "Include", "DefaultInclude",
+            "내역", "Unit",
+            "Unit Price", "통화", "계약년월",
+            "__adj_price", "산출통화",
+            "__cpi_ratio", "__latest_ym",
+            "__fx_ratio",
+            "__fac_ratio",
+            "__hyb",
+            "공종코드", "공종명",
+            "현장코드", "현장명",
+            "협력사코드", "협력사명",
+        ]
+
+        for c in display_cols:
+            if c not in log_view_full.columns:
+                log_view_full[c] = None
+
+        log_view = log_view_full[display_cols].copy()
+
+        # ✅ 편집(Include만)
         edited_view = st.data_editor(
             log_view,
             use_container_width=True,
             hide_index=True,
             column_config={
                 "Include": st.column_config.CheckboxColumn("포함", help="평균단가 산출 포함/제외"),
+                "DefaultInclude": st.column_config.CheckboxColumn("기본포함", help="초기 자동 포함 여부(컷 로직)"),
+
+                "내역": st.column_config.TextColumn("내역", width="large"),
+                "Unit": st.column_config.TextColumn("단위(Unit)"),
+
+                "Unit Price": st.column_config.NumberColumn("원단가", format="%.4f"),
+                "통화": st.column_config.TextColumn("원통화"),
+                "계약년월": st.column_config.TextColumn("계약년월"),
+
                 "__adj_price": st.column_config.NumberColumn("산출단가(산출통화 기준)", format="%.4f"),
+                "산출통화": st.column_config.TextColumn("산출통화"),
+
+                "__cpi_ratio": st.column_config.NumberColumn("물가보정계수(CPI)", format="%.6f"),
+                "__latest_ym": st.column_config.TextColumn("물가지수 최신월"),
+
+                "__fx_ratio": st.column_config.NumberColumn("환율보정계수", format="%.6f"),
+                "__fac_ratio": st.column_config.NumberColumn("국가보정계수(Factor)", format="%.6f"),
+
                 "__hyb": st.column_config.NumberColumn("유사도점수", format="%.2f"),
+
+                "공종코드": st.column_config.TextColumn("공종코드"),
+                "공종명": st.column_config.TextColumn("공종명"),
+
+                "현장코드": st.column_config.TextColumn("현장코드"),
+                "현장명": st.column_config.TextColumn("현장명"),
+
+                "협력사코드": st.column_config.TextColumn("협력사코드"),
+                "협력사명": st.column_config.TextColumn("협력사명"),
             },
             disabled=[c for c in log_view.columns if c not in ["Include"]],
             key="log_editor",
         )
 
-        # BOQ_ID 단위로 Include만 반영
-        log_all_updated = log_all.copy()
-        mask = log_all_updated["BOQ_ID"].astype(int) == int(sel_id)
+        # ✅ 가장 안전한 반영 방식: 원본 인덱스로 Include만 업데이트
+        st.session_state["log_df_edited"].loc[log_view_full.index, "Include"] = edited_view["Include"].values
 
-        if mask.sum() == len(edited_view):
-            log_all_updated.loc[mask, "Include"] = edited_view["Include"].values
-            st.session_state["log_df_edited"] = log_all_updated
-            st.session_state["result_df_adjusted"] = recompute_result_from_log(st.session_state["log_df_edited"])
-        else:
-            st.warning("로그 행수가 일치하지 않아 Include 반영을 건너뛰었습니다. 다시 선택해 주세요.")
+        # ✅ 즉시 BOQ 결과 재계산
+        st.session_state["result_df_adjusted"] = recompute_result_from_log(st.session_state["log_df_edited"])
 
     with tab1:
         show_df = st.session_state.get("result_df_adjusted", result_df).copy()
@@ -923,6 +1008,7 @@ if st.session_state.get("has_results", False):
         out_log.to_excel(writer, index=False, sheet_name="calculation_log")
     bio.seek(0)
     st.download_button("⬇️ Excel 다운로드", data=bio.read(), file_name="result_unitrate.xlsx")
+
 
 
 
