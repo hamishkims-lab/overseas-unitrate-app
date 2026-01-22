@@ -234,42 +234,44 @@ def hybrid_scores(boq_text_norm: str, db_texts_norm: pd.Series, sem_scores: np.n
     str_scores = np.array([fuzz.token_sort_ratio(boq_text_norm, s) / 100.0 for s in db_texts_norm.tolist()], dtype="float32")
     return (w_str * str_scores + w_sem * sem) * 100.0
 
-def match_items_faiss(
+def build_candidate_pool(
     cost_db: pd.DataFrame,
     boq: pd.DataFrame,
     price_index: pd.DataFrame,
-    exchange: pd.DataFrame,
-    factor: pd.DataFrame,
-    sim_threshold: float,
-    cut_ratio: float,
-    target_currency: str,
-    w_str: float,
-    w_sem: float,
+    sim_w_str: float,
+    sim_w_sem: float,
     top_k_sem: int,
+    pool_per_boq: int = 400,
     progress=None,
     prog_text=None,
-):
+) -> pd.DataFrame:
+    """
+    ✅ 1단계(무거움): BOQ별 후보 풀 생성
+    - FAISS 검색 + 문자열 점수 + __hyb 계산까지 여기서만 수행
+    - 산출통화(FX/Factor)는 여기서 계산하지 않음(빠른 재계산에서 처리)
+    - CPI는 통화/계약월에만 의존하므로 여기서 미리 계산해 둠
+    """
     work = cost_db.copy()
     work["__내역_norm"] = work["내역"].apply(norm_text)
     work["__Unit_norm"] = work["Unit"].astype(str).str.lower().str.strip()
     work["_계약월"] = robust_parse_contract_month(work["계약년월"])
     work = work[(pd.to_numeric(work["Unit Price"], errors="coerce") > 0) & (work["_계약월"].notna())].copy()
 
-    price_index = price_index.copy()
-    price_index["년월"] = price_index["년월"].apply(to_year_month_string)
+    price_index2 = price_index.copy()
+    price_index2["년월"] = price_index2["년월"].apply(to_year_month_string)
 
-    fp = file_fingerprint(work, ["__내역_norm","__Unit_norm","통화","Unit Price","_계약월"])
+    fp = file_fingerprint(work, ["__내역_norm", "__Unit_norm", "통화", "Unit Price", "_계약월"])
     embs = compute_or_load_embeddings(work["__내역_norm"], tag=f"costdb_{fp}")
     index = build_faiss_index(embs) if FAISS_OK else None
 
-    results, logs = [], []
+    pool_rows = []
     total = len(boq) if len(boq) else 1
 
     for i, (_, boq_row) in enumerate(boq.iterrows(), start=1):
         if prog_text is not None:
-            prog_text.text(f"산출 진행률: {i}/{total} 항목 처리 중…")
+            prog_text.text(f"후보 풀 생성: {i}/{total} 처리 중…")
         if progress is not None:
-            progress.progress(i/total)
+            progress.progress(i / total)
 
         boq_item = str(boq_row.get("내역", ""))
         boq_unit = str(boq_row.get("Unit", "")).lower().strip()
@@ -290,144 +292,178 @@ def match_items_faiss(
         cand_df = work.iloc[cand_idx].copy()
         cand_df["__sem"] = sem_scores
 
+        # Unit 일치 후보만
         unit_df = cand_df[cand_df["__Unit_norm"] == boq_unit].reset_index(drop=True)
         if unit_df.empty:
-            res_row = dict(boq_row)
-            res_row["Final Price"] = None
-            res_row["산출근거"] = "매칭 없음"
-            results.append(res_row)
             continue
 
-        hyb = hybrid_scores(boq_text_norm, unit_df["__내역_norm"], unit_df["__sem"].to_numpy(), w_str, w_sem)
+        # __hyb 계산(문자열+의미 유사도)
+        hyb = hybrid_scores(boq_text_norm, unit_df["__내역_norm"], unit_df["__sem"].to_numpy(), sim_w_str, sim_w_sem)
         unit_df["__hyb"] = hyb
 
-        unit_df = unit_df[unit_df["__hyb"] >= sim_threshold].copy()
-        if unit_df.empty:
-            res_row = dict(boq_row)
-            res_row["Final Price"] = None
-            res_row["산출근거"] = "매칭 없음"
-            results.append(res_row)
-            continue
+        # 너무 큰 풀 방지: hyb 상위 N개만 보관
+        unit_df = unit_df.sort_values("__hyb", ascending=False).head(pool_per_boq).copy()
 
-        adj_list = []
+        # CPI는 통화+계약월 기준으로 미리 계산 (산출통화 바뀌어도 재사용 가능)
+        # contract_ym을 문자열로
+        unit_df["__contract_ym"] = unit_df["_계약월"].apply(to_year_month_string)
+
+        cpi_list = []
         for _, r in unit_df.iterrows():
-            c_currency = str(r.get("통화","")).upper().strip()
-            unit_price = float(r.get("Unit Price", 0.0))
-            contract_ym = to_year_month_string(r.get("_계약월"))
+            c_currency = str(r.get("통화", "")).upper().strip()
+            contract_ym = r.get("__contract_ym", None)
+            cpi_ratio, base_cpi, latest_cpi, latest_ym = get_cpi_ratio(price_index2, c_currency, contract_ym)
+            cpi_list.append((cpi_ratio, latest_ym))
+        unit_df["__cpi_ratio"] = [x[0] for x in cpi_list]
+        unit_df["__latest_ym"] = [x[1] for x in cpi_list]
 
-            cpi_ratio, base_cpi, latest_cpi, latest_ym = get_cpi_ratio(price_index, c_currency, contract_ym)
-            fx_ratio  = get_exchange_rate(exchange, c_currency, target_currency)
-            fac_ratio = get_factor_ratio(factor, c_currency, target_currency)
+        # BOQ 메타 붙이기
+        boq_id = int(i)
+        unit_df["BOQ_ID"] = boq_id
+        unit_df["BOQ_내역"] = boq_item
+        unit_df["BOQ_Unit"] = boq_unit
 
-            adj_price = unit_price * cpi_ratio * fx_ratio * fac_ratio
+        pool_rows.append(unit_df)
 
-            adj_list.append({
-                **r.to_dict(),
-                "__adj_price": adj_price,
-                "__base_cpi": base_cpi,
-                "__latest_cpi": latest_cpi,
-                "__latest_ym": latest_ym,
-                "__cpi_ratio": cpi_ratio,
-                "__fx_ratio": fx_ratio,
-                "__fac_ratio": fac_ratio,
-                "__hyb": r["__hyb"],
-            })
-        unit_df = pd.DataFrame(adj_list)
+    if not pool_rows:
+        return pd.DataFrame()
 
-        # -------------------------
-        # (A) 컷 계산 + Include 기본값 지정
-        # -------------------------
-        unit_df = unit_df.sort_values("__adj_price").reset_index(drop=True)
-        n = len(unit_df)
+    pool = pd.concat(pool_rows, ignore_index=True)
+
+    # 풀에서 앞으로 필요한 최소 컬럼만 유지(가벼운 재계산용)
+    keep_cols = [
+        "BOQ_ID", "BOQ_내역", "BOQ_Unit",
+        "공종코드", "공종명",
+        "내역", "Unit",
+        "Unit Price", "통화", "계약년월",
+        "현장코드", "현장명",
+        "협력사코드", "협력사명",
+        "__hyb",
+        "__cpi_ratio",
+        "__latest_ym",
+    ]
+    for c in keep_cols:
+        if c not in pool.columns:
+            pool[c] = None
+    return pool[keep_cols].copy()
+
+
+def fast_recompute_from_pool(
+    pool: pd.DataFrame,
+    exchange: pd.DataFrame,
+    factor: pd.DataFrame,
+    sim_threshold: float,
+    cut_ratio: float,
+    target_currency: str,
+) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """
+    ✅ 2단계(가벼움): 후보 풀에서 빠른 재계산
+    - Threshold 필터
+    - 산출통화 변경: __fx_ratio, __fac_ratio만 다시 계산
+    - 컷비율로 Include/DefaultInclude 설정
+    - __adj_price = Unit Price * __cpi_ratio * __fx_ratio * __fac_ratio
+    """
+    if pool is None or pool.empty:
+        return pd.DataFrame(), pd.DataFrame()
+
+    df = pool.copy()
+
+    # 1) Threshold 적용
+    df = df[pd.to_numeric(df["__hyb"], errors="coerce").fillna(0) >= float(sim_threshold)].copy()
+    if df.empty:
+        # BOQ 결과도 BOQ_ID 기반으로 만들기 어렵기 때문에, 빈 결과 반환
+        return pd.DataFrame(), pd.DataFrame()
+
+    # 2) FX/Factor 맵(통화별) 만들어 vectorized 계산
+    currencies = df["통화"].astype(str).str.upper().unique().tolist()
+
+    fx_map = {}
+    fac_map = {}
+    for c in currencies:
+        fx_map[c] = get_exchange_rate(exchange, c, target_currency)
+        fac_map[c] = get_factor_ratio(factor, c, target_currency)
+
+    df["통화_std"] = df["통화"].astype(str).str.upper()
+    df["__fx_ratio"] = df["통화_std"].map(fx_map).fillna(1.0)
+    df["__fac_ratio"] = df["통화_std"].map(fac_map).fillna(1.0)
+    df["산출통화"] = target_currency
+
+    # 3) __adj_price 계산
+    unit_price = pd.to_numeric(df["Unit Price"], errors="coerce").fillna(0.0)
+    cpi_ratio = pd.to_numeric(df["__cpi_ratio"], errors="coerce").fillna(1.0)
+
+    df["__adj_price"] = unit_price * cpi_ratio * df["__fx_ratio"] * df["__fac_ratio"]
+
+    # 4) BOQ별 컷 + Include/DefaultInclude 설정
+    df["Include"] = False
+    df["DefaultInclude"] = False
+
+    for boq_id, gidx in df.groupby("BOQ_ID").groups.items():
+        sub = df.loc[gidx].sort_values("__adj_price").copy()
+        n = len(sub)
         cut = max(0, int(n * cut_ratio)) if n > 5 else 0
 
-        # 컷 적용 후 남길 인덱스 범위
         if cut > 0:
             keep_mask = np.zeros(n, dtype=bool)
             keep_mask[cut:n-cut] = True
         else:
             keep_mask = np.ones(n, dtype=bool)
 
-        unit_df["Include"] = keep_mask  # ✅ 사용자가 log에서 수정할 컬럼
-        unit_df["DefaultInclude"] = keep_mask  # 참고용(원래 기본값)
+        kept_index = sub.index[keep_mask]
+        df.loc[kept_index, "DefaultInclude"] = True
+        df.loc[kept_index, "Include"] = True
 
-        # -------------------------
-        # (B) 산출로그(후보행 단위) 누적
-        # -------------------------
-        boq_id = int(i)  # 1부터 증가 (loop의 i 사용)
-        log_cols = [
-            # BOQ 메타
-            "BOQ_ID",
-            "BOQ_내역",
-            "BOQ_Unit",
-
-            # 후보 핵심
-            "Include",
-            "DefaultInclude",
-            "공종코드",
-            "공종명",
-            "내역",
-            "Unit",
-            "Unit Price",
-            "통화",
-            "계약년월",
-            "현장코드",
-            "현장명",
-            "협력사코드",
-            "협력사명",
-
-            # 점수/보정
-            "__hyb",
-            "__adj_price",
-            "산출통화",
-            "__cpi_ratio",
-            "__fx_ratio",
-            "__fac_ratio",
-            "__latest_ym",
-        ]
-
-        tmp = unit_df.copy()
-        tmp["BOQ_ID"] = boq_id
-        tmp["BOQ_내역"] = boq_item
-        tmp["BOQ_Unit"] = boq_unit
-        tmp["산출통화"] = target_currency
-
-        # 없을 수 있는 컬럼 대비(안전)
-        for c in log_cols:
-            if c not in tmp.columns:
-                tmp[c] = None
-
-        logs.extend(tmp[log_cols].to_dict("records"))
-
-        # -------------------------
-        # (C) Include=True 기준으로 Final Price 계산 + 공종 분포(A안)
-        # -------------------------
-        inc = unit_df[unit_df["Include"] == True].copy()
-
+    # 5) BOQ 결과(result_df) 생성
+    results = []
+    for boq_id, sub in df.groupby("BOQ_ID"):
+        inc = sub[sub["Include"] == True]
         if inc.empty:
             final_price = None
             reason_text = "매칭 후보 없음(또는 전부 제외)"
             top_work = ""
         else:
             final_price = float(inc["__adj_price"].mean())
+            currencies2 = sorted(inc["통화_std"].unique().tolist())
+            reason_text = f"{len(currencies2)}개국({', '.join(currencies2)}) {len(inc)}개 내역 근거"
 
-            currencies = sorted(inc["통화"].astype(str).str.upper().unique().tolist())
-            reason_text = f"{len(currencies)}개국({', '.join(currencies)}) {len(inc)}개 내역 근거"
-
-            # ✅ A안: 후보 공종코드 최빈값(Top1) 표시
             vc = inc["공종코드"].astype(str).value_counts()
             top_code = vc.index[0] if len(vc) else ""
             top_cnt = int(vc.iloc[0]) if len(vc) else 0
             top_work = f"{top_code} ({top_cnt}/{len(inc)})" if top_code else ""
 
-        res_row = dict(boq_row)
-        res_row["BOQ_ID"] = boq_id
-        res_row["Final Price"] = f"{final_price:,.2f}" if final_price is not None else None
-        res_row["산출근거"] = reason_text
-        res_row["근거공종(최빈)"] = top_work
-        results.append(res_row)
+        # BOQ 메타는 pool에 있음
+        one = sub.iloc[0]
+        results.append({
+            "BOQ_ID": int(boq_id),
+            "내역": one.get("BOQ_내역", ""),
+            "Unit": one.get("BOQ_Unit", ""),
+            "Final Price": f"{final_price:,.2f}" if final_price is not None else None,
+            "산출근거": reason_text,
+            "근거공종(최빈)": top_work,
+        })
 
-    return pd.DataFrame(results), pd.DataFrame(logs)
+    result_df = pd.DataFrame(results).sort_values("BOQ_ID").reset_index(drop=True)
+
+    # 6) 산출 로그(log_df) 반환(Include 편집 가능하도록 필요한 컬럼 포함)
+    log_cols = [
+        "BOQ_ID","BOQ_내역","BOQ_Unit",
+        "Include","DefaultInclude",
+        "공종코드","공종명",
+        "내역","Unit",
+        "Unit Price","통화","계약년월",
+        "__adj_price","산출통화",
+        "__cpi_ratio","__latest_ym",
+        "__fx_ratio","__fac_ratio",
+        "__hyb",
+        "현장코드","현장명",
+        "협력사코드","협력사명",
+    ]
+    for c in log_cols:
+        if c not in df.columns:
+            df[c] = None
+    log_df = df[log_cols].copy()
+
+    return result_df, log_df
 
 
 # =========================
@@ -1008,6 +1044,7 @@ if st.session_state.get("has_results", False):
         out_log.to_excel(writer, index=False, sheet_name="calculation_log")
     bio.seek(0)
     st.download_button("⬇️ Excel 다운로드", data=bio.read(), file_name="result_unitrate.xlsx")
+
 
 
 
