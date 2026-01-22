@@ -334,30 +334,95 @@ def match_items_faiss(
             })
         unit_df = pd.DataFrame(adj_list)
 
-        unit_df = unit_df.sort_values("__adj_price")
+        # -------------------------
+        # (A) 컷 계산 + Include 기본값 지정
+        # -------------------------
+        unit_df = unit_df.sort_values("__adj_price").reset_index(drop=True)
         n = len(unit_df)
         cut = max(0, int(n * cut_ratio)) if n > 5 else 0
-        kept = unit_df.iloc[cut:n-cut] if cut > 0 else unit_df.copy()
 
-        currencies = sorted(kept["통화"].astype(str).str.upper().unique().tolist())
-        reason_text = f"{len(currencies)}개국({', '.join(currencies)}) {len(kept)}개 내역 근거"
+        # 컷 적용 후 남길 인덱스 범위
+        if cut > 0:
+            keep_mask = np.zeros(n, dtype=bool)
+            keep_mask[cut:n-cut] = True
+        else:
+            keep_mask = np.ones(n, dtype=bool)
 
-        final_price = float(kept["__adj_price"].mean()) if not kept.empty else None
-        # -------- 로그(최소) 기록 --------
-        logs.append({
-            "BOQ_내역": boq_item,
-            "BOQ_Unit": boq_unit,
-            "후보수_sem": int(len(cand_df)),
-            "후보수_unit일치": int(len(unit_df)) if isinstance(unit_df, pd.DataFrame) else 0,
-            "후보수_threshold통과": int(len(unit_df)) if isinstance(unit_df, pd.DataFrame) else 0,
-            "후보수_kept": int(len(kept)) if isinstance(kept, pd.DataFrame) else 0,
-            "사용통화": ", ".join(currencies) if isinstance(currencies, list) else "",
-            "FinalPrice(평균)": float(final_price) if final_price is not None else None,
-        })
+        unit_df["Include"] = keep_mask  # ✅ 사용자가 log에서 수정할 컬럼
+        unit_df["DefaultInclude"] = keep_mask  # 참고용(원래 기본값)
+
+        # -------------------------
+        # (B) 산출로그(후보행 단위) 누적
+        # -------------------------
+        boq_id = int(i)  # 1부터 증가 (loop의 i 사용)
+        log_cols = [
+            # BOQ 메타
+            "BOQ_ID",
+            "BOQ_내역",
+            "BOQ_Unit",
+
+            # 후보 핵심
+            "Include",
+            "DefaultInclude",
+            "공종코드",
+            "공종명",
+            "내역",
+            "Unit",
+            "Unit Price",
+            "통화",
+            "계약년월",
+            "현장코드",
+            "현장명",
+            "협력사코드",
+            "협력사명",
+
+            # 점수/보정
+            "__hyb",
+            "__adj_price",
+            "__cpi_ratio",
+            "__fx_ratio",
+            "__fac_ratio",
+            "__latest_ym",
+        ]
+
+        tmp = unit_df.copy()
+        tmp["BOQ_ID"] = boq_id
+        tmp["BOQ_내역"] = boq_item
+        tmp["BOQ_Unit"] = boq_unit
+
+        # 없을 수 있는 컬럼 대비(안전)
+        for c in log_cols:
+            if c not in tmp.columns:
+                tmp[c] = None
+
+        logs.extend(tmp[log_cols].to_dict("records"))
+
+        # -------------------------
+        # (C) Include=True 기준으로 Final Price 계산 + 공종 분포(A안)
+        # -------------------------
+        inc = unit_df[unit_df["Include"] == True].copy()
+
+        if inc.empty:
+            final_price = None
+            reason_text = "매칭 후보 없음(또는 전부 제외)"
+            top_work = ""
+        else:
+            final_price = float(inc["__adj_price"].mean())
+
+            currencies = sorted(inc["통화"].astype(str).str.upper().unique().tolist())
+            reason_text = f"{len(currencies)}개국({', '.join(currencies)}) {len(inc)}개 내역 근거"
+
+            # ✅ A안: 후보 공종코드 최빈값(Top1) 표시
+            vc = inc["공종코드"].astype(str).value_counts()
+            top_code = vc.index[0] if len(vc) else ""
+            top_cnt = int(vc.iloc[0]) if len(vc) else 0
+            top_work = f"{top_code} ({top_cnt}/{len(inc)})" if top_code else ""
 
         res_row = dict(boq_row)
+        res_row["BOQ_ID"] = boq_id
         res_row["Final Price"] = f"{final_price:,.2f}" if final_price is not None else None
         res_row["산출근거"] = reason_text
+        res_row["근거공종(최빈)"] = top_work
         results.append(res_row)
 
     return pd.DataFrame(results), pd.DataFrame(logs)
@@ -684,22 +749,113 @@ if run_btn:
 
         st.success("✅ 완료! 결과 확인 및 다운로드 가능")
 
-        tab1, tab2 = st.tabs(["📄 BOQ 결과", "🧾 산출 로그"])
+        # -------------------------
+        # 세션에 저장(편집/재계산을 위해)
+        # -------------------------
+        st.session_state["result_df_base"] = result_df.copy()
+        st.session_state["log_df_base"] = log_df.copy()
 
-        with tab1:
-            if "통화" in result_df.columns:
-                result_df = result_df.drop(columns=["통화"])
-            st.dataframe(result_df, use_container_width=True)
+        # -------------------------
+        # 로그 Include 기준으로 결과 재계산 함수
+        # -------------------------
+        def recompute_result_from_log(boq_df: pd.DataFrame, edited_log: pd.DataFrame) -> pd.DataFrame:
+            base = st.session_state["result_df_base"].copy()
+
+            # 기본값: Final Price/근거공종/산출근거를 로그로 다시 계산
+            out_prices = []
+            for boq_id, g in edited_log.groupby("BOQ_ID"):
+                g2 = g[g["Include"] == True].copy()
+                if g2.empty:
+                    out_prices.append((boq_id, None, "매칭 후보 없음(또는 전부 제외)", ""))
+                    continue
+
+                final_price = float(pd.to_numeric(g2["__adj_price"], errors="coerce").mean())
+
+                currencies = sorted(g2["통화"].astype(str).str.upper().unique().tolist())
+                reason_text = f"{len(currencies)}개국({', '.join(currencies)}) {len(g2)}개 내역 근거"
+
+                vc = g2["공종코드"].astype(str).value_counts()
+                top_code = vc.index[0] if len(vc) else ""
+                top_cnt = int(vc.iloc[0]) if len(vc) else 0
+                top_work = f"{top_code} ({top_cnt}/{len(g2)})" if top_code else ""
+
+                out_prices.append((int(boq_id), f"{final_price:,.2f}", reason_text, top_work))
+
+            upd = pd.DataFrame(out_prices, columns=["BOQ_ID", "Final Price", "산출근거", "근거공종(최빈)"])
+
+            # BOQ_ID 기준으로 업데이트
+            base = base.drop(columns=[c for c in ["Final Price", "산출근거", "근거공종(최빈)"] if c in base.columns], errors="ignore")
+            base = base.merge(upd, on="BOQ_ID", how="left")
+
+            return base
+
+        tab1, tab2 = st.tabs(["📄 BOQ 결과", "🧾 산출 로그(편집 가능)"])
 
         with tab2:
-            st.dataframe(log_df, use_container_width=True)
+            st.caption("✅ 체크 해제하면 평균단가 산출에서 제외됩니다. 체크하면 포함됩니다.")
+
+            # 편집용 로그 DF: 없으면 base 사용
+            if "log_df_edited" not in st.session_state:
+                st.session_state["log_df_edited"] = st.session_state["log_df_base"].copy()
+
+            # BOQ 선택 필터(너무 길면 편집 어려워서)
+            log_all = st.session_state["log_df_edited"]
+            boq_ids = sorted(log_all["BOQ_ID"].dropna().astype(int).unique().tolist())
+            sel_id = st.selectbox("편집할 BOQ_ID 선택", options=boq_ids)
+
+            log_view = log_all[log_all["BOQ_ID"].astype(int) == int(sel_id)].copy()
+
+            # data_editor로 Include 편집
+            edited_view = st.data_editor(
+                log_view,
+                use_container_width=True,
+                hide_index=True,
+                column_config={
+                    "Include": st.column_config.CheckboxColumn("Include", help="평균단가 산출 포함/제외"),
+                    "__adj_price": st.column_config.NumberColumn("__adj_price", format="%.2f"),
+                    "__hyb": st.column_config.NumberColumn("__hyb", format="%.2f"),
+                },
+                disabled=[c for c in log_view.columns if c not in ["Include"]],
+                key=f"log_editor_{sel_id}",
+            )
+
+            # 편집 내용을 전체 로그에 반영
+            # (BOQ_ID + 내역 + 현장코드 + Unit Price 등으로 조인하면 제일 안전하지만,
+            #  여기선 index 기반으로 BOQ 단위 덮어쓰기 방식 사용)
+            log_all_updated = log_all.copy()
+            mask = log_all_updated["BOQ_ID"].astype(int) == int(sel_id)
+            # 같은 행수 가정(동일 BOQ_ID로 만든 로그는 고정)
+            log_all_updated.loc[mask, "Include"] = edited_view["Include"].values
+
+            st.session_state["log_df_edited"] = log_all_updated
+
+            # 편집 즉시 결과 재계산
+            st.session_state["result_df_adjusted"] = recompute_result_from_log(boq, st.session_state["log_df_edited"])
+
+        with tab1:
+            # 조정된 결과가 있으면 그걸 보여줌
+            show_df = st.session_state.get("result_df_adjusted", st.session_state["result_df_base"]).copy()
+
+            # 기존처럼 통화 컬럼 숨김(있으면)
+            if "통화" in show_df.columns:
+                show_df = show_df.drop(columns=["통화"])
+
+            st.dataframe(show_df, use_container_width=True)
+
+        # -------------------------
+        # 다운로드도 "조정된 결과" 기준으로
+        # -------------------------
+        out_result = st.session_state.get("result_df_adjusted", st.session_state["result_df_base"]).copy()
+        out_log = st.session_state.get("log_df_edited", st.session_state["log_df_base"]).copy()
 
         bio = io.BytesIO()
         with pd.ExcelWriter(bio, engine="openpyxl") as writer:
-            result_df.to_excel(writer, index=False, sheet_name="boq_with_price")
-            log_df.to_excel(writer, index=False, sheet_name="calculation_log")
+            out_result.to_excel(writer, index=False, sheet_name="boq_with_price")
+            out_log.to_excel(writer, index=False, sheet_name="calculation_log")
         bio.seek(0)
+
         st.download_button("⬇️ Excel 다운로드", data=bio.read(), file_name="result_unitrate.xlsx")
+
 
 
 
