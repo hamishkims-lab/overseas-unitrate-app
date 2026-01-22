@@ -803,21 +803,48 @@ def run_calculation_and_store(run_sig: str):
     progress = st.progress(0.0)
     prog_text = st.empty()
 
-    with st.spinner("임베딩/인덱스 준비 및 계산 중..."):
-        result_df, log_df = match_items_faiss(
-            cost_db=cost_db_run,
-            boq=boq,
-            price_index=price_index,
+    # ✅ 후보풀 재사용을 위한 시그니처(현장필터/BOQ/DB가 바뀔 때만 새로 생성)
+    pool_sig_payload = {
+        "boq": boq_file_signature(boq_file),
+        "use_site_filter": bool(use_site_filter),
+        "selected_site_codes": sorted([norm_site_code(x) for x in (selected_site_codes or [])]),
+        "top_k_sem": int(top_k_sem),
+        "w_str": float(w_str),
+        "w_sem": float(w_sem),
+        "cost_db_rows": int(len(cost_db_run)),
+    }
+    pool_sig = hashlib.md5(json.dumps(pool_sig_payload, sort_keys=True).encode("utf-8")).hexdigest()
+
+    # 1) 후보풀 생성(무거움) - 필요한 경우에만
+    need_new_pool = (st.session_state.get("candidate_pool_sig") != pool_sig) or ("candidate_pool" not in st.session_state)
+
+    if need_new_pool:
+        with st.spinner("후보 풀 생성(최초/현장변경 시 오래 걸릴 수 있음)..."):
+            pool = build_candidate_pool(
+                cost_db=cost_db_run,
+                boq=boq,
+                price_index=price_index,
+                sim_w_str=w_str,
+                sim_w_sem=w_sem,
+                top_k_sem=top_k_sem,
+                pool_per_boq=400,
+                progress=progress,
+                prog_text=prog_text,
+            )
+        st.session_state["candidate_pool"] = pool
+        st.session_state["candidate_pool_sig"] = pool_sig
+    else:
+        pool = st.session_state["candidate_pool"]
+
+    # 2) 빠른 재계산(가벼움) - Threshold/컷/산출통화는 여기서만 반영
+    with st.spinner("빠른 재계산(Threshold/컷/산출통화 반영 중)..."):
+        result_df, log_df = fast_recompute_from_pool(
+            pool=pool,
             exchange=exchange,
             factor=factor,
             sim_threshold=sim_threshold,
             cut_ratio=cut_ratio,
             target_currency=target_currency,
-            w_str=w_str,
-            w_sem=w_sem,
-            top_k_sem=top_k_sem,
-            progress=progress,
-            prog_text=prog_text,
         )
 
     progress.progress(1.0)
@@ -1044,6 +1071,7 @@ if st.session_state.get("has_results", False):
         out_log.to_excel(writer, index=False, sheet_name="calculation_log")
     bio.seek(0)
     st.download_button("⬇️ Excel 다운로드", data=bio.read(), file_name="result_unitrate.xlsx")
+
 
 
 
