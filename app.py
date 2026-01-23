@@ -8,6 +8,7 @@ from typing import Optional
 import numpy as np
 import pandas as pd
 import streamlit as st
+import altair as alt
 from rapidfuzz import fuzz
 from sentence_transformers import SentenceTransformer
 
@@ -671,6 +672,46 @@ def build_report_tables(log_df: pd.DataFrame, result_df: pd.DataFrame):
     return summary_df, detail_df
 
 # =========================
+# 🤖 AI 최종 적용 기준 기록/표시용 (TAB3에서 사용)
+# =========================
+def record_ai_last_applied(scope: str, mode: str, min_keep: int, max_keep: int, summary: dict | None):
+    """
+    scope: "현재 BOQ" or "전체 BOQ"
+    summary: suggest_include_for_one_boq()에서 반환한 summary(있으면 hyb_min, iqr_k 포함)
+    """
+    payload = {
+        "scope": scope,
+        "mode": mode,
+        "min_keep": int(min_keep),
+        "max_keep": int(max_keep),
+    }
+    if isinstance(summary, dict):
+        for k in ["hyb_min", "iqr_k", "kept", "total"]:
+            if k in summary:
+                payload[k] = summary[k]
+    st.session_state["ai_last_applied"] = payload
+
+def get_ai_effective_rule_text() -> str:
+    info = st.session_state.get("ai_last_applied")
+    if not isinstance(info, dict) or not info:
+        return "AI 최종기준 기록 없음(수동 편집 또는 기본 컷만 적용)"
+
+    # 표시 문구(날짜/시간은 굳이 넣지 않음)
+    scope = info.get("scope", "")
+    mode = info.get("mode", "")
+    min_keep = info.get("min_keep", "")
+    max_keep = info.get("max_keep", "")
+    hyb_min = info.get("hyb_min", None)
+    iqr_k = info.get("iqr_k", None)
+
+    parts = [f"적용범위={scope}", f"모드={mode}", f"최소포함={min_keep}", f"최대포함={max_keep}"]
+    if hyb_min is not None:
+        parts.append(f"유사도최소(hyb_min)={hyb_min}")
+    if iqr_k is not None:
+        parts.append(f"IQR계수(iqr_k)={iqr_k}")
+    return " / ".join(parts)
+
+# =========================
 # 🧾 보고서 TAB3 유틸(특성/현장/AI기준/분포 그래프)
 # =========================
 import matplotlib.pyplot as plt
@@ -727,6 +768,96 @@ def plot_distribution(series: pd.Series, title: str):
         plt.xlabel("산출단가(__adj_price)")
         plt.ylabel("빈도")
     st.pyplot(fig, clear_figure=True)
+
+# =========================
+# 📊 BOQ 내역별 산점도(계약년월 vs 산출단가) - 포함/미포함 표시
+# =========================
+def _parse_contract_month_series(s: pd.Series) -> pd.Series:
+    # "2019-11" / 날짜 / 기타가 섞여 있어도 최대한 datetime으로
+    dt = pd.to_datetime(s, errors="coerce")
+    if dt.isna().any():
+        # fallback: YYYY-MM 형태로 정규화 후 재파싱
+        s2 = s.astype(str).apply(to_year_month_string)
+        dt2 = pd.to_datetime(s2, errors="coerce")
+        dt = dt.fillna(dt2)
+    return dt
+
+def render_boq_scatter(log_df: pd.DataFrame, base_result: pd.DataFrame):
+    if log_df is None or log_df.empty:
+        st.info("로그 데이터가 없어 그래프를 표시할 수 없습니다.")
+        return
+
+    # 검색(예: REBAR)
+    keyword = st.text_input("내역 키워드(예: REBAR)", value="", key="report_kw")
+    cand = base_result.copy() if (base_result is not None and not base_result.empty) else None
+
+    if cand is not None and "내역" in cand.columns and "BOQ_ID" in cand.columns and keyword.strip():
+        kw = keyword.strip().lower()
+        cand = cand[cand["내역"].astype(str).str.lower().str.contains(kw, na=False)].copy()
+
+    # 선택 후보 BOQ_ID 목록
+    if cand is not None and not cand.empty:
+        boq_ids = cand["BOQ_ID"].dropna().astype(int).unique().tolist()
+        boq_ids = sorted(boq_ids)
+        id_to_text = cand.set_index(cand["BOQ_ID"].astype(int))["내역"].astype(str).to_dict()
+    else:
+        boq_ids = sorted(log_df["BOQ_ID"].dropna().astype(int).unique().tolist())
+        id_to_text = (
+            log_df.dropna(subset=["BOQ_ID"])
+            .assign(BOQ_ID=lambda d: d["BOQ_ID"].astype(int))
+            .groupby("BOQ_ID")["BOQ_내역"].first()
+            .astype(str).to_dict()
+        )
+
+    if not boq_ids:
+        st.info("표시할 BOQ_ID가 없습니다.")
+        return
+
+    def fmt(x: int) -> str:
+        t = id_to_text.get(int(x), "")
+        t = (t[:60] + "…") if len(t) > 60 else t
+        return f"{int(x)} | {t}"
+
+    sel = st.selectbox("그래프 볼 BOQ 선택", options=boq_ids, format_func=fmt, key="report_boq_pick")
+
+    sub = log_df[log_df["BOQ_ID"].astype(int) == int(sel)].copy()
+    if sub.empty:
+        st.info("해당 BOQ 후보가 없습니다.")
+        return
+
+    # x, y 준비
+    sub["계약월_dt"] = _parse_contract_month_series(sub["계약년월"])
+    sub["산출단가"] = pd.to_numeric(sub["__adj_price"], errors="coerce")
+    sub["포함여부"] = sub["Include"].fillna(False).astype(bool)
+
+    # 표시용 최소 컬럼만
+    sub["표시내역"] = sub["내역"].astype(str)
+
+    # Altair 산점도
+    # - 색: 포함여부(자동 스킴)
+    # - 크기: 포함=True면 크게
+    chart = (
+        alt.Chart(sub.dropna(subset=["계약월_dt", "산출단가"]))
+        .mark_circle()
+        .encode(
+            x=alt.X("계약월_dt:T", title="계약년월"),
+            y=alt.Y("산출단가:Q", title="산출단가(산출통화 기준)"),
+            color=alt.Color("포함여부:N", title="포함"),
+            size=alt.Size("포함여부:N", title="포함(크기)", scale=alt.Scale(range=[40, 140])),
+            tooltip=[
+                alt.Tooltip("표시내역:N", title="내역"),
+                alt.Tooltip("산출단가:Q", title="산출단가", format=",.4f"),
+                alt.Tooltip("통화:N", title="원통화"),
+                alt.Tooltip("계약년월:N", title="계약년월"),
+                alt.Tooltip("__hyb:Q", title="유사도", format=".2f"),
+                alt.Tooltip("현장코드:N", title="현장코드"),
+                alt.Tooltip("협력사코드:N", title="협력사코드"),
+            ],
+        )
+        .properties(height=420)
+        .interactive()
+    )
+    st.altair_chart(chart, use_container_width=True)
 
 # =========================
 # 데이터 로드
@@ -1295,6 +1426,7 @@ if st.session_state.get("has_results", False):
             st.session_state["result_df_adjusted"] = recompute_result_from_log(st.session_state["log_df_edited"])
             if summary:
                 st.success(f"AI 적용 완료(현재 BOQ): {summary['kept']}/{summary['total']} 포함, 모드={summary['mode']}")
+            record_ai_last_applied("현재 BOQ", agent_mode, int(min_keep), int(max_keep), summary)
             st.rerun()
 
         if btn_ai_all:
@@ -1310,6 +1442,7 @@ if st.session_state.get("has_results", False):
             st.success("AI 적용 완료(전체 BOQ)")
             if sum_df is not None and not sum_df.empty:
                 st.dataframe(sum_df, use_container_width=True)
+            record_ai_last_applied("전체 BOQ", agent_mode, int(min_keep), int(max_keep), None)
             st.rerun()
 
         if btn_undo_all:
@@ -1480,17 +1613,8 @@ if st.session_state.get("has_results", False):
             st.info("Include=True 상세 후보가 없습니다(전부 제외되었거나 후보가 없음).")
     
         # 8) 분포 그래프(전체/선택)
-        st.markdown("### 8) 전체 단가 분포 / 선택(Include) 단가 분포")
-        if log_for_report is None or log_for_report.empty:
-            st.info("로그 데이터가 없습니다.")
-        else:
-            all_prices = pd.to_numeric(log_for_report.get("__adj_price", np.nan), errors="coerce")
-            inc_prices = pd.to_numeric(
-                log_for_report.loc[log_for_report["Include"] == True].get("__adj_price", np.nan),
-                errors="coerce"
-            )
-            plot_distribution(all_prices, "전체 후보 단가 분포(__adj_price)")
-            plot_distribution(inc_prices, "선택(Include=True) 단가 분포(__adj_price)")
+        st.markdown("### 8) 내역별 단가 점분포(계약년월 vs 단가) - 포함/미포함")
+        render_boq_scatter(log_for_report, base_result)
     
         # 다운로드도 조정값 기준
         out_result = st.session_state.get("result_df_adjusted", result_df).copy()
@@ -1508,6 +1632,7 @@ if st.session_state.get("has_results", False):
             rep_det.to_excel(writer, index=False, sheet_name="report_detail")
     bio.seek(0)
     st.download_button("⬇️ Excel 다운로드", data=bio.read(), file_name="result_unitrate.xlsx")
+
 
 
 
