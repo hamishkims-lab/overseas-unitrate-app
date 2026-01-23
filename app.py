@@ -1408,92 +1408,93 @@ if st.session_state.get("has_results", False):
         if "통화" in show_df.columns:
             show_df = show_df.drop(columns=["통화"])
         st.dataframe(show_df, use_container_width=True)
+   
     with tab3:
-    st.markdown("## 📝 근거 보고서(자동 생성)")
-    st.caption("현재 Include(포함) 상태 + 조건/선택 현장/특성 + (AI 적용 시) 최종 기준을 포함합니다.")
-
-    base_result = st.session_state.get("result_df_adjusted", st.session_state.get("result_df_base", pd.DataFrame()))
-    log_for_report = st.session_state.get("log_df_edited", st.session_state.get("log_df_base", pd.DataFrame()))
-
-    # 1) 찾아야 할 공종 특성(선택된 프로젝트 특성)
-    st.markdown("### 1) 찾아야 할 공종 특성(선택된 프로젝트 특성)")
-    sel_features = st.session_state.get("selected_feature_ids", [])
-    ft = build_feature_context_table(feature_master, sel_features)
-    if ft.empty:
-        st.info("선택된 특성ID가 없습니다.")
-    else:
-        st.dataframe(ft, use_container_width=True)
-
-    # 2) 찾은 실적 현장 리스트(최종 선택 현장)
-    st.markdown("### 2) 찾은 실적 현장 리스트(최종 선택 현장)")
-    try:
-        _sel_sites = selected_site_codes if (selected_site_codes is not None) else []
-    except Exception:
-        _sel_sites = []
-    st_sites = build_site_context_table(cost_db, _sel_sites)
-    if st_sites.empty:
-        st.info("선택된 현장이 없습니다(또는 현장 필터 미사용).")
-    else:
-        st.dataframe(st_sites, use_container_width=True)
-
-    # 3) 단가 추출 근거(조건)
-    st.markdown("### 3) 단가 추출 근거(조건)")
-    c1, c2, c3 = st.columns(3)
-    with c1:
-        st.metric("Threshold(컷 기준, %)", f"{float(sim_threshold):.0f}")
-    with c2:
-        st.metric("상/하위 컷 비율(%)", f"{float(cut_ratio)*100:.0f}")
-    with c3:
-        st.metric("산출통화", str(target_currency))
-
-    # 4) AI 적용 시 최종 기준
-    st.markdown("### 4) AI 적용 시 최종 기준")
-    st.write(get_ai_effective_rule_text())
-
-    # 5) 실적 단가 BOQ(결과)
-    st.markdown("### 5) 실적 단가 BOQ(결과)")
-    if base_result is None or base_result.empty:
-        st.warning("결과 데이터가 없습니다. 먼저 산출 실행 후 다시 시도하세요.")
-    else:
-        st.dataframe(base_result, use_container_width=True)
-
-    # 6) 보고서 테이블 생성/갱신
-    if st.button("📝 보고서 생성/갱신", key="btn_build_report"):
-        summary_df, detail_df = build_report_tables(log_for_report, base_result)
-        st.session_state["report_summary_df"] = summary_df
-        st.session_state["report_detail_df"] = detail_df
-
-    summary_df = st.session_state.get("report_summary_df", pd.DataFrame())
-    detail_df = st.session_state.get("report_detail_df", pd.DataFrame())
-
-    st.markdown("### 6) 각 내역별 단가 근거(요약)")
-    if summary_df is None or summary_df.empty:
-        st.info("보고서를 보려면 '보고서 생성/갱신'을 눌러주세요.")
-    else:
-        st.dataframe(summary_df, use_container_width=True)
-
-    st.markdown("### 7) 각 내역별 단가 근거(상세: Include=True 후보)")
-    if detail_df is not None and not detail_df.empty:
-        st.dataframe(detail_df, use_container_width=True)
-    else:
-        st.info("Include=True 상세 후보가 없습니다(전부 제외되었거나 후보가 없음).")
-
-    # 8) 분포 그래프(전체/선택)
-    st.markdown("### 8) 전체 단가 분포 / 선택(Include) 단가 분포")
-    if log_for_report is None or log_for_report.empty:
-        st.info("로그 데이터가 없습니다.")
-    else:
-        all_prices = pd.to_numeric(log_for_report.get("__adj_price", np.nan), errors="coerce")
-        inc_prices = pd.to_numeric(
-            log_for_report.loc[log_for_report["Include"] == True].get("__adj_price", np.nan),
-            errors="coerce"
-        )
-        plot_distribution(all_prices, "전체 후보 단가 분포(__adj_price)")
-        plot_distribution(inc_prices, "선택(Include=True) 단가 분포(__adj_price)")
-
-    # 다운로드도 조정값 기준
-    out_result = st.session_state.get("result_df_adjusted", result_df).copy()
-    out_log = st.session_state.get("log_df_edited", log_df).copy()
+        st.markdown("## 📝 근거 보고서(자동 생성)")
+        st.caption("현재 Include(포함) 상태 + 조건/선택 현장/특성 + (AI 적용 시) 최종 기준을 포함합니다.")
+    
+        base_result = st.session_state.get("result_df_adjusted", st.session_state.get("result_df_base", pd.DataFrame()))
+        log_for_report = st.session_state.get("log_df_edited", st.session_state.get("log_df_base", pd.DataFrame()))
+    
+        # 1) 찾아야 할 공종 특성(선택된 프로젝트 특성)
+        st.markdown("### 1) 찾아야 할 공종 특성(선택된 프로젝트 특성)")
+        sel_features = st.session_state.get("selected_feature_ids", [])
+        ft = build_feature_context_table(feature_master, sel_features)
+        if ft.empty:
+            st.info("선택된 특성ID가 없습니다.")
+        else:
+            st.dataframe(ft, use_container_width=True)
+    
+        # 2) 찾은 실적 현장 리스트(최종 선택 현장)
+        st.markdown("### 2) 찾은 실적 현장 리스트(최종 선택 현장)")
+        try:
+            _sel_sites = selected_site_codes if (selected_site_codes is not None) else []
+        except Exception:
+            _sel_sites = []
+        st_sites = build_site_context_table(cost_db, _sel_sites)
+        if st_sites.empty:
+            st.info("선택된 현장이 없습니다(또는 현장 필터 미사용).")
+        else:
+            st.dataframe(st_sites, use_container_width=True)
+    
+        # 3) 단가 추출 근거(조건)
+        st.markdown("### 3) 단가 추출 근거(조건)")
+        c1, c2, c3 = st.columns(3)
+        with c1:
+            st.metric("Threshold(컷 기준, %)", f"{float(sim_threshold):.0f}")
+        with c2:
+            st.metric("상/하위 컷 비율(%)", f"{float(cut_ratio)*100:.0f}")
+        with c3:
+            st.metric("산출통화", str(target_currency))
+    
+        # 4) AI 적용 시 최종 기준
+        st.markdown("### 4) AI 적용 시 최종 기준")
+        st.write(get_ai_effective_rule_text())
+    
+        # 5) 실적 단가 BOQ(결과)
+        st.markdown("### 5) 실적 단가 BOQ(결과)")
+        if base_result is None or base_result.empty:
+            st.warning("결과 데이터가 없습니다. 먼저 산출 실행 후 다시 시도하세요.")
+        else:
+            st.dataframe(base_result, use_container_width=True)
+    
+        # 6) 보고서 테이블 생성/갱신
+        if st.button("📝 보고서 생성/갱신", key="btn_build_report"):
+            summary_df, detail_df = build_report_tables(log_for_report, base_result)
+            st.session_state["report_summary_df"] = summary_df
+            st.session_state["report_detail_df"] = detail_df
+    
+        summary_df = st.session_state.get("report_summary_df", pd.DataFrame())
+        detail_df = st.session_state.get("report_detail_df", pd.DataFrame())
+    
+        st.markdown("### 6) 각 내역별 단가 근거(요약)")
+        if summary_df is None or summary_df.empty:
+            st.info("보고서를 보려면 '보고서 생성/갱신'을 눌러주세요.")
+        else:
+            st.dataframe(summary_df, use_container_width=True)
+    
+        st.markdown("### 7) 각 내역별 단가 근거(상세: Include=True 후보)")
+        if detail_df is not None and not detail_df.empty:
+            st.dataframe(detail_df, use_container_width=True)
+        else:
+            st.info("Include=True 상세 후보가 없습니다(전부 제외되었거나 후보가 없음).")
+    
+        # 8) 분포 그래프(전체/선택)
+        st.markdown("### 8) 전체 단가 분포 / 선택(Include) 단가 분포")
+        if log_for_report is None or log_for_report.empty:
+            st.info("로그 데이터가 없습니다.")
+        else:
+            all_prices = pd.to_numeric(log_for_report.get("__adj_price", np.nan), errors="coerce")
+            inc_prices = pd.to_numeric(
+                log_for_report.loc[log_for_report["Include"] == True].get("__adj_price", np.nan),
+                errors="coerce"
+            )
+            plot_distribution(all_prices, "전체 후보 단가 분포(__adj_price)")
+            plot_distribution(inc_prices, "선택(Include=True) 단가 분포(__adj_price)")
+    
+        # 다운로드도 조정값 기준
+        out_result = st.session_state.get("result_df_adjusted", result_df).copy()
+        out_log = st.session_state.get("log_df_edited", log_df).copy()
 
     bio = io.BytesIO()
     with pd.ExcelWriter(bio, engine="openpyxl") as writer:
@@ -1507,6 +1508,7 @@ if st.session_state.get("has_results", False):
             rep_det.to_excel(writer, index=False, sheet_name="report_detail")
     bio.seek(0)
     st.download_button("⬇️ Excel 다운로드", data=bio.read(), file_name="result_unitrate.xlsx")
+
 
 
 
