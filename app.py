@@ -464,6 +464,211 @@ def fast_recompute_from_pool(
     log_df = df[log_cols].copy()
 
     return result_df, log_df
+    # =========================
+# 🤖 Include 자동 추천 에이전트(룰 기반)
+# =========================
+def _to_num(s):
+    return pd.to_numeric(s, errors="coerce")
+
+def suggest_include_for_one_boq(
+    df_boq: pd.DataFrame,
+    mode: str = "균형",
+    min_keep: int = 3,
+    max_keep: int = 50,
+):
+    d = df_boq.copy()
+
+    hyb = _to_num(d.get("__hyb", 0)).fillna(0.0)
+    price = _to_num(d.get("__adj_price", np.nan))
+
+    if mode == "보수적":
+        hyb_min = 80
+        iqr_k = 1.0
+    elif mode == "공격적":
+        hyb_min = 60
+        iqr_k = 2.0
+    else:  # 균형
+        hyb_min = 70
+        iqr_k = 1.5
+
+    keep = hyb >= hyb_min
+
+    valid = price[price.notna()]
+    low = high = None
+    if len(valid) >= 5:
+        q1 = valid.quantile(0.25)
+        q3 = valid.quantile(0.75)
+        iqr = q3 - q1
+        low = q1 - iqr_k * iqr
+        high = q3 + iqr_k * iqr
+        keep = keep & (price.between(low, high) | price.isna())
+
+    keep_idx = d.index[keep].tolist()
+    if len(keep_idx) < int(min_keep):
+        top_idx = hyb.sort_values(ascending=False).head(int(min_keep)).index.tolist()
+        keep_idx = sorted(set(keep_idx) | set(top_idx))
+
+    if len(keep_idx) > int(max_keep):
+        keep_idx = hyb.loc[keep_idx].sort_values(ascending=False).head(int(max_keep)).index.tolist()
+
+    include = pd.Series(False, index=d.index)
+    include.loc[keep_idx] = True
+
+    reasons = []
+    for idx in d.index:
+        r = []
+        if hyb.loc[idx] < hyb_min:
+            r.append(f"유사도<{hyb_min}")
+        if low is not None and high is not None and pd.notna(price.loc[idx]):
+            if price.loc[idx] < low or price.loc[idx] > high:
+                r.append("단가이상치(IQR)")
+        if include.loc[idx]:
+            reasons.append("포함" if not r else "포함(예외보완): " + ", ".join(r))
+        else:
+            reasons.append("제외" if not r else "제외: " + ", ".join(r))
+
+    summary = {
+        "mode": mode,
+        "hyb_min": hyb_min,
+        "iqr_k": iqr_k,
+        "min_keep": int(min_keep),
+        "max_keep": int(max_keep),
+        "kept": int(include.sum()),
+        "total": int(len(d)),
+    }
+    return include, pd.Series(reasons, index=d.index), summary
+
+def apply_agent_to_log(
+    log_all: pd.DataFrame,
+    boq_id: int,
+    mode: str = "균형",
+    min_keep: int = 3,
+    max_keep: int = 50,
+):
+    mask = log_all["BOQ_ID"].astype(int) == int(boq_id)
+    sub = log_all.loc[mask].copy()
+    if sub.empty:
+        return log_all, None
+
+    inc, reason_s, summary = suggest_include_for_one_boq(sub, mode=mode, min_keep=min_keep, max_keep=max_keep)
+
+    if "AI_추천사유" not in log_all.columns:
+        log_all["AI_추천사유"] = ""
+    if "AI_모드" not in log_all.columns:
+        log_all["AI_모드"] = ""
+
+    log_all.loc[mask, "Include"] = inc.values
+    log_all.loc[mask, "AI_추천사유"] = reason_s.values
+    log_all.loc[mask, "AI_모드"] = mode
+
+    return log_all, summary
+
+def apply_agent_to_all_boqs(
+    log_all: pd.DataFrame,
+    mode: str = "균형",
+    min_keep: int = 3,
+    max_keep: int = 50,
+):
+    rows = []
+    for boq_id in sorted(log_all["BOQ_ID"].dropna().astype(int).unique().tolist()):
+        log_all, summary = apply_agent_to_log(log_all, boq_id, mode=mode, min_keep=min_keep, max_keep=max_keep)
+        if summary:
+            rows.append([boq_id, summary["kept"], summary["total"], summary["mode"]])
+    sum_df = pd.DataFrame(rows, columns=["BOQ_ID", "포함수", "후보수", "모드"])
+    return log_all, sum_df
+
+
+# =========================
+# 📝 근거 보고서 생성(요약/상세)
+# =========================
+def build_report_tables(log_df: pd.DataFrame, result_df: pd.DataFrame):
+    if log_df is None or log_df.empty:
+        return pd.DataFrame(), pd.DataFrame()
+
+    df = log_df.copy()
+    df["BOQ_ID"] = df["BOQ_ID"].astype(int)
+
+    inc = df[df["Include"] == True].copy()
+
+    detail_cols = [
+        "BOQ_ID","BOQ_내역","BOQ_Unit",
+        "내역","Unit","Unit Price","통화","계약년월",
+        "__adj_price","산출통화",
+        "__cpi_ratio","__latest_ym","__fx_ratio","__fac_ratio","__hyb",
+        "공종코드","공종명",
+        "현장코드","현장명","협력사코드","협력사명",
+        "AI_모드","AI_추천사유",
+    ]
+    for c in detail_cols:
+        if c not in inc.columns:
+            inc[c] = None
+    detail_df = inc[detail_cols].copy()
+
+    rows = []
+    for boq_id, g in df.groupby("BOQ_ID"):
+        g_inc = g[g["Include"] == True].copy()
+        total_n = len(g)
+        inc_n = len(g_inc)
+
+        adj = pd.to_numeric(g_inc.get("__adj_price", np.nan), errors="coerce")
+        mean = float(adj.mean()) if inc_n else np.nan
+        std = float(adj.std(ddof=0)) if inc_n else np.nan
+        vmin = float(adj.min()) if inc_n else np.nan
+        vmax = float(adj.max()) if inc_n else np.nan
+
+        countries = sorted(g_inc["통화"].astype(str).str.upper().unique().tolist()) if inc_n else []
+        sites = g_inc["현장코드"].astype(str).nunique() if inc_n and "현장코드" in g_inc.columns else 0
+        vendors = g_inc["협력사코드"].astype(str).nunique() if inc_n and "협력사코드" in g_inc.columns else 0
+
+        top_site = ""
+        top_vendor = ""
+        if inc_n and "현장코드" in g_inc.columns:
+            vc = g_inc["현장코드"].astype(str).value_counts()
+            top_site = f"{vc.index[0]} ({int(vc.iloc[0])}/{inc_n})" if len(vc) else ""
+        if inc_n and "협력사코드" in g_inc.columns:
+            vc2 = g_inc["협력사코드"].astype(str).value_counts()
+            top_vendor = f"{vc2.index[0]} ({int(vc2.iloc[0])}/{inc_n})" if len(vc2) else ""
+
+        risk = []
+        if inc_n == 0:
+            risk.append("포함후보없음")
+        if inc_n and pd.notna(vmax) and pd.notna(vmin) and vmin > 0 and (vmax / vmin > 3):
+            risk.append("단가편차큼(>3배)")
+        if inc_n and pd.notna(std) and pd.notna(mean) and mean != 0 and (std / mean > 0.5):
+            risk.append("변동성큼(CV>0.5)")
+        if inc_n and sites == 1 and inc_n >= 3:
+            risk.append("현장편향(1개현장)")
+        if inc_n and vendors == 1 and inc_n >= 3:
+            risk.append("업체편향(1개업체)")
+
+        one = g.iloc[0]
+        rows.append({
+            "BOQ_ID": int(boq_id),
+            "BOQ_내역": one.get("BOQ_내역",""),
+            "BOQ_Unit": one.get("BOQ_Unit",""),
+            "후보수": int(total_n),
+            "포함수": int(inc_n),
+            "포함국가": ", ".join(countries),
+            "포함현장수": int(sites),
+            "포함업체수": int(vendors),
+            "산출단가평균": mean,
+            "산출단가표준편차": std,
+            "산출단가최저": vmin,
+            "산출단가최고": vmax,
+            "최빈현장": top_site,
+            "최빈업체": top_vendor,
+            "리스크": ", ".join(risk),
+        })
+
+    summary_df = pd.DataFrame(rows).sort_values("BOQ_ID").reset_index(drop=True)
+
+    if result_df is not None and not result_df.empty and "BOQ_ID" in result_df.columns:
+        tmp = result_df.copy()
+        tmp["BOQ_ID"] = tmp["BOQ_ID"].astype(int)
+        keep = [c for c in ["BOQ_ID","Final Price","산출근거","근거공종(최빈)"] if c in tmp.columns]
+        summary_df = summary_df.merge(tmp[keep], on="BOQ_ID", how="left")
+
+    return summary_df, detail_df
 
 
 # =========================
@@ -982,6 +1187,92 @@ if st.session_state.get("has_results", False):
 
         # ✅ 선택된 BOQ 후보만
         log_view_full = log_all[log_all["BOQ_ID"].astype(int) == int(sel_id)].copy()
+        # =========================
+        # 🤖 AI 추천 컨트롤 (현재 BOQ / 전체 BOQ)
+        # =========================
+        if "_include_backup" not in st.session_state:
+            st.session_state["_include_backup"] = {}
+        if "_include_backup_all" not in st.session_state:
+            st.session_state["_include_backup_all"] = None
+
+        cA, cB, cC, cD = st.columns([1.2, 1.0, 1.0, 1.8])
+        with cA:
+            agent_mode = st.selectbox("AI 추천 모드", ["보수적", "균형", "공격적"], index=1, key="agent_mode")
+        with cB:
+            min_keep = st.number_input("최소 포함", min_value=1, max_value=20, value=3, step=1, key="agent_min_keep")
+        with cC:
+            max_keep = st.number_input("최대 포함", min_value=3, max_value=200, value=50, step=1, key="agent_max_keep")
+        with cD:
+            st.caption("※ 적용 후 화면이 자동 갱신됩니다.")
+
+        b1, b2, b3, b4 = st.columns([1.2, 1.2, 1.2, 2.4])
+        with b1:
+            btn_ai_one = st.button("🤖 AI 적용(현재 BOQ)", key="btn_ai_one")
+        with b2:
+            btn_undo_one = st.button("↩️ 되돌리기(현재 BOQ)", key="btn_undo_one")
+        with b3:
+            btn_ai_all = st.button("🤖 AI 적용(전체 BOQ)", key="btn_ai_all")
+        with b4:
+            btn_undo_all = st.button("↩️ 되돌리기(전체 BOQ)", key="btn_undo_all")
+
+        if btn_undo_one:
+            backup = st.session_state["_include_backup"].get(int(sel_id))
+            if backup is not None and len(backup) == len(log_view_full.index):
+                st.session_state["log_df_edited"].loc[log_view_full.index, "Include"] = backup.values
+                st.session_state["result_df_adjusted"] = recompute_result_from_log(st.session_state["log_df_edited"])
+                st.success("되돌리기 완료(현재 BOQ)")
+                st.rerun()
+            else:
+                st.warning("되돌릴 백업이 없습니다(또는 후보행이 변경됨).")
+
+        if btn_ai_one:
+            st.session_state["_include_backup"][int(sel_id)] = st.session_state["log_df_edited"].loc[log_view_full.index, "Include"].copy()
+            updated, summary = apply_agent_to_log(
+                log_all=st.session_state["log_df_edited"].copy(),
+                boq_id=int(sel_id),
+                mode=agent_mode,
+                min_keep=int(min_keep),
+                max_keep=int(max_keep),
+            )
+            st.session_state["log_df_edited"] = updated
+            st.session_state["result_df_adjusted"] = recompute_result_from_log(st.session_state["log_df_edited"])
+            if summary:
+                st.success(f"AI 적용 완료(현재 BOQ): {summary['kept']}/{summary['total']} 포함, 모드={summary['mode']}")
+            st.rerun()
+
+        if btn_ai_all:
+            st.session_state["_include_backup_all"] = st.session_state["log_df_edited"][["BOQ_ID", "Include"]].copy()
+            updated, sum_df = apply_agent_to_all_boqs(
+                log_all=st.session_state["log_df_edited"].copy(),
+                mode=agent_mode,
+                min_keep=int(min_keep),
+                max_keep=int(max_keep),
+            )
+            st.session_state["log_df_edited"] = updated
+            st.session_state["result_df_adjusted"] = recompute_result_from_log(st.session_state["log_df_edited"])
+            st.success("AI 적용 완료(전체 BOQ)")
+            if sum_df is not None and not sum_df.empty:
+                st.dataframe(sum_df, use_container_width=True)
+            st.rerun()
+
+        if btn_undo_all:
+            backup_all = st.session_state.get("_include_backup_all")
+            if backup_all is None or backup_all.empty:
+                st.warning("되돌릴 전체 백업이 없습니다.")
+            else:
+                cur = st.session_state["log_df_edited"].copy()
+                b = backup_all.copy()
+                b["BOQ_ID"] = b["BOQ_ID"].astype(int)
+                cur["BOQ_ID"] = cur["BOQ_ID"].astype(int)
+
+                # BOQ_ID 기준 Include 복원
+                cur = cur.drop(columns=["Include"], errors="ignore").merge(b, on="BOQ_ID", how="left")
+                cur["Include"] = cur["Include"].fillna(False).astype(bool)
+
+                st.session_state["log_df_edited"] = cur
+                st.session_state["result_df_adjusted"] = recompute_result_from_log(st.session_state["log_df_edited"])
+                st.success("되돌리기 완료(전체 BOQ)")
+                st.rerun()
 
         # -------------------------
         # ✅ 화면 표시용 컬럼(열 순서 고정)
@@ -1060,6 +1351,29 @@ if st.session_state.get("has_results", False):
         if "통화" in show_df.columns:
             show_df = show_df.drop(columns=["통화"])
         st.dataframe(show_df, use_container_width=True)
+    with tab3:
+        st.caption("현재 Include(포함) 상태를 기준으로 근거 보고서를 생성합니다.")
+
+        base_result = st.session_state.get("result_df_adjusted", st.session_state.get("result_df_base", pd.DataFrame()))
+        log_for_report = st.session_state.get("log_df_edited", st.session_state.get("log_df_base", pd.DataFrame()))
+
+        if st.button("📝 보고서 생성/갱신", key="btn_build_report"):
+            summary_df, detail_df = build_report_tables(log_for_report, base_result)
+            st.session_state["report_summary_df"] = summary_df
+            st.session_state["report_detail_df"] = detail_df
+
+        summary_df = st.session_state.get("report_summary_df", pd.DataFrame())
+        detail_df = st.session_state.get("report_detail_df", pd.DataFrame())
+
+        if summary_df is None or summary_df.empty:
+            st.info("보고서를 보려면 '보고서 생성/갱신'을 눌러주세요.")
+        else:
+            st.subheader("요약(BOQ별)")
+            st.dataframe(summary_df, use_container_width=True)
+
+        if detail_df is not None and not detail_df.empty:
+            st.subheader("포함 후보 상세(Include=True)")
+            st.dataframe(detail_df, use_container_width=True)
 
     # 다운로드도 조정값 기준
     out_result = st.session_state.get("result_df_adjusted", result_df).copy()
@@ -1069,8 +1383,15 @@ if st.session_state.get("has_results", False):
     with pd.ExcelWriter(bio, engine="openpyxl") as writer:
         out_result.to_excel(writer, index=False, sheet_name="boq_with_price")
         out_log.to_excel(writer, index=False, sheet_name="calculation_log")
+        rep_sum = st.session_state.get("report_summary_df", pd.DataFrame())
+        rep_det = st.session_state.get("report_detail_df", pd.DataFrame())
+        if rep_sum is not None and not rep_sum.empty:
+            rep_sum.to_excel(writer, index=False, sheet_name="report_summary")
+        if rep_det is not None and not rep_det.empty:
+            rep_det.to_excel(writer, index=False, sheet_name="report_detail")
     bio.seek(0)
     st.download_button("⬇️ Excel 다운로드", data=bio.read(), file_name="result_unitrate.xlsx")
+
 
 
 
