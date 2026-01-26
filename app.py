@@ -1341,7 +1341,6 @@ def run_calculation_and_store(run_sig: str):
 # (1) 실행 트리거 결정
 # =========================
 
-sidebar_hr(thick=True, mt=10, mb=8)  # ✅ 산출실행 위 진한 구분선
 run_btn = st.sidebar.button("🚀 산출 실행")
 
 current_sig = make_params_signature()
@@ -1715,6 +1714,7 @@ if st.session_state.get("has_results", False):
             rep_det.to_excel(writer, index=False, sheet_name="report_detail")
     bio.seek(0)
     st.download_button("⬇️ Excel 다운로드", data=bio.read(), file_name="result_unitrate.xlsx")
+
 
 
 
