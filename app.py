@@ -149,15 +149,12 @@ section[data-testid="stSidebar"] div[data-baseweb="select"] svg path{
 </style>
 """, unsafe_allow_html=True)
 
-def sidebar_hr(mt=8, mb=10):
-    st.sidebar.markdown(
-        f"<hr style='margin:{mt}px 0 {mb}px 0; border:0; border-top:1px solid rgba(255,255,255,0.18);'>",
-        unsafe_allow_html=True
-    )
-def sidebar_hr(thick=False, mt=6, mb=6):
+def sidebar_hr(thick: bool = False, mt: int = 6, mb: int = 6):
+    # ✅ 연한 회색 구분선 통일
+    color = "#D9DDE3"  # 연한 회색
     h = "3px" if thick else "1px"
     st.sidebar.markdown(
-        f"<hr style='margin:{mt}px 0 {mb}px 0; border:none; border-top:{h} solid #005EB8;' />",
+        f"<hr style='margin:{mt}px 0 {mb}px 0; border:none; border-top:{h} solid {color};' />",
         unsafe_allow_html=True
     )
 
@@ -1200,9 +1197,11 @@ if use_site_filter:
 # =========================
 sidebar_hr(thick=True, mt=10, mb=6)  # (3) 설정값 위 진한선
 st.sidebar.subheader("🧩 설정값")
-sidebar_hr(thick=False, mt=6, mb=8)  # (4) 설정값 아래 일반선
+
 sim_threshold = st.sidebar.slider("Threshold (컷 기준, %)", 0, 100, 60, 5)
 cut_ratio = st.sidebar.slider("상/하위 컷 비율 (%)", 0, 30, 20, 5) / 100.0
+
+sidebar_hr(thick=False, mt=6, mb=8)  # (4) 설정값 아래 일반선  ✅ 슬라이더 아래로 이동
 
 target_options = sorted(factor["국가"].astype(str).str.upper().unique().tolist())
 default_idx = target_options.index("KRW") if "KRW" in target_options else 0
@@ -1210,11 +1209,13 @@ target_currency = st.sidebar.selectbox("산출통화", options=target_options, i
 
 missing_exchange = exchange[exchange["통화"].astype(str).str.upper()==target_currency].empty
 missing_factor   = factor[factor["국가"].astype(str).str.upper()==target_currency].empty
-sidebar_hr(thick=True, mt=10, mb=8)  # (5) 산출통화 아래 진한선
+
 if missing_exchange:
     st.sidebar.error(f"선택한 산출통화 '{target_currency}'에 대한 환율 정보가 exchange.xlsx에 없습니다.")
 if missing_factor:
     st.sidebar.error(f"선택한 산출통화 '{target_currency}'에 대한 지수 정보가 Factor.xlsx에 없습니다.")
+
+sidebar_hr(thick=True, mt=10, mb=8)  # (5) 산출통화 아래 진한선 ✅ 에러 출력 뒤로
 
 
 # =========================
@@ -1714,6 +1715,7 @@ if st.session_state.get("has_results", False):
             rep_det.to_excel(writer, index=False, sheet_name="report_detail")
     bio.seek(0)
     st.download_button("⬇️ Excel 다운로드", data=bio.read(), file_name="result_unitrate.xlsx")
+
 
 
 
