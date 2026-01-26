@@ -127,6 +127,25 @@ section[data-testid="stSidebar"] div[data-baseweb="select"] span{
   -webkit-text-fill-color:#000000 !important;
 }
 
+section[data-testid="stSidebar"] div[data-baseweb="select"] input{
+  color:#000000 !important;
+  -webkit-text-fill-color:#000000 !important;
+  caret-color:#000000 !important;
+}
+
+/* ✅ (닫힌 상태) 선택된 값 텍스트가 span/div로 보이는 케이스까지 전부 검정으로 강제 */
+section[data-testid="stSidebar"] div[data-baseweb="select"] > div *{
+  color:#000000 !important;
+  -webkit-text-fill-color:#000000 !important;
+}
+
+/* ✅ 화살표(chevron) 아이콘도 흰색이면 안 보일 수 있어서 같이 정리 */
+section[data-testid="stSidebar"] div[data-baseweb="select"] svg,
+section[data-testid="stSidebar"] div[data-baseweb="select"] svg path{
+  fill:#000000 !important;
+}
+
+
 </style>
 """, unsafe_allow_html=True)
 
@@ -1666,6 +1685,7 @@ if st.session_state.get("has_results", False):
             rep_det.to_excel(writer, index=False, sheet_name="report_detail")
     bio.seek(0)
     st.download_button("⬇️ Excel 다운로드", data=bio.read(), file_name="result_unitrate.xlsx")
+
 
 
 
