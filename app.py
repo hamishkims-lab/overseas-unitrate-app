@@ -674,41 +674,64 @@ def build_report_tables(log_df: pd.DataFrame, result_df: pd.DataFrame):
 # =========================
 # 🤖 AI 최종 적용 기준 기록/표시용 (TAB3에서 사용)
 # =========================
-def record_ai_last_applied(scope: str, mode: str, min_keep: int, max_keep: int, summary: Optional[dict]):
+def record_ai_last_applied(
+    scope: str,
+    mode: str,
+    min_keep: int,
+    max_keep: int,
+    summary: Optional[dict] = None,
+    boq_id: Optional[int] = None,
+):
     """
     scope: "현재 BOQ" or "전체 BOQ"
     summary: suggest_include_for_one_boq()에서 반환한 summary(있으면 hyb_min, iqr_k 포함)
+    boq_id: scope가 "현재 BOQ"일 때 어떤 BOQ에 적용했는지 기록용
     """
     payload = {
-        "scope": scope,
-        "mode": mode,
+        "scope": str(scope),
+        "mode": str(mode),
         "min_keep": int(min_keep),
         "max_keep": int(max_keep),
     }
+    if boq_id is not None:
+        payload["boq_id"] = int(boq_id)
+
     if isinstance(summary, dict):
         for k in ["hyb_min", "iqr_k", "kept", "total"]:
             if k in summary:
                 payload[k] = summary[k]
+
     st.session_state["ai_last_applied"] = payload
 
+
 def get_ai_effective_rule_text() -> str:
-    info = st.session_state.get("ai_last_applied")
-    if not isinstance(info, dict) or not info:
+    info = st.session_state.get("ai_last_applied", None)
+    if not isinstance(info, dict) or not info.get("mode"):
         return "AI 최종기준 기록 없음(수동 편집 또는 기본 컷만 적용)"
 
-    # 표시 문구(날짜/시간은 굳이 넣지 않음)
     scope = info.get("scope", "")
     mode = info.get("mode", "")
     min_keep = info.get("min_keep", "")
     max_keep = info.get("max_keep", "")
+    boq_id = info.get("boq_id", None)
     hyb_min = info.get("hyb_min", None)
     iqr_k = info.get("iqr_k", None)
 
-    parts = [f"적용범위={scope}", f"모드={mode}", f"최소포함={min_keep}", f"최대포함={max_keep}"]
+    parts = []
+    if scope == "현재 BOQ" and boq_id is not None:
+        parts.append(f"적용범위={scope}(BOQ_ID={boq_id})")
+    else:
+        parts.append(f"적용범위={scope}")
+
+    parts.append(f"모드={mode}")
+    parts.append(f"최소포함={min_keep}")
+    parts.append(f"최대포함={max_keep}")
+
     if hyb_min is not None:
         parts.append(f"유사도최소(hyb_min)={hyb_min}")
     if iqr_k is not None:
         parts.append(f"IQR계수(iqr_k)={iqr_k}")
+
     return " / ".join(parts)
 
 # =========================
@@ -1413,7 +1436,7 @@ if st.session_state.get("has_results", False):
             st.session_state["result_df_adjusted"] = recompute_result_from_log(st.session_state["log_df_edited"])
             if summary:
                 st.success(f"AI 적용 완료(현재 BOQ): {summary['kept']}/{summary['total']} 포함, 모드={summary['mode']}")
-            record_ai_last_applied("현재 BOQ", agent_mode, int(min_keep), int(max_keep), summary)
+            record_ai_last_applied("현재 BOQ", agent_mode, int(min_keep), int(max_keep), summary, boq_id=int(sel_id))
             st.rerun()
 
         if btn_ai_all:
@@ -1619,6 +1642,7 @@ if st.session_state.get("has_results", False):
             rep_det.to_excel(writer, index=False, sheet_name="report_detail")
     bio.seek(0)
     st.download_button("⬇️ Excel 다운로드", data=bio.read(), file_name="result_unitrate.xlsx")
+
 
 
 
