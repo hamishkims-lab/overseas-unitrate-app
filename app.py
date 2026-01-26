@@ -1193,7 +1193,7 @@ if use_site_filter:
 # =========================
 # 기타 슬라이더/통화 선택
 # =========================
-🧩 설정값
+st.sidebar.subheader("🧩 설정값")
 sim_threshold = st.sidebar.slider("Threshold (컷 기준, %)", 0, 100, 60, 5)
 cut_ratio = st.sidebar.slider("상/하위 컷 비율 (%)", 0, 30, 20, 5) / 100.0
 
@@ -1706,6 +1706,7 @@ if st.session_state.get("has_results", False):
             rep_det.to_excel(writer, index=False, sheet_name="report_detail")
     bio.seek(0)
     st.download_button("⬇️ Excel 다운로드", data=bio.read(), file_name="result_unitrate.xlsx")
+
 
 
 
