@@ -45,11 +45,19 @@ st.markdown(f"""
      border: 1px solid {CI_BLUE} !important;
      border-radius: 6px !important;
   }}
+  /* ✅ multiselect 선택된 태그(칩) 색상 */
   div[data-baseweb="select"] span {{
-     background-color: {CI_TEAL} !important;
+     background-color: {CI_BLUE} !important;
      color: white !important;
-     border-radius: 4px !important;
-     padding: 2px 6px !important;
+     border-radius: 6px !important;
+     padding: 2px 8px !important;
+     border: 1px solid {CI_TEAL} !important;
+  }}
+
+  /* ✅ 태그(칩) hover 시 강조 */
+  div[data-baseweb="select"] span:hover {{
+     background-color: {CI_TEAL} !important;
+     border: 1px solid {CI_BLUE} !important;
   }}
   .stDownloadButton button {{
      background-color:{CI_BLUE}; color:white; border-radius:8px; padding:8px 14px; border:0;
@@ -903,12 +911,9 @@ if "auto_sites" not in st.session_state:
 # Sidebar: 설정
 # =========================
 st.sidebar.header("⚙️ 설정")
-st.sidebar.caption("①~⑥ 순서대로 설정하세요.")
 
-use_site_filter = st.sidebar.checkbox(
-    "현장 필터 사용(추천)",
-    value=True
-)
+# ✅ 현장필터는 기능적으로 계속 사용(항상 True)하되, 화면에는 노출하지 않음
+use_site_filter = True
 
 DEFAULT_W_STR = 0.3
 DEFAULT_TOP_K_SEM = 200
@@ -932,112 +937,65 @@ with st.container():
 auto_sites = []
 
 if use_site_filter:
-    if boq_file is not None:
-        st.markdown("<div class='gs-card'>", unsafe_allow_html=True)
-        st.markdown("### 🏷️ 프로젝트 특성 선택 (176개 전체)")
+    st.sidebar.markdown("---")
+    st.sidebar.subheader("🏗️ 실적 현장 선택")
 
-        fm = feature_master.copy()
-        cols6 = ["대공종","중공종","소공종","Cost Driver Type","Cost Driver Method","Cost Driver Condition"]
-        for c in ["특성ID"] + cols6:
-            fm[c] = fm[c].astype(str).fillna("").str.strip()
+    # ✅ 항상 auto_sites를 읽고 UI를 그려야 함
+    auto_sites = st.session_state.get("auto_sites", [])
 
-        site_cnt = project_feature_long.groupby("특성ID")["현장코드"].nunique().astype(int).to_dict()
-        fm["현장수"] = fm["특성ID"].map(site_cnt).fillna(0).astype(int)
+    # 1) cost_db에서 전체 현장 목록 만들기
+    site_df = cost_db[["현장코드", "현장명"]].copy()
+    site_df = site_df.dropna(subset=["현장코드"])
 
-        fm["라벨"] = fm.apply(
-            lambda r: f'{r["특성ID"]} | {r["대공종"]}/{r["중공종"]}/{r["소공종"]} | '
-                      f'{r["Cost Driver Type"]}/{r["Cost Driver Method"]}/{r["Cost Driver Condition"]} | '
-                      f'현장 {r["현장수"]}개',
-            axis=1
-        )
+    site_df["현장코드"] = site_df["현장코드"].apply(norm_site_code)
+    site_df["현장명"] = site_df["현장명"].astype(str).fillna("").str.strip()
+    site_df.loc[site_df["현장명"].isin(["", "nan", "None"]), "현장명"] = "(현장명없음)"
 
-        keyword = st.text_input("특성 목록 필터(키워드)", value="", placeholder="예: DCM, Jet, 지반개량, 도심 ...")
-        fm_view = fm
-        if keyword.strip():
-            kw = keyword.strip().lower()
-            fm_view = fm[fm["라벨"].str.lower().str.contains(kw, na=False)].copy()
+    site_df = site_df.drop_duplicates(subset=["현장코드"])
+    site_df["label"] = site_df["현장코드"] + " | " + site_df["현장명"]
 
-        options = fm_view["라벨"].tolist()
-        label_to_id = dict(zip(fm_view["라벨"], fm_view["특성ID"]))
+    all_codes = site_df["현장코드"].tolist()
+    code_to_label = dict(zip(site_df["현장코드"], site_df["label"]))
 
-        # 기존 선택 복원(필터링 시에도 유지)
-        master_label_to_id = dict(zip(fm["라벨"], fm["특성ID"]))
-        master_id_to_label = {}
-        for lab, fid in master_label_to_id.items():
-            master_id_to_label.setdefault(fid, lab)
+    # 2) auto_sites -> auto_codes (존재하는 코드만)
+    auto_codes_raw = [norm_site_code(x) for x in (auto_sites or [])]
+    auto_codes = [c for c in auto_codes_raw if c in code_to_label]
 
-        current_selected_ids = st.session_state["selected_feature_ids"]
-        current_labels = [master_id_to_label[fid] for fid in current_selected_ids if fid in master_id_to_label]
+    auto_labels = [code_to_label[c] for c in auto_codes]
+    other_labels = [code_to_label[c] for c in all_codes if c not in set(auto_codes)]
 
-        new_selected_labels = st.multiselect(
-            "특성 선택(다중 선택 가능)",
-            options=options,
-            default=[lab for lab in current_labels if lab in options]
-        )
+    # =========================
+    # ✅ auto 후보가 바뀌면: 사이드바 자동 후보를 "즉시 전체 선택" 상태로 세팅
+    #    (사용자는 체크 해제로 제외 가능)
+    # =========================
+    auto_sig = "|".join(auto_labels)
 
-        new_ids = [label_to_id[lab] for lab in new_selected_labels]
-        kept_ids = [fid for fid in current_selected_ids if (fid in master_id_to_label and master_id_to_label[fid] not in options)]
-        merged_ids = sorted(list(dict.fromkeys(kept_ids + new_ids)))
+    if st.session_state.get("_auto_sig") != auto_sig:
+        st.session_state["_auto_sig"] = auto_sig
+        st.session_state["selected_auto_labels"] = list(auto_labels)
 
-        st.session_state["selected_feature_ids"] = merged_ids
+    if "selected_auto_labels" not in st.session_state:
+        st.session_state["selected_auto_labels"] = list(auto_labels)
+    if "selected_extra_labels" not in st.session_state:
+        st.session_state["selected_extra_labels"] = []
 
-        st.markdown("#### ✅ 선택된 특성ID")
-        if merged_ids:
-            st.write(merged_ids)
-            del_ids = st.multiselect("제거할 특성ID 선택", options=merged_ids, default=[])
-            c1, c2 = st.columns(2)
-            with c1:
-                if st.button("🗑️ 선택 제거"):
-                    st.session_state["selected_feature_ids"] = [x for x in merged_ids if x not in del_ids]
-            with c2:
-                if st.button("🧹 전체 초기화"):
-                    st.session_state["selected_feature_ids"] = []
-        else:
-            st.info("선택된 특성이 없습니다.")
+    # ✅ 라벨 변경
+    selected_auto_labels = st.sidebar.multiselect(
+        "실적현장",
+        options=auto_labels,
+        key="selected_auto_labels",
+    )
+    selected_auto_codes = [x.split(" | ")[0] for x in selected_auto_labels]
 
-        # auto_sites 계산
-        if st.session_state["selected_feature_ids"]:
-            auto_sites = (
-                project_feature_long[
-                    project_feature_long["특성ID"].astype(str).isin([str(x) for x in st.session_state["selected_feature_ids"]])
-                ]["현장코드"].astype(str).unique().tolist()
-            )
-        else:
-            auto_sites = []
+    selected_extra_labels = st.sidebar.multiselect(
+        "추가 실적현장",
+        options=other_labels,
+        key="selected_extra_labels",
+    )
+    selected_extra_codes = [x.split(" | ")[0] for x in selected_extra_labels]
 
-        st.session_state["auto_sites"] = auto_sites
-
-        # =========================
-        # ✅ auto_sites 변경 시: 사이드바 선택 UI 강제 갱신 (안전 버전)
-        # =========================
-        # 1) 표준화 + 정렬(순서 안정화)
-        new_auto_sites = sorted({
-            norm_site_code(x)
-            for x in (auto_sites or [])
-            if norm_site_code(x)
-        })
-
-        # 2) 이전 값(표준화 + 정렬)
-        old_auto_sites = sorted({
-            norm_site_code(x)
-            for x in (st.session_state.get("auto_sites", []) or [])
-            if norm_site_code(x)
-        })
-
-        # 3) 변경된 경우에만 session 업데이트 + 사이드바 multiselect key 제거 + rerun 1회
-        if new_auto_sites != old_auto_sites:
-            st.session_state["auto_sites"] = new_auto_sites
-
-            # ✅ 사이드바 multiselect key만 제거 (default 갱신 목적)
-            for k in ["selected_auto_labels", "selected_extra_labels"]:
-                if k in st.session_state:
-                    del st.session_state[k]
-
-            st.rerun()
-        else:
-            st.session_state["auto_sites"] = new_auto_sites
-
-        st.success(f"자동 후보 현장: {len(new_auto_sites)}개")
+    selected_site_codes = sorted(set(selected_auto_codes + selected_extra_codes))
+    st.sidebar.caption(f"선택 현장: {len(selected_site_codes)}개")
 
         if len(new_auto_sites) <= 30:
             st.write(new_auto_sites)
@@ -1642,6 +1600,7 @@ if st.session_state.get("has_results", False):
             rep_det.to_excel(writer, index=False, sheet_name="report_detail")
     bio.seek(0)
     st.download_button("⬇️ Excel 다운로드", data=bio.read(), file_name="result_unitrate.xlsx")
+
 
 
 
