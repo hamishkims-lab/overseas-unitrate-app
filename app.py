@@ -67,6 +67,10 @@ section[data-testid="stSidebar"] span[data-baseweb="tag"]{
   align-items: center !important;
   gap: 8px !important;
 
+  background-color:#4DA3FF !important;   /* 밝은 파란색 */
+  border:1px solid #2F80ED !important;
+  color:#ffffff !important;
+
   padding: 0 10px !important;
   box-sizing: border-box !important;
 
@@ -85,6 +89,7 @@ section[data-testid="stSidebar"] span[data-baseweb="tag"] > span:first-child{
 
   font-size: 12px !important;       /* 글자 약간 축소 */
   line-height: 1 !important;
+  color:#ffffff !important;   /* ✅ 이 줄 추가 */
 }
 
 /* ✅ 마지막 X(삭제) 버튼 영역은 고정폭으로 확보해서 항상 보이게 */
@@ -97,6 +102,13 @@ section[data-testid="stSidebar"] span[data-baseweb="tag"] > span:last-child{
   display: inline-flex !important;
   align-items: center !important;
   justify-content: center !important;
+}
+
+section[data-testid="stSidebar"] div[data-baseweb="tag"] svg,
+section[data-testid="stSidebar"] span[data-baseweb="tag"] svg,
+section[data-testid="stSidebar"] div[data-baseweb="tag"] path,
+section[data-testid="stSidebar"] span[data-baseweb="tag"] path{
+  fill:#ffffff !important;
 }
   
 </style>
