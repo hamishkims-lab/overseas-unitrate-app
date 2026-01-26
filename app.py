@@ -1052,64 +1052,78 @@ else:
 
 
 # =========================
-# (3) 사이드바: 실적 현장 선택 (auto_sites가 session에 저장된 이후에!)
+# (3) 사이드바: 실적 현장 선택
 # =========================
 selected_site_codes = None
 
-if use_site_filter:
-    st.sidebar.markdown("---")
-    st.sidebar.subheader("🏗️ 실적 현장 선택")
+st.sidebar.markdown("---")
+st.sidebar.subheader("🏗️ 실적 현장 선택")
 
-    auto_sites = st.session_state.get("auto_sites", [])
+auto_sites = st.session_state.get("auto_sites", [])
 
-    # 1) cost_db에서 전체 현장 목록 만들기
-    site_df = cost_db[["현장코드", "현장명"]].copy()
-    site_df = site_df.dropna(subset=["현장코드"])
+site_df = cost_db[["현장코드", "현장명"]].copy()
+site_df = site_df.dropna(subset=["현장코드"])
 
-    site_df["현장코드"] = site_df["현장코드"].apply(norm_site_code)
-    site_df["현장명"] = site_df["현장명"].astype(str).fillna("").str.strip()
-    site_df.loc[site_df["현장명"].isin(["", "nan", "None"]), "현장명"] = "(현장명없음)"
+site_df["현장코드"] = site_df["현장코드"].apply(norm_site_code)
+site_df["현장명"] = site_df["현장명"].astype(str).fillna("").str.strip()
+site_df.loc[site_df["현장명"].isin(["", "nan", "None"]), "현장명"] = "(현장명없음)"
+site_df = site_df.drop_duplicates(subset=["현장코드"]).reset_index(drop=True)
 
-    site_df = site_df.drop_duplicates(subset=["현장코드"])
-    site_df["label"] = site_df["현장코드"] + " | " + site_df["현장명"]
+# ✅ 화면 표시용 라벨은 "현장명만"
+# ✅ 단, 같은 현장명이 여러 개면 (2), (3)으로만 구분(코드는 숨김 유지)
+name_counts = site_df["현장명"].value_counts()
+dup_names = set(name_counts[name_counts > 1].index.tolist())
 
-    all_codes = site_df["현장코드"].tolist()
-    code_to_label = dict(zip(site_df["현장코드"], site_df["label"]))
+site_df["__dup_idx"] = site_df.groupby("현장명").cumcount() + 1
+site_df["label"] = site_df["현장명"]
+site_df.loc[site_df["현장명"].isin(dup_names), "label"] = (
+    site_df.loc[site_df["현장명"].isin(dup_names), "현장명"]
+    + " ("
+    + site_df.loc[site_df["현장명"].isin(dup_names), "__dup_idx"].astype(str)
+    + ")"
+)
 
-    # 2) auto_sites -> auto_codes (존재하는 코드만)
-    auto_codes_raw = [norm_site_code(x) for x in (auto_sites or [])]
-    auto_codes = [c for c in auto_codes_raw if c in code_to_label]
+all_codes = site_df["현장코드"].tolist()
 
-    auto_labels = [code_to_label[c] for c in auto_codes]
-    other_labels = [code_to_label[c] for c in all_codes if c not in set(auto_codes)]
+code_to_label = dict(zip(site_df["현장코드"], site_df["label"]))
+label_to_code = dict(zip(site_df["label"], site_df["현장코드"]))
 
-    # ✅ auto 후보가 바뀌면: 자동 후보를 "즉시 전체 선택" 상태로
-    auto_sig = "|".join(auto_labels)
-    if st.session_state.get("_auto_sig") != auto_sig:
-        st.session_state["_auto_sig"] = auto_sig
-        st.session_state["selected_auto_labels"] = list(auto_labels)
+# auto_sites -> auto_codes (존재하는 코드만)
+auto_codes_raw = [norm_site_code(x) for x in (auto_sites or [])]
+auto_codes = [c for c in auto_codes_raw if c in code_to_label]
 
-    if "selected_auto_labels" not in st.session_state:
-        st.session_state["selected_auto_labels"] = list(auto_labels)
-    if "selected_extra_labels" not in st.session_state:
-        st.session_state["selected_extra_labels"] = []
+auto_labels = [code_to_label[c] for c in auto_codes]
+other_labels = [code_to_label[c] for c in all_codes if c not in set(auto_codes)]
 
-    selected_auto_labels = st.sidebar.multiselect(
-        "실적현장",
-        options=auto_labels,
-        key="selected_auto_labels",
-    )
-    selected_auto_codes = [x.split(" | ")[0] for x in selected_auto_labels]
+# auto 후보 변경 시 자동 후보 전체 선택
+auto_sig = "|".join(auto_labels)
+if st.session_state.get("_auto_sig") != auto_sig:
+    st.session_state["_auto_sig"] = auto_sig
+    st.session_state["selected_auto_labels"] = list(auto_labels)
 
-    selected_extra_labels = st.sidebar.multiselect(
-        "추가 실적현장",
-        options=other_labels,
-        key="selected_extra_labels",
-    )
-    selected_extra_codes = [x.split(" | ")[0] for x in selected_extra_labels]
+if "selected_auto_labels" not in st.session_state:
+    st.session_state["selected_auto_labels"] = list(auto_labels)
+if "selected_extra_labels" not in st.session_state:
+    st.session_state["selected_extra_labels"] = []
 
-    selected_site_codes = sorted(set(selected_auto_codes + selected_extra_codes))
-    st.sidebar.caption(f"선택 현장: {len(selected_site_codes)}개")
+selected_auto_labels = st.sidebar.multiselect(
+    "실적현장",
+    options=auto_labels,
+    key="selected_auto_labels",
+)
+
+selected_extra_labels = st.sidebar.multiselect(
+    "추가 실적현장",
+    options=other_labels,
+    key="selected_extra_labels",
+)
+
+# ✅ 라벨 -> 코드로 변환
+selected_auto_codes = [label_to_code[x] for x in selected_auto_labels if x in label_to_code]
+selected_extra_codes = [label_to_code[x] for x in selected_extra_labels if x in label_to_code]
+
+selected_site_codes = sorted(set(selected_auto_codes + selected_extra_codes))
+st.sidebar.caption(f"선택 현장: {len(selected_site_codes)}개")
 
 
 # =========================
@@ -1629,6 +1643,7 @@ if st.session_state.get("has_results", False):
             rep_det.to_excel(writer, index=False, sheet_name="report_detail")
     bio.seek(0)
     st.download_button("⬇️ Excel 다운로드", data=bio.read(), file_name="result_unitrate.xlsx")
+
 
 
 
