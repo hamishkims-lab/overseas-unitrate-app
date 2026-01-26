@@ -1057,7 +1057,7 @@ if boq_file is not None:
     options = fm_view["라벨"].tolist()
     label_to_id = dict(zip(fm_view["라벨"], fm_view["특성ID"]))
 
-    # ✅ 기존 선택 복원(필터링을 바꿔도 선택 유지)
+    # ✅ 필터 바꿔도 기존 선택 유지
     master_label_to_id = dict(zip(fm["라벨"], fm["특성ID"]))
     master_id_to_label = {}
     for lab, fid in master_label_to_id.items():
@@ -1072,7 +1072,7 @@ if boq_file is not None:
         default=[lab for lab in current_labels if lab in options],
     )
 
-    # ✅ 필터 화면에 없는 기존 선택도 유지(기능 유지 핵심)
+    # ✅ 선택 ID 저장(기능 유지)
     new_ids = [label_to_id[lab] for lab in new_selected_labels]
     kept_ids = [
         fid for fid in current_selected_ids
@@ -1081,11 +1081,11 @@ if boq_file is not None:
     merged_ids = sorted(list(dict.fromkeys(kept_ids + new_ids)))
     st.session_state["selected_feature_ids"] = merged_ids
 
-    # ✅ auto_sites 계산(기능 유지: 현장 후보 자동 반영)
-    if st.session_state["selected_feature_ids"]:
+    # ✅ auto_sites 계산/저장(기능 유지)
+    if merged_ids:
         auto_sites = (
             project_feature_long[
-                project_feature_long["특성ID"].astype(str).isin([str(x) for x in st.session_state["selected_feature_ids"]])
+                project_feature_long["특성ID"].astype(str).isin([str(x) for x in merged_ids])
             ]["현장코드"].astype(str).unique().tolist()
         )
     else:
@@ -1705,6 +1705,7 @@ if st.session_state.get("has_results", False):
             rep_det.to_excel(writer, index=False, sheet_name="report_detail")
     bio.seek(0)
     st.download_button("⬇️ Excel 다운로드", data=bio.read(), file_name="result_unitrate.xlsx")
+
 
 
 
