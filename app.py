@@ -1008,33 +1008,25 @@ w_str = DEFAULT_W_STR
 w_sem = 1.0 - w_str
 top_k_sem = DEFAULT_TOP_K_SEM
 
-
 # =========================
-# (1) BOQ 업로드 (먼저!)
+# Sidebar: 프로젝트 특성 선택 (메인 → 사이드바로 이동)
 # =========================
-with st.container():
-    st.markdown("<div class='gs-card'>", unsafe_allow_html=True)
-    boq_file = st.file_uploader("📤 BOQ 파일 업로드", type=["xlsx"])
-    st.markdown("</div>", unsafe_allow_html=True)
+st.sidebar.subheader("🏷️ 프로젝트 특성 선택")  # ✅ (176개 전체) 제거
 
-
-# =========================
-# (2) 메인: BOQ 업로드 아래 특성 선택 UI
-# =========================
-auto_sites = []
-
-if boq_file is not None:
-    st.markdown("<div class='gs-card'>", unsafe_allow_html=True)
-    st.markdown("### 🏷️ 프로젝트 특성 선택 (176개 전체)")
-
+if boq_file is None:
+    st.sidebar.caption("BOQ 업로드 후 선택할 수 있습니다.")
+else:
+    # feature_master 준비
     fm = feature_master.copy()
     cols6 = ["대공종","중공종","소공종","Cost Driver Type","Cost Driver Method","Cost Driver Condition"]
     for c in ["특성ID"] + cols6:
         fm[c] = fm[c].astype(str).fillna("").str.strip()
 
+    # 현장수 계산
     site_cnt = project_feature_long.groupby("특성ID")["현장코드"].nunique().astype(int).to_dict()
     fm["현장수"] = fm["특성ID"].map(site_cnt).fillna(0).astype(int)
 
+    # 라벨 생성
     fm["라벨"] = fm.apply(
         lambda r: f'{r["특성ID"]} | {r["대공종"]}/{r["중공종"]}/{r["소공종"]} | '
                   f'{r["Cost Driver Type"]}/{r["Cost Driver Method"]}/{r["Cost Driver Condition"]} | '
@@ -1042,7 +1034,13 @@ if boq_file is not None:
         axis=1
     )
 
-    keyword = st.text_input("특성 목록 필터(키워드)", value="", placeholder="예: DCM, Jet, 지반개량, 도심 ...")
+    # 필터(사이드바)
+    keyword = st.sidebar.text_input(
+        "특성 목록 필터(키워드)",
+        value="",
+        placeholder="예: DCM, Jet, 지반개량, 도심 ..."
+    )
+
     fm_view = fm
     if keyword.strip():
         kw = keyword.strip().lower()
@@ -1060,32 +1058,26 @@ if boq_file is not None:
     current_selected_ids = st.session_state.get("selected_feature_ids", [])
     current_labels = [master_id_to_label[fid] for fid in current_selected_ids if fid in master_id_to_label]
 
-    new_selected_labels = st.multiselect(
+    # ✅ 선택 UI만 남김 (삭제/버튼/선택ID 표시는 제거)
+    new_selected_labels = st.sidebar.multiselect(
         "특성 선택(다중 선택 가능)",
         options=options,
         default=[lab for lab in current_labels if lab in options]
     )
 
+    # 선택 결과 -> selected_feature_ids 저장 (기능 유지)
     new_ids = [label_to_id[lab] for lab in new_selected_labels]
-    kept_ids = [fid for fid in current_selected_ids if (fid in master_id_to_label and master_id_to_label[fid] not in options)]
+
+    # 필터로 인해 options에 안 잡히는 기존 선택도 유지(중요)
+    kept_ids = [
+        fid for fid in current_selected_ids
+        if (fid in master_id_to_label and master_id_to_label[fid] not in options)
+    ]
+
     merged_ids = sorted(list(dict.fromkeys(kept_ids + new_ids)))
     st.session_state["selected_feature_ids"] = merged_ids
 
-    st.markdown("#### ✅ 선택된 특성ID")
-    if merged_ids:
-        st.write(merged_ids)
-        del_ids = st.multiselect("제거할 특성ID 선택", options=merged_ids, default=[])
-        c1, c2 = st.columns(2)
-        with c1:
-            if st.button("🗑️ 선택 제거"):
-                st.session_state["selected_feature_ids"] = [x for x in merged_ids if x not in del_ids]
-        with c2:
-            if st.button("🧹 전체 초기화"):
-                st.session_state["selected_feature_ids"] = []
-    else:
-        st.info("선택된 특성이 없습니다.")
-
-    # auto_sites 계산
+    # ✅ auto_sites 계산/세션 저장 (기능 유지)
     if st.session_state["selected_feature_ids"]:
         auto_sites = (
             project_feature_long[
@@ -1095,7 +1087,6 @@ if boq_file is not None:
     else:
         auto_sites = []
 
-    # 표준화 + 정렬해서 session 저장
     new_auto_sites = sorted({
         norm_site_code(x)
         for x in (auto_sites or [])
@@ -1103,13 +1094,18 @@ if boq_file is not None:
     })
     st.session_state["auto_sites"] = new_auto_sites
 
-    st.success(f"자동 후보 현장: {len(new_auto_sites)}개")
-    if len(new_auto_sites) <= 30:
-        st.write(new_auto_sites)
+# 섹션 끝 구분선(원하면)
+sidebar_hr(thick=False, mt=6, mb=6)
 
+
+# =========================
+# (1) BOQ 업로드 (먼저!)
+# =========================
+with st.container():
+    st.markdown("<div class='gs-card'>", unsafe_allow_html=True)
+    boq_file = st.file_uploader("📤 BOQ 파일 업로드", type=["xlsx"])
     st.markdown("</div>", unsafe_allow_html=True)
-else:
-    st.info("BOQ 업로드 후 프로젝트 특성을 선택할 수 있습니다.")
+
 
 
 # =========================
@@ -1714,6 +1710,7 @@ if st.session_state.get("has_results", False):
             rep_det.to_excel(writer, index=False, sheet_name="report_detail")
     bio.seek(0)
     st.download_button("⬇️ Excel 다운로드", data=bio.read(), file_name="result_unitrate.xlsx")
+
 
 
 
