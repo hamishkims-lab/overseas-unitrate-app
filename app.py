@@ -149,6 +149,12 @@ section[data-testid="stSidebar"] div[data-baseweb="select"] svg path{
 </style>
 """, unsafe_allow_html=True)
 
+def sidebar_hr(mt=8, mb=10):
+    st.sidebar.markdown(
+        f"<hr style='margin:{mt}px 0 {mb}px 0; border:0; border-top:1px solid rgba(255,255,255,0.18);'>",
+        unsafe_allow_html=True
+    )
+
 st.markdown("<div class='gs-header'>📦 해외 실적단가 DB</div>", unsafe_allow_html=True)
 st.write("")
 
@@ -1111,7 +1117,18 @@ if use_site_filter:
     "<hr style='margin:6px 0 10px 0; border:0; border-top:1px solid rgba(255,255,255,0.18);'>",
     unsafe_allow_html=True
 )
-    st.sidebar.subheader("🏗️ 실적 현장 선택")
+    # 현재 선택 개수(리런 시 세션 기준으로 항상 최신)
+    _sel_cnt = len(set(st.session_state.get("selected_auto_codes", []) + st.session_state.get("selected_extra_codes", [])))
+    
+    st.sidebar.markdown(
+        f"""
+        <div style="display:flex; align-items:baseline; justify-content:space-between;">
+          <div style="font-size:1.05rem; font-weight:600;">🏗️ 실적 현장 선택</div>
+          <div style="font-size:0.8rem; opacity:0.7;">선택 현장: {_sel_cnt}개</div>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
 
     auto_sites = st.session_state.get("auto_sites", [])
 
@@ -1171,8 +1188,7 @@ if use_site_filter:
     )
 
     selected_site_codes = sorted(set(selected_auto_codes + selected_extra_codes))
-    st.sidebar.caption(f"선택 현장: {len(selected_site_codes)}개")
-
+    sidebar_hr(mt=10, mb=12)
 
 # =========================
 # 기타 슬라이더/통화 선택
@@ -1186,6 +1202,7 @@ target_currency = st.sidebar.selectbox("산출통화", options=target_options, i
 
 missing_exchange = exchange[exchange["통화"].astype(str).str.upper()==target_currency].empty
 missing_factor   = factor[factor["국가"].astype(str).str.upper()==target_currency].empty
+sidebar_hr(mt=10, mb=12)
 if missing_exchange:
     st.sidebar.error(f"선택한 산출통화 '{target_currency}'에 대한 환율 정보가 exchange.xlsx에 없습니다.")
 if missing_factor:
@@ -1688,6 +1705,7 @@ if st.session_state.get("has_results", False):
             rep_det.to_excel(writer, index=False, sheet_name="report_detail")
     bio.seek(0)
     st.download_button("⬇️ Excel 다운로드", data=bio.read(), file_name="result_unitrate.xlsx")
+
 
 
 
