@@ -1129,12 +1129,12 @@ st.sidebar.caption(f"선택 현장: {len(selected_site_codes)}개")
 # =========================
 # 기타 슬라이더/통화 선택
 # =========================
-sim_threshold = st.sidebar.slider("② Threshold (컷 기준, %)", 0, 100, 60, 5)
-cut_ratio = st.sidebar.slider("③ 상/하위 컷 비율 (%)", 0, 30, 20, 5) / 100.0
+sim_threshold = st.sidebar.slider("Threshold (컷 기준, %)", 0, 100, 60, 5)
+cut_ratio = st.sidebar.slider("상/하위 컷 비율 (%)", 0, 30, 20, 5) / 100.0
 
 target_options = sorted(factor["국가"].astype(str).str.upper().unique().tolist())
 default_idx = target_options.index("KRW") if "KRW" in target_options else 0
-target_currency = st.sidebar.selectbox("④ 산출통화", options=target_options, index=default_idx)
+target_currency = st.sidebar.selectbox("산출통화", options=target_options, index=default_idx)
 
 missing_exchange = exchange[exchange["통화"].astype(str).str.upper()==target_currency].empty
 missing_factor   = factor[factor["국가"].astype(str).str.upper()==target_currency].empty
@@ -1148,12 +1148,7 @@ if missing_factor:
 # Run / Auto Recompute
 # =========================
 # ✅ 자동 재산출 토글(사이드바)
-auto_recompute = st.sidebar.checkbox(
-    "조건 변경 시 자동 재산출",
-    value=True,
-    help="현장/Threshold/컷비율/산출통화 등을 바꾸면 자동으로 다시 산출합니다. (기존 로그 편집값은 초기화됩니다.)",
-    key="auto_recompute",
-)
+auto_recompute = True  # ✅ UI는 숨기지만 기능은 항상 ON
 
 def boq_file_signature(uploaded_file) -> str:
     """BOQ 파일이 바뀌었는지 감지하기 위한 간단 서명(해시)."""
@@ -1202,7 +1197,9 @@ def run_calculation_and_store(run_sig: str):
     else:
         cost_db_run = cost_db.copy()
 
-    st.sidebar.caption(f"실행용 cost_db 행수: {len(cost_db_run):,} / 전체 {len(cost_db):,}")
+    st.sidebar.caption(
+    f"전체 {len(cost_db):,}개 내역 중 {len(cost_db_run):,}개 내역으로 산출 실행"
+    )
 
     progress = st.progress(0.0)
     prog_text = st.empty()
@@ -1643,6 +1640,7 @@ if st.session_state.get("has_results", False):
             rep_det.to_excel(writer, index=False, sheet_name="report_detail")
     bio.seek(0)
     st.download_button("⬇️ Excel 다운로드", data=bio.read(), file_name="result_unitrate.xlsx")
+
 
 
 
