@@ -110,7 +110,36 @@ section[data-testid="stSidebar"] div[data-baseweb="tag"] path,
 section[data-testid="stSidebar"] span[data-baseweb="tag"] path{
   fill:#ffffff !important;
 }
-  
+
+/* ✅ 산출통화 드롭다운(옵션 리스트) : 배경 흰색 / 글자 검정 */
+section[data-testid="stSidebar"] div[data-baseweb="popover"] {
+  background: #ffffff !important;
+}
+
+section[data-testid="stSidebar"] div[data-baseweb="menu"] {
+  background: #ffffff !important;
+}
+
+section[data-testid="stSidebar"] ul[role="listbox"] {
+  background: #ffffff !important;
+}
+
+section[data-testid="stSidebar"] li[role="option"] {
+  color: #000000 !important;
+  background: #ffffff !important;
+}
+
+/* hover/선택 상태도 흰배경 유지(원하면 hover 색은 나중에 조정 가능) */
+section[data-testid="stSidebar"] li[role="option"][aria-selected="true"] {
+  background: #ffffff !important;
+  color: #000000 !important;
+}
+section[data-testid="stSidebar"] li[role="option"]:hover {
+  background: #f2f5f9 !important;
+  color: #000000 !important;
+}
+
+
 </style>
 """, unsafe_allow_html=True)
 
@@ -1650,6 +1679,7 @@ if st.session_state.get("has_results", False):
             rep_det.to_excel(writer, index=False, sheet_name="report_detail")
     bio.seek(0)
     st.download_button("⬇️ Excel 다운로드", data=bio.read(), file_name="result_unitrate.xlsx")
+
 
 
 
