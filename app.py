@@ -111,34 +111,21 @@ section[data-testid="stSidebar"] span[data-baseweb="tag"] path{
   fill:#ffffff !important;
 }
 
-/* ✅ 산출통화 드롭다운(옵션 리스트) : 배경 흰색 / 글자 검정 */
-section[data-testid="stSidebar"] div[data-baseweb="popover"] {
-  background: #ffffff !important;
+/* ✅ (닫힌 상태) 선택된 산출통화 값만 검정 텍스트로 강제
+   - 드롭다운(popover/menu)은 건드리지 않음 → 검은 배경/흰 글씨 유지
+*/
+section[data-testid="stSidebar"] div[data-baseweb="select"] input{
+  color:#000000 !important;
+  -webkit-text-fill-color:#000000 !important;
+  caret-color:#000000 !important;
 }
 
-section[data-testid="stSidebar"] div[data-baseweb="menu"] {
-  background: #ffffff !important;
+/* 일부 버전에서 input 대신 내부 span/div로 값이 보이는 케이스 대응 */
+section[data-testid="stSidebar"] div[data-baseweb="select"] [data-testid="stMarkdownContainer"],
+section[data-testid="stSidebar"] div[data-baseweb="select"] span{
+  color:#000000 !important;
+  -webkit-text-fill-color:#000000 !important;
 }
-
-section[data-testid="stSidebar"] ul[role="listbox"] {
-  background: #ffffff !important;
-}
-
-section[data-testid="stSidebar"] li[role="option"] {
-  color: #000000 !important;
-  background: #ffffff !important;
-}
-
-/* hover/선택 상태도 흰배경 유지(원하면 hover 색은 나중에 조정 가능) */
-section[data-testid="stSidebar"] li[role="option"][aria-selected="true"] {
-  background: #ffffff !important;
-  color: #000000 !important;
-}
-section[data-testid="stSidebar"] li[role="option"]:hover {
-  background: #f2f5f9 !important;
-  color: #000000 !important;
-}
-
 
 </style>
 """, unsafe_allow_html=True)
@@ -1679,6 +1666,7 @@ if st.session_state.get("has_results", False):
             rep_det.to_excel(writer, index=False, sheet_name="report_detail")
     bio.seek(0)
     st.download_button("⬇️ Excel 다운로드", data=bio.read(), file_name="result_unitrate.xlsx")
+
 
 
 
