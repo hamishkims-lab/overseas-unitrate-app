@@ -40,29 +40,55 @@ st.markdown(f"""
      border-radius: 10px;
      font-size: 26px; font-weight: 700;
   }}
+
+  /* select 기본 박스 */
   div[data-baseweb="select"] > div {{
      background-color: white !important;
      border: 1px solid {CI_BLUE} !important;
      border-radius: 6px !important;
   }}
-  /* ✅ multiselect 선택된 태그(칩) 색상 */
-  div[data-baseweb="select"] span {{
+
+  /* ✅ 멀티셀렉트 '칩(tag)'만 스타일 적용 (selectbox 선택값은 건드리지 않음) */
+  div[data-baseweb="tag"] {{
      background-color: {CI_BLUE} !important;
      color: white !important;
-     border-radius: 6px !important;
-     padding: 2px 8px !important;
+     border-radius: 8px !important;
      border: 1px solid {CI_TEAL} !important;
+
+     /* ✅ 파란색 크기(높이/패딩) 균일화 */
+     min-height: 28px !important;
+     height: 28px !important;
+     display: inline-flex !important;
+     align-items: center !important;
+     padding: 0 10px !important;
+     box-sizing: border-box !important;
   }}
 
-  /* ✅ 태그(칩) hover 시 강조 */
-  div[data-baseweb="select"] span:hover {{
+  /* tag 내부 텍스트/아이콘 색 고정 */
+  div[data-baseweb="tag"] * {{
+     color: white !important;
+  }}
+
+  /* tag hover */
+  div[data-baseweb="tag"]:hover {{
      background-color: {CI_TEAL} !important;
      border: 1px solid {CI_BLUE} !important;
   }}
+
+  /* ✅ 드롭다운 옵션 hover/선택 색 (가능하면 적용됨: streamlit 버전/DOM에 따라 다를 수 있음) */
+  div[role="option"][aria-selected="true"] {{
+    background-color: {CI_TEAL} !important;
+    color: black !important;
+  }}
+  div[role="option"]:hover {{
+    background-color: rgba(0, 191, 179, 0.12) !important;
+  }}
+
   .stDownloadButton button {{
      background-color:{CI_BLUE}; color:white; border-radius:8px; padding:8px 14px; border:0;
   }}
   .stDownloadButton button:hover {{ background-color:{CI_TEAL}; color:white; }}
+
   .gs-card {{
     background-color: white;
     border: 1px solid #e8eef3;
@@ -1603,6 +1629,7 @@ if st.session_state.get("has_results", False):
             rep_det.to_excel(writer, index=False, sheet_name="report_detail")
     bio.seek(0)
     st.download_button("⬇️ Excel 다운로드", data=bio.read(), file_name="result_unitrate.xlsx")
+
 
 
 
