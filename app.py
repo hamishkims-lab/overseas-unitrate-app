@@ -465,7 +465,7 @@ def fast_recompute_from_pool(
     log_df = df[log_cols].copy()
 
     return result_df, log_df
-    # =========================
+# =========================
 # 🤖 Include 자동 추천 에이전트(룰 기반)
 # =========================
 def _to_num(s):
@@ -743,19 +743,6 @@ def build_site_context_table(cost_db: pd.DataFrame, selected_site_codes: list) -
     out = tmp[tmp["현장코드"].isin([norm_site_code(x) for x in selected_site_codes])].copy()
     out = out.sort_values("현장코드").reset_index(drop=True)
     return out
-
-def get_ai_effective_rule_text() -> str:
-    info = st.session_state.get("ai_last_applied", None)
-    if isinstance(info, dict) and info.get("mode"):
-        scope = info.get("scope", "")
-        mode = info.get("mode", "")
-        min_keep = info.get("min_keep", "")
-        max_keep = info.get("max_keep", "")
-        boq_id = info.get("boq_id", None)
-        if scope == "현재 BOQ" and boq_id is not None:
-            return f"AI 적용됨: 범위={scope}(BOQ_ID={boq_id}), 모드={mode}, 최소포함={min_keep}, 최대포함={max_keep}"
-        return f"AI 적용됨: 범위={scope}, 모드={mode}, 최소포함={min_keep}, 최대포함={max_keep}"
-    return "AI 최종기준 기록 없음(수동 편집 또는 기본 컷만 적용)"
 
 def plot_distribution(series: pd.Series, title: str):
     s = pd.to_numeric(series, errors="coerce").dropna()
@@ -1632,6 +1619,7 @@ if st.session_state.get("has_results", False):
             rep_det.to_excel(writer, index=False, sheet_name="report_detail")
     bio.seek(0)
     st.download_button("⬇️ Excel 다운로드", data=bio.read(), file_name="result_unitrate.xlsx")
+
 
 
 
