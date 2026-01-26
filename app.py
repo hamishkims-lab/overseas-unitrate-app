@@ -1008,9 +1008,19 @@ w_str = DEFAULT_W_STR
 w_sem = 1.0 - w_str
 top_k_sem = DEFAULT_TOP_K_SEM
 
+# ✅ 방어코드(어디든, 사용 전에 1번만)
+boq_file = None
 
 # =========================
-# (2) 메인: BOQ 업로드 아래 특성 선택 UI
+# (1) BOQ 업로드 (먼저!)
+# =========================
+with st.container():
+    st.markdown("<div class='gs-card'>", unsafe_allow_html=True)
+    boq_file = st.file_uploader("📤 BOQ 파일 업로드", type=["xlsx"])
+    st.markdown("</div>", unsafe_allow_html=True)
+
+# =========================
+# (2) 메인: BOQ 업로드 아래 특성 선택 UI (요청 반영 버전)
 # =========================
 auto_sites = []
 
@@ -1695,6 +1705,7 @@ if st.session_state.get("has_results", False):
             rep_det.to_excel(writer, index=False, sheet_name="report_detail")
     bio.seek(0)
     st.download_button("⬇️ Excel 다운로드", data=bio.read(), file_name="result_unitrate.xlsx")
+
 
 
 
