@@ -674,7 +674,7 @@ def build_report_tables(log_df: pd.DataFrame, result_df: pd.DataFrame):
 # =========================
 # 🤖 AI 최종 적용 기준 기록/표시용 (TAB3에서 사용)
 # =========================
-def record_ai_last_applied(scope: str, mode: str, min_keep: int, max_keep: int, summary: dict | None):
+def record_ai_last_applied(scope: str, mode: str, min_keep: int, max_keep: int, summary: Optional[dict]):
     """
     scope: "현재 BOQ" or "전체 BOQ"
     summary: suggest_include_for_one_boq()에서 반환한 summary(있으면 hyb_min, iqr_k 포함)
@@ -1619,6 +1619,7 @@ if st.session_state.get("has_results", False):
             rep_det.to_excel(writer, index=False, sheet_name="report_detail")
     bio.seek(0)
     st.download_button("⬇️ Excel 다운로드", data=bio.read(), file_name="result_unitrate.xlsx")
+
 
 
 
