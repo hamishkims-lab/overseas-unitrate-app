@@ -30,67 +30,72 @@ CI_BLUE   = "#005EB8"
 CI_TEAL   = "#00BFB3"
 BG_LIGHT  = "#F6FAFC"
 
-st.markdown(f"""
+st.markdown("""
 <style>
-  .main {{ background-color: {BG_LIGHT}; }}
+  /* 전체 배경 */
+  .main { background-color: #F6FAFC; }
 
   /* ====== 사이드바에서만 강제 적용(우선순위 ↑) ====== */
-section[data-testid="stSidebar"] div[data-baseweb="select"] > div{
-  background-color: #ffffff !important;
-  border: 1px solid #005EB8 !important;
-  border-radius: 6px !important;
-}
+  section[data-testid="stSidebar"] div[data-baseweb="select"] > div{
+    background-color: #ffffff !important;
+    border: 1px solid #005EB8 !important;
+    border-radius: 6px !important;
+  }
 
-/* ✅ 산출통화(Selectbox) 선택 텍스트를 검정으로 강제 */
-section[data-testid="stSidebar"] div[data-baseweb="select"] input{
-  color:#000000 !important;
-  -webkit-text-fill-color:#000000 !important;
-}
+  /* ✅ 산출통화(Selectbox) 선택 텍스트를 검정으로 강제 */
+  section[data-testid="stSidebar"] div[data-baseweb="select"] input{
+    color:#000000 !important;
+    -webkit-text-fill-color:#000000 !important;
+    caret-color:#000000 !important;
+  }
 
-/* ====== 멀티셀렉트 칩(tag) : BaseWeb DOM이 케이스별로 div/span 둘 다 나올 수 있어 둘 다 잡음 ====== */
-section[data-testid="stSidebar"] div[data-baseweb="tag"],
-section[data-testid="stSidebar"] span[data-baseweb="tag"]{
-  background-color:#4DA3FF !important;   /* 밝은 파란색 */
-  border:1px solid #2F80ED !important;
-  border-radius:8px !important;
+  /* ✅ placeholder/비활성 텍스트도 검정 계열로 */
+  section[data-testid="stSidebar"] div[data-baseweb="select"] input::placeholder{
+    color:#000000 !important;
+    -webkit-text-fill-color:#000000 !important;
+    opacity: 0.7 !important;
+  }
 
-  min-height:30px !important;
-  height:30px !important;
-  display:inline-flex !important;
-  align-items:center !important;
+  /* ====== 멀티셀렉트 칩(tag) ====== */
+  section[data-testid="stSidebar"] div[data-baseweb="tag"],
+  section[data-testid="stSidebar"] span[data-baseweb="tag"]{
+    background-color:#4DA3FF !important;   /* 밝은 파란색 */
+    border:1px solid #2F80ED !important;
+    border-radius:8px !important;
 
-  padding:0 10px !important;
-  box-sizing:border-box !important;
+    min-height:30px !important;
+    height:30px !important;
+    display:inline-flex !important;
+    align-items:center !important;
 
-  /* ✅ 폭을 넓혀서 15자 잘림 완화 */
-  max-width: 280px !important;
-}
+    padding:0 10px !important;
+    box-sizing:border-box !important;
 
-/* ✅ tag 내부 텍스트: ellipsis 유지 + 폭 확대 */
-section[data-testid="stSidebar"] div[data-baseweb="tag"] span,
-section[data-testid="stSidebar"] span[data-baseweb="tag"] span{
-  color:#ffffff !important;
-  white-space:nowrap !important;
-  overflow:hidden !important;
-  text-overflow:ellipsis !important;
-  max-width: 230px !important;  /* 25자 정도 노출 목표 */
-  display:inline-block !important;
-}
+    max-width: 280px !important;
+  }
 
-/* ✅ tag의 X 아이콘/버튼 색 */
-section[data-testid="stSidebar"] div[data-baseweb="tag"] svg,
-section[data-testid="stSidebar"] span[data-baseweb="tag"] svg,
-section[data-testid="stSidebar"] div[data-baseweb="tag"] path,
-section[data-testid="stSidebar"] span[data-baseweb="tag"] path{
-  fill:#ffffff !important;
-}
+  section[data-testid="stSidebar"] div[data-baseweb="tag"] span,
+  section[data-testid="stSidebar"] span[data-baseweb="tag"] span{
+    color:#ffffff !important;
+    white-space:nowrap !important;
+    overflow:hidden !important;
+    text-overflow:ellipsis !important;
+    max-width: 230px !important;  /* 25자 노출 목표 */
+    display:inline-block !important;
+  }
 
-/* hover */
-section[data-testid="stSidebar"] div[data-baseweb="tag"]:hover,
-section[data-testid="stSidebar"] span[data-baseweb="tag"]:hover{
-  background-color:#2F80ED !important;
-  border:1px solid #1C6DD0 !important;
-}
+  section[data-testid="stSidebar"] div[data-baseweb="tag"] svg,
+  section[data-testid="stSidebar"] span[data-baseweb="tag"] svg,
+  section[data-testid="stSidebar"] div[data-baseweb="tag"] path,
+  section[data-testid="stSidebar"] span[data-baseweb="tag"] path{
+    fill:#ffffff !important;
+  }
+
+  section[data-testid="stSidebar"] div[data-baseweb="tag"]:hover,
+  section[data-testid="stSidebar"] span[data-baseweb="tag"]:hover{
+    background-color:#2F80ED !important;
+    border:1px solid #1C6DD0 !important;
+  }
 </style>
 """, unsafe_allow_html=True)
 
@@ -1630,6 +1635,7 @@ if st.session_state.get("has_results", False):
             rep_det.to_excel(writer, index=False, sheet_name="report_detail")
     bio.seek(0)
     st.download_button("⬇️ Excel 다운로드", data=bio.read(), file_name="result_unitrate.xlsx")
+
 
 
 
