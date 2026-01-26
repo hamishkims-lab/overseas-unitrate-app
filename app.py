@@ -34,79 +34,63 @@ st.markdown(f"""
 <style>
   .main {{ background-color: {BG_LIGHT}; }}
 
-  /* ====== 공통 Select 박스 ====== */
-  div[data-baseweb="select"] > div {{
-     background-color: white !important;
-     border: 1px solid {CI_BLUE} !important;
-     border-radius: 6px !important;
-  }}
+  /* ====== 사이드바에서만 강제 적용(우선순위 ↑) ====== */
+section[data-testid="stSidebar"] div[data-baseweb="select"] > div{
+  background-color: #ffffff !important;
+  border: 1px solid #005EB8 !important;
+  border-radius: 6px !important;
+}
 
-  /* ✅ 산출통화(Selectbox) 선택 텍스트를 '검정'으로 강제
-     - 일부 환경에서 input이 readonly로 들어가서 text-fill도 같이 지정 */
-  div[data-baseweb="select"] input {{
-    color: #000000 !important;
-    -webkit-text-fill-color: #000000 !important;
-  }}
-  div[data-baseweb="select"] span {{
-    color: #000000 !important;
-  }}
+/* ✅ 산출통화(Selectbox) 선택 텍스트를 검정으로 강제 */
+section[data-testid="stSidebar"] div[data-baseweb="select"] input{
+  color:#000000 !important;
+  -webkit-text-fill-color:#000000 !important;
+}
 
-  /* ====== 멀티셀렉트 '칩(tag)' 스타일 ======
-     ✅ 밝은 파란색 + 높이/패딩 균일 + 더 길게(약 25자 정도) 보이도록 폭 확대 */
-  div[data-baseweb="tag"] {{
-     background-color: #4DA3FF !important;   /* 밝은 파란색 */
-     border: 1px solid #2F80ED !important;
-     border-radius: 8px !important;
+/* ====== 멀티셀렉트 칩(tag) : BaseWeb DOM이 케이스별로 div/span 둘 다 나올 수 있어 둘 다 잡음 ====== */
+section[data-testid="stSidebar"] div[data-baseweb="tag"],
+section[data-testid="stSidebar"] span[data-baseweb="tag"]{
+  background-color:#4DA3FF !important;   /* 밝은 파란색 */
+  border:1px solid #2F80ED !important;
+  border-radius:8px !important;
 
-     min-height: 30px !important;
-     height: 30px !important;
-     display: inline-flex !important;
-     align-items: center !important;
+  min-height:30px !important;
+  height:30px !important;
+  display:inline-flex !important;
+  align-items:center !important;
 
-     padding: 0 10px !important;
-     box-sizing: border-box !important;
+  padding:0 10px !important;
+  box-sizing:border-box !important;
 
-     /* ✅ 칩 폭을 늘려서 잘림(ellipsis) 전 글자 노출 늘림 */
-     max-width: 260px !important;
-  }}
+  /* ✅ 폭을 넓혀서 15자 잘림 완화 */
+  max-width: 280px !important;
+}
 
-  /* ✅ tag 내부 텍스트(잘림 규칙/폭) */
-  div[data-baseweb="tag"] span {{
-     color: #ffffff !important;
-     white-space: nowrap !important;
-     overflow: hidden !important;
-     text-overflow: ellipsis !important;
+/* ✅ tag 내부 텍스트: ellipsis 유지 + 폭 확대 */
+section[data-testid="stSidebar"] div[data-baseweb="tag"] span,
+section[data-testid="stSidebar"] span[data-baseweb="tag"] span{
+  color:#ffffff !important;
+  white-space:nowrap !important;
+  overflow:hidden !important;
+  text-overflow:ellipsis !important;
+  max-width: 230px !important;  /* 25자 정도 노출 목표 */
+  display:inline-block !important;
+}
 
-     /* 텍스트가 들어가는 span 폭을 키워서 25자 근접하게 */
-     max-width: 210px !important;
-     display: inline-block !important;
-     vertical-align: middle !important;
-  }}
+/* ✅ tag의 X 아이콘/버튼 색 */
+section[data-testid="stSidebar"] div[data-baseweb="tag"] svg,
+section[data-testid="stSidebar"] span[data-baseweb="tag"] svg,
+section[data-testid="stSidebar"] div[data-baseweb="tag"] path,
+section[data-testid="stSidebar"] span[data-baseweb="tag"] path{
+  fill:#ffffff !important;
+}
 
-  /* ✅ tag 내부 모든 아이콘/버튼 색 고정 */
-  div[data-baseweb="tag"] svg,
-  div[data-baseweb="tag"] path {{
-     fill: #ffffff !important;
-  }}
-
-  /* ✅ hover */
-  div[data-baseweb="tag"]:hover {{
-     background-color: #2F80ED !important;
-     border: 1px solid #1C6DD0 !important;
-  }}
-
-  .stDownloadButton button {{
-     background-color:{CI_BLUE}; color:white; border-radius:8px; padding:8px 14px; border:0;
-  }}
-  .stDownloadButton button:hover {{ background-color:{CI_TEAL}; color:white; }}
-
-  .gs-card {{
-    background-color: white;
-    border: 1px solid #e8eef3;
-    border-radius: 10px;
-    padding: 12px 14px;
-    box-shadow: 0 1px 2px rgba(0,0,0,0.04);
-  }}
+/* hover */
+section[data-testid="stSidebar"] div[data-baseweb="tag"]:hover,
+section[data-testid="stSidebar"] span[data-baseweb="tag"]:hover{
+  background-color:#2F80ED !important;
+  border:1px solid #1C6DD0 !important;
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -1067,74 +1051,69 @@ else:
 # =========================
 selected_site_codes = None
 
-st.sidebar.markdown("---")
-st.sidebar.subheader("🏗️ 실적 현장 선택")
+if use_site_filter:
+    st.sidebar.markdown("---")
+    st.sidebar.subheader("🏗️ 실적 현장 선택")
 
-auto_sites = st.session_state.get("auto_sites", [])
+    auto_sites = st.session_state.get("auto_sites", [])
 
-site_df = cost_db[["현장코드", "현장명"]].copy()
-site_df = site_df.dropna(subset=["현장코드"])
+    # 1) cost_db에서 전체 현장 목록 만들기
+    site_df = cost_db[["현장코드", "현장명"]].copy()
+    site_df = site_df.dropna(subset=["현장코드"])
 
-site_df["현장코드"] = site_df["현장코드"].apply(norm_site_code)
-site_df["현장명"] = site_df["현장명"].astype(str).fillna("").str.strip()
-site_df.loc[site_df["현장명"].isin(["", "nan", "None"]), "현장명"] = "(현장명없음)"
-site_df = site_df.drop_duplicates(subset=["현장코드"]).reset_index(drop=True)
+    site_df["현장코드"] = site_df["현장코드"].apply(norm_site_code)
+    site_df["현장명"] = site_df["현장명"].astype(str).fillna("").str.strip()
+    site_df.loc[site_df["현장명"].isin(["", "nan", "None"]), "현장명"] = "(현장명없음)"
+    site_df = site_df.drop_duplicates(subset=["현장코드"]).reset_index(drop=True)
 
-# ✅ 화면 표시용 라벨은 "현장명만"
-# ✅ 단, 같은 현장명이 여러 개면 (2), (3)으로만 구분(코드는 숨김 유지)
-name_counts = site_df["현장명"].value_counts()
-dup_names = set(name_counts[name_counts > 1].index.tolist())
+    all_codes = site_df["현장코드"].tolist()
+    code_to_name = dict(zip(site_df["현장코드"], site_df["현장명"]))
 
-site_df["__dup_idx"] = site_df.groupby("현장명").cumcount() + 1
-site_df["label"] = site_df["현장명"]
-site_df.loc[site_df["현장명"].isin(dup_names), "label"] = (
-    site_df.loc[site_df["현장명"].isin(dup_names), "현장명"]
-    + " ("
-    + site_df.loc[site_df["현장명"].isin(dup_names), "__dup_idx"].astype(str)
-    + ")"
-)
+    # 2) auto_sites -> auto_codes (존재하는 코드만)
+    auto_codes_raw = [norm_site_code(x) for x in (auto_sites or [])]
+    auto_codes = [c for c in auto_codes_raw if c in code_to_name]
 
-all_codes = site_df["현장코드"].tolist()
+    other_codes = [c for c in all_codes if c not in set(auto_codes)]
 
-code_to_label = dict(zip(site_df["현장코드"], site_df["label"]))
-label_to_code = dict(zip(site_df["label"], site_df["현장코드"]))
+    # ✅ 표시용(현장명만, 최대 25자)
+    def fmt_site_code(code: str) -> str:
+        name = code_to_name.get(code, "")
+        name = name.strip()
+        if len(name) > 25:
+            return name[:25] + "…"
+        return name
 
-# auto_sites -> auto_codes (존재하는 코드만)
-auto_codes_raw = [norm_site_code(x) for x in (auto_sites or [])]
-auto_codes = [c for c in auto_codes_raw if c in code_to_label]
+    # =========================
+    # ✅ auto 후보가 바뀌면: 자동 후보를 "즉시 전체 선택" 상태로 세팅
+    # =========================
+    auto_sig = "|".join(auto_codes)
 
-auto_labels = [code_to_label[c] for c in auto_codes]
-other_labels = [code_to_label[c] for c in all_codes if c not in set(auto_codes)]
+    if st.session_state.get("_auto_sig") != auto_sig:
+        st.session_state["_auto_sig"] = auto_sig
+        st.session_state["selected_auto_codes"] = list(auto_codes)
 
-# auto 후보 변경 시 자동 후보 전체 선택
-auto_sig = "|".join(auto_labels)
-if st.session_state.get("_auto_sig") != auto_sig:
-    st.session_state["_auto_sig"] = auto_sig
-    st.session_state["selected_auto_labels"] = list(auto_labels)
+    if "selected_auto_codes" not in st.session_state:
+        st.session_state["selected_auto_codes"] = list(auto_codes)
+    if "selected_extra_codes" not in st.session_state:
+        st.session_state["selected_extra_codes"] = []
 
-if "selected_auto_labels" not in st.session_state:
-    st.session_state["selected_auto_labels"] = list(auto_labels)
-if "selected_extra_labels" not in st.session_state:
-    st.session_state["selected_extra_labels"] = []
+    # ✅ 코드로 선택하되, 화면에는 현장명만 보이게(format_func)
+    selected_auto_codes = st.sidebar.multiselect(
+        "실적현장",
+        options=auto_codes,
+        key="selected_auto_codes",
+        format_func=fmt_site_code,
+    )
 
-selected_auto_labels = st.sidebar.multiselect(
-    "실적현장",
-    options=auto_labels,
-    key="selected_auto_labels",
-)
+    selected_extra_codes = st.sidebar.multiselect(
+        "추가 실적현장",
+        options=other_codes,
+        key="selected_extra_codes",
+        format_func=fmt_site_code,
+    )
 
-selected_extra_labels = st.sidebar.multiselect(
-    "추가 실적현장",
-    options=other_labels,
-    key="selected_extra_labels",
-)
-
-# ✅ 라벨 -> 코드로 변환
-selected_auto_codes = [label_to_code[x] for x in selected_auto_labels if x in label_to_code]
-selected_extra_codes = [label_to_code[x] for x in selected_extra_labels if x in label_to_code]
-
-selected_site_codes = sorted(set(selected_auto_codes + selected_extra_codes))
-st.sidebar.caption(f"선택 현장: {len(selected_site_codes)}개")
+    selected_site_codes = sorted(set(selected_auto_codes + selected_extra_codes))
+    st.sidebar.caption(f"선택 현장: {len(selected_site_codes)}개")
 
 
 # =========================
@@ -1651,6 +1630,7 @@ if st.session_state.get("has_results", False):
             rep_det.to_excel(writer, index=False, sheet_name="report_detail")
     bio.seek(0)
     st.download_button("⬇️ Excel 다운로드", data=bio.read(), file_name="result_unitrate.xlsx")
+
 
 
 
