@@ -1107,7 +1107,10 @@ else:
 selected_site_codes = None
 
 if use_site_filter:
-    st.sidebar.markdown("---")
+    st.sidebar.markdown(
+    "<hr style='margin:6px 0 10px 0; border:0; border-top:1px solid rgba(255,255,255,0.18);'>",
+    unsafe_allow_html=True
+)
     st.sidebar.subheader("🏗️ 실적 현장 선택")
 
     auto_sites = st.session_state.get("auto_sites", [])
@@ -1685,6 +1688,7 @@ if st.session_state.get("has_results", False):
             rep_det.to_excel(writer, index=False, sheet_name="report_detail")
     bio.seek(0)
     st.download_button("⬇️ Excel 다운로드", data=bio.read(), file_name="result_unitrate.xlsx")
+
 
 
 
