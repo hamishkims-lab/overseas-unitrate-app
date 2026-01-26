@@ -1010,22 +1010,13 @@ top_k_sem = DEFAULT_TOP_K_SEM
 
 
 # =========================
-# (1) BOQ 업로드 (먼저!)
-# =========================
-with st.container():
-    st.markdown("<div class='gs-card'>", unsafe_allow_html=True)
-    boq_file = st.file_uploader("📤 BOQ 파일 업로드", type=["xlsx"])
-    st.markdown("</div>", unsafe_allow_html=True)
-
-
-# =========================
 # (2) 메인: BOQ 업로드 아래 특성 선택 UI
 # =========================
 auto_sites = []
 
 if boq_file is not None:
     st.markdown("<div class='gs-card'>", unsafe_allow_html=True)
-    st.markdown("### 🏷️ 프로젝트 특성 선택 (176개 전체)")
+    st.markdown("### 🏷️ 프로젝트 특성 선택")
 
     fm = feature_master.copy()
     cols6 = ["대공종","중공종","소공종","Cost Driver Type","Cost Driver Method","Cost Driver Condition"]
@@ -1042,7 +1033,12 @@ if boq_file is not None:
         axis=1
     )
 
-    keyword = st.text_input("특성 목록 필터(키워드)", value="", placeholder="예: DCM, Jet, 지반개량, 도심 ...")
+    keyword = st.text_input(
+        "특성 목록 필터(키워드)",
+        value="",
+        placeholder="예: DCM, Jet, 지반개량, 도심 ..."
+    )
+
     fm_view = fm
     if keyword.strip():
         kw = keyword.strip().lower()
@@ -1051,7 +1047,7 @@ if boq_file is not None:
     options = fm_view["라벨"].tolist()
     label_to_id = dict(zip(fm_view["라벨"], fm_view["특성ID"]))
 
-    # 기존 선택 복원(필터링 시에도 유지)
+    # ✅ 기존 선택 복원(필터링을 바꿔도 선택 유지)
     master_label_to_id = dict(zip(fm["라벨"], fm["특성ID"]))
     master_id_to_label = {}
     for lab, fid in master_label_to_id.items():
@@ -1063,29 +1059,19 @@ if boq_file is not None:
     new_selected_labels = st.multiselect(
         "특성 선택(다중 선택 가능)",
         options=options,
-        default=[lab for lab in current_labels if lab in options]
+        default=[lab for lab in current_labels if lab in options],
     )
 
+    # ✅ 필터 화면에 없는 기존 선택도 유지(기능 유지 핵심)
     new_ids = [label_to_id[lab] for lab in new_selected_labels]
-    kept_ids = [fid for fid in current_selected_ids if (fid in master_id_to_label and master_id_to_label[fid] not in options)]
+    kept_ids = [
+        fid for fid in current_selected_ids
+        if (fid in master_id_to_label and master_id_to_label[fid] not in options)
+    ]
     merged_ids = sorted(list(dict.fromkeys(kept_ids + new_ids)))
     st.session_state["selected_feature_ids"] = merged_ids
 
-    st.markdown("#### ✅ 선택된 특성ID")
-    if merged_ids:
-        st.write(merged_ids)
-        del_ids = st.multiselect("제거할 특성ID 선택", options=merged_ids, default=[])
-        c1, c2 = st.columns(2)
-        with c1:
-            if st.button("🗑️ 선택 제거"):
-                st.session_state["selected_feature_ids"] = [x for x in merged_ids if x not in del_ids]
-        with c2:
-            if st.button("🧹 전체 초기화"):
-                st.session_state["selected_feature_ids"] = []
-    else:
-        st.info("선택된 특성이 없습니다.")
-
-    # auto_sites 계산
+    # ✅ auto_sites 계산(기능 유지: 현장 후보 자동 반영)
     if st.session_state["selected_feature_ids"]:
         auto_sites = (
             project_feature_long[
@@ -1095,17 +1081,12 @@ if boq_file is not None:
     else:
         auto_sites = []
 
-    # 표준화 + 정렬해서 session 저장
     new_auto_sites = sorted({
         norm_site_code(x)
         for x in (auto_sites or [])
         if norm_site_code(x)
     })
     st.session_state["auto_sites"] = new_auto_sites
-
-    st.success(f"자동 후보 현장: {len(new_auto_sites)}개")
-    if len(new_auto_sites) <= 30:
-        st.write(new_auto_sites)
 
     st.markdown("</div>", unsafe_allow_html=True)
 else:
@@ -1714,6 +1695,7 @@ if st.session_state.get("has_results", False):
             rep_det.to_excel(writer, index=False, sheet_name="report_detail")
     bio.seek(0)
     st.download_button("⬇️ Excel 다운로드", data=bio.read(), file_name="result_unitrate.xlsx")
+
 
 
 
