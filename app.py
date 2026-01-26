@@ -1245,12 +1245,21 @@ def make_params_signature() -> str:
 
 def run_calculation_and_store(run_sig: str):
     """'산출 실행'과 동일한 효과: 계산 → session_state 저장 → 편집값 초기화"""
+
+    # ✅ 메인 화면 상태 텍스트(산출중 표시) - 항상 먼저 만들어둠
+    status_box = st.empty()
+
     if boq_file is None:
+        status_box.empty()
         st.warning("BOQ 파일을 업로드해 주세요.")
         return
     if missing_exchange or missing_factor:
+        status_box.empty()
         st.error("산출통화에 필요한 환율/지수 정보가 없습니다.")
         return
+
+    # ✅ 여기서부터 산출중 표시
+    status_box.markdown("### ⏳ 산출중...")
 
     boq = pd.read_excel(boq_file, engine="openpyxl")
 
@@ -1262,11 +1271,23 @@ def run_calculation_and_store(run_sig: str):
         cost_db_run = cost_db.copy()
 
     st.sidebar.caption(
-    f"전체 {len(cost_db):,}개 내역 중 {len(cost_db_run):,}개 내역으로 산출 실행"
+        f"전체 {len(cost_db):,}개 내역 중 {len(cost_db_run):,}개 내역으로 산출 실행"
     )
 
     progress = st.progress(0.0)
     prog_text = st.empty()
+
+    # ... (기존 후보풀/재계산 로직 그대로)
+
+    progress.progress(1.0)
+    prog_text.text("산출 진행률: 완료")
+
+    # ✅ 완료 표시로 교체(원하면 status_box.empty()로 지워도 됨)
+    status_box.markdown("### ✅ 산출 완료")
+
+    st.success("✅ 완료! 결과 확인 및 다운로드 가능")
+
+    # ... (session_state 저장 로직 그대로)
 
     # ✅ 후보풀 재사용을 위한 시그니처(현장필터/BOQ/DB가 바뀔 때만 새로 생성)
     pool_sig_payload = {
@@ -1705,6 +1726,7 @@ if st.session_state.get("has_results", False):
             rep_det.to_excel(writer, index=False, sheet_name="report_detail")
     bio.seek(0)
     st.download_button("⬇️ Excel 다운로드", data=bio.read(), file_name="result_unitrate.xlsx")
+
 
 
 
