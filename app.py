@@ -33,55 +33,66 @@ BG_LIGHT  = "#F6FAFC"
 st.markdown(f"""
 <style>
   .main {{ background-color: {BG_LIGHT}; }}
-  .gs-header {{
-     color: white;
-     background: linear-gradient(90deg, {CI_BLUE} 0%, {CI_TEAL} 100%);
-     padding: 14px 16px;
-     border-radius: 10px;
-     font-size: 26px; font-weight: 700;
-  }}
 
-  /* select 기본 박스 */
+  /* ====== 공통 Select 박스 ====== */
   div[data-baseweb="select"] > div {{
      background-color: white !important;
      border: 1px solid {CI_BLUE} !important;
      border-radius: 6px !important;
   }}
 
-  /* ✅ 멀티셀렉트 '칩(tag)'만 스타일 적용 (selectbox 선택값은 건드리지 않음) */
-  div[data-baseweb="tag"] {{
-     background-color: {CI_BLUE} !important;
-     color: white !important;
-     border-radius: 8px !important;
-     border: 1px solid {CI_TEAL} !important;
+  /* ✅ 산출통화(Selectbox) 선택 텍스트를 '검정'으로 강제
+     - 일부 환경에서 input이 readonly로 들어가서 text-fill도 같이 지정 */
+  div[data-baseweb="select"] input {{
+    color: #000000 !important;
+    -webkit-text-fill-color: #000000 !important;
+  }}
+  div[data-baseweb="select"] span {{
+    color: #000000 !important;
+  }}
 
-     /* ✅ 파란색 크기(높이/패딩) 균일화 */
-     min-height: 28px !important;
-     height: 28px !important;
+  /* ====== 멀티셀렉트 '칩(tag)' 스타일 ======
+     ✅ 밝은 파란색 + 높이/패딩 균일 + 더 길게(약 25자 정도) 보이도록 폭 확대 */
+  div[data-baseweb="tag"] {{
+     background-color: #4DA3FF !important;   /* 밝은 파란색 */
+     border: 1px solid #2F80ED !important;
+     border-radius: 8px !important;
+
+     min-height: 30px !important;
+     height: 30px !important;
      display: inline-flex !important;
      align-items: center !important;
+
      padding: 0 10px !important;
      box-sizing: border-box !important;
+
+     /* ✅ 칩 폭을 늘려서 잘림(ellipsis) 전 글자 노출 늘림 */
+     max-width: 260px !important;
   }}
 
-  /* tag 내부 텍스트/아이콘 색 고정 */
-  div[data-baseweb="tag"] * {{
-     color: white !important;
+  /* ✅ tag 내부 텍스트(잘림 규칙/폭) */
+  div[data-baseweb="tag"] span {{
+     color: #ffffff !important;
+     white-space: nowrap !important;
+     overflow: hidden !important;
+     text-overflow: ellipsis !important;
+
+     /* 텍스트가 들어가는 span 폭을 키워서 25자 근접하게 */
+     max-width: 210px !important;
+     display: inline-block !important;
+     vertical-align: middle !important;
   }}
 
-  /* tag hover */
+  /* ✅ tag 내부 모든 아이콘/버튼 색 고정 */
+  div[data-baseweb="tag"] svg,
+  div[data-baseweb="tag"] path {{
+     fill: #ffffff !important;
+  }}
+
+  /* ✅ hover */
   div[data-baseweb="tag"]:hover {{
-     background-color: {CI_TEAL} !important;
-     border: 1px solid {CI_BLUE} !important;
-  }}
-
-  /* ✅ 드롭다운 옵션 hover/선택 색 (가능하면 적용됨: streamlit 버전/DOM에 따라 다를 수 있음) */
-  div[role="option"][aria-selected="true"] {{
-    background-color: {CI_TEAL} !important;
-    color: black !important;
-  }}
-  div[role="option"]:hover {{
-    background-color: rgba(0, 191, 179, 0.12) !important;
+     background-color: #2F80ED !important;
+     border: 1px solid #1C6DD0 !important;
   }}
 
   .stDownloadButton button {{
@@ -1640,6 +1651,7 @@ if st.session_state.get("has_results", False):
             rep_det.to_excel(writer, index=False, sheet_name="report_detail")
     bio.seek(0)
     st.download_button("⬇️ Excel 다운로드", data=bio.read(), file_name="result_unitrate.xlsx")
+
 
 
 
