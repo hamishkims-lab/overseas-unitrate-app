@@ -56,46 +56,49 @@ st.markdown("""
     opacity: 0.7 !important;
   }
 
-  /* ====== 멀티셀렉트 칩(tag) ====== */
-  section[data-testid="stSidebar"] div[data-baseweb="tag"],
-  section[data-testid="stSidebar"] span[data-baseweb="tag"]{
-    background-color:#4DA3FF !important;   /* 밝은 파란색 */
-    border:1px solid #2F80ED !important;
-    border-radius:8px !important;
+  /* ✅ tag(칩) 자체는 한 줄 꽉 차게. X가 잘리지 않게 */
+section[data-testid="stSidebar"] div[data-baseweb="tag"],
+section[data-testid="stSidebar"] span[data-baseweb="tag"]{
+  width: 100% !important;
+  max-width: 100% !important;
+  overflow: visible !important;
 
-    min-height:30px !important;
-    height:30px !important;
-    display:inline-flex !important;
-    align-items:center !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 8px !important;
 
-    padding:0 10px !important;
-    box-sizing:border-box !important;
+  padding: 0 10px !important;
+  box-sizing: border-box !important;
 
-    max-width: 280px !important;
-  }
+  height: 30px !important;
+  min-height: 30px !important;
+}
 
-  section[data-testid="stSidebar"] div[data-baseweb="tag"] span,
-  section[data-testid="stSidebar"] span[data-baseweb="tag"] span{
-    color:#ffffff !important;
-    white-space:nowrap !important;
-    overflow:hidden !important;
-    text-overflow:ellipsis !important;
-    max-width: 230px !important;  /* 25자 노출 목표 */
-    display:inline-block !important;
-  }
+/* ✅ tag 안의 '텍스트 라벨'은 남은 공간만 쓰고 ellipsis 처리 */
+section[data-testid="stSidebar"] div[data-baseweb="tag"] > span:first-child,
+section[data-testid="stSidebar"] span[data-baseweb="tag"] > span:first-child{
+  flex: 1 1 auto !important;
+  min-width: 0 !important;          /* 이게 핵심: flex에서 ellipsis가 먹게 */
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
 
-  section[data-testid="stSidebar"] div[data-baseweb="tag"] svg,
-  section[data-testid="stSidebar"] span[data-baseweb="tag"] svg,
-  section[data-testid="stSidebar"] div[data-baseweb="tag"] path,
-  section[data-testid="stSidebar"] span[data-baseweb="tag"] path{
-    fill:#ffffff !important;
-  }
+  font-size: 12px !important;       /* 글자 약간 축소 */
+  line-height: 1 !important;
+}
 
-  section[data-testid="stSidebar"] div[data-baseweb="tag"]:hover,
-  section[data-testid="stSidebar"] span[data-baseweb="tag"]:hover{
-    background-color:#2F80ED !important;
-    border:1px solid #1C6DD0 !important;
-  }
+/* ✅ 마지막 X(삭제) 버튼 영역은 고정폭으로 확보해서 항상 보이게 */
+section[data-testid="stSidebar"] div[data-baseweb="tag"] > span:last-child,
+section[data-testid="stSidebar"] span[data-baseweb="tag"] > span:last-child{
+  flex: 0 0 26px !important;
+  width: 26px !important;
+  min-width: 26px !important;
+
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+  
 </style>
 """, unsafe_allow_html=True)
 
@@ -1635,6 +1638,7 @@ if st.session_state.get("has_results", False):
             rep_det.to_excel(writer, index=False, sheet_name="report_detail")
     bio.seek(0)
     st.download_button("⬇️ Excel 다운로드", data=bio.read(), file_name="result_unitrate.xlsx")
+
 
 
 
