@@ -936,11 +936,104 @@ with st.container():
 # =========================
 auto_sites = []
 
+if boq_file is not None:
+    st.markdown("<div class='gs-card'>", unsafe_allow_html=True)
+    st.markdown("### 🏷️ 프로젝트 특성 선택 (176개 전체)")
+
+    fm = feature_master.copy()
+    cols6 = ["대공종","중공종","소공종","Cost Driver Type","Cost Driver Method","Cost Driver Condition"]
+    for c in ["특성ID"] + cols6:
+        fm[c] = fm[c].astype(str).fillna("").str.strip()
+
+    site_cnt = project_feature_long.groupby("특성ID")["현장코드"].nunique().astype(int).to_dict()
+    fm["현장수"] = fm["특성ID"].map(site_cnt).fillna(0).astype(int)
+
+    fm["라벨"] = fm.apply(
+        lambda r: f'{r["특성ID"]} | {r["대공종"]}/{r["중공종"]}/{r["소공종"]} | '
+                  f'{r["Cost Driver Type"]}/{r["Cost Driver Method"]}/{r["Cost Driver Condition"]} | '
+                  f'현장 {r["현장수"]}개',
+        axis=1
+    )
+
+    keyword = st.text_input("특성 목록 필터(키워드)", value="", placeholder="예: DCM, Jet, 지반개량, 도심 ...")
+    fm_view = fm
+    if keyword.strip():
+        kw = keyword.strip().lower()
+        fm_view = fm[fm["라벨"].str.lower().str.contains(kw, na=False)].copy()
+
+    options = fm_view["라벨"].tolist()
+    label_to_id = dict(zip(fm_view["라벨"], fm_view["특성ID"]))
+
+    # 기존 선택 복원(필터링 시에도 유지)
+    master_label_to_id = dict(zip(fm["라벨"], fm["특성ID"]))
+    master_id_to_label = {}
+    for lab, fid in master_label_to_id.items():
+        master_id_to_label.setdefault(fid, lab)
+
+    current_selected_ids = st.session_state.get("selected_feature_ids", [])
+    current_labels = [master_id_to_label[fid] for fid in current_selected_ids if fid in master_id_to_label]
+
+    new_selected_labels = st.multiselect(
+        "특성 선택(다중 선택 가능)",
+        options=options,
+        default=[lab for lab in current_labels if lab in options]
+    )
+
+    new_ids = [label_to_id[lab] for lab in new_selected_labels]
+    kept_ids = [fid for fid in current_selected_ids if (fid in master_id_to_label and master_id_to_label[fid] not in options)]
+    merged_ids = sorted(list(dict.fromkeys(kept_ids + new_ids)))
+    st.session_state["selected_feature_ids"] = merged_ids
+
+    st.markdown("#### ✅ 선택된 특성ID")
+    if merged_ids:
+        st.write(merged_ids)
+        del_ids = st.multiselect("제거할 특성ID 선택", options=merged_ids, default=[])
+        c1, c2 = st.columns(2)
+        with c1:
+            if st.button("🗑️ 선택 제거"):
+                st.session_state["selected_feature_ids"] = [x for x in merged_ids if x not in del_ids]
+        with c2:
+            if st.button("🧹 전체 초기화"):
+                st.session_state["selected_feature_ids"] = []
+    else:
+        st.info("선택된 특성이 없습니다.")
+
+    # auto_sites 계산
+    if st.session_state["selected_feature_ids"]:
+        auto_sites = (
+            project_feature_long[
+                project_feature_long["특성ID"].astype(str).isin([str(x) for x in st.session_state["selected_feature_ids"]])
+            ]["현장코드"].astype(str).unique().tolist()
+        )
+    else:
+        auto_sites = []
+
+    # 표준화 + 정렬해서 session 저장
+    new_auto_sites = sorted({
+        norm_site_code(x)
+        for x in (auto_sites or [])
+        if norm_site_code(x)
+    })
+    st.session_state["auto_sites"] = new_auto_sites
+
+    st.success(f"자동 후보 현장: {len(new_auto_sites)}개")
+    if len(new_auto_sites) <= 30:
+        st.write(new_auto_sites)
+
+    st.markdown("</div>", unsafe_allow_html=True)
+else:
+    st.info("BOQ 업로드 후 프로젝트 특성을 선택할 수 있습니다.")
+
+
+# =========================
+# (3) 사이드바: 실적 현장 선택 (auto_sites가 session에 저장된 이후에!)
+# =========================
+selected_site_codes = None
+
 if use_site_filter:
     st.sidebar.markdown("---")
     st.sidebar.subheader("🏗️ 실적 현장 선택")
 
-    # ✅ 항상 auto_sites를 읽고 UI를 그려야 함
     auto_sites = st.session_state.get("auto_sites", [])
 
     # 1) cost_db에서 전체 현장 목록 만들기
@@ -964,12 +1057,8 @@ if use_site_filter:
     auto_labels = [code_to_label[c] for c in auto_codes]
     other_labels = [code_to_label[c] for c in all_codes if c not in set(auto_codes)]
 
-    # =========================
-    # ✅ auto 후보가 바뀌면: 사이드바 자동 후보를 "즉시 전체 선택" 상태로 세팅
-    #    (사용자는 체크 해제로 제외 가능)
-    # =========================
+    # ✅ auto 후보가 바뀌면: 자동 후보를 "즉시 전체 선택" 상태로
     auto_sig = "|".join(auto_labels)
-
     if st.session_state.get("_auto_sig") != auto_sig:
         st.session_state["_auto_sig"] = auto_sig
         st.session_state["selected_auto_labels"] = list(auto_labels)
@@ -979,7 +1068,6 @@ if use_site_filter:
     if "selected_extra_labels" not in st.session_state:
         st.session_state["selected_extra_labels"] = []
 
-    # ✅ 라벨 변경
     selected_auto_labels = st.sidebar.multiselect(
         "실적현장",
         options=auto_labels,
@@ -996,91 +1084,6 @@ if use_site_filter:
 
     selected_site_codes = sorted(set(selected_auto_codes + selected_extra_codes))
     st.sidebar.caption(f"선택 현장: {len(selected_site_codes)}개")
-
-        if len(new_auto_sites) <= 30:
-            st.write(new_auto_sites)
-
-        st.markdown("</div>", unsafe_allow_html=True)
-    else:
-        st.info("BOQ 업로드 후 프로젝트 특성을 선택할 수 있습니다.")
-
-
-# =========================
-# (3) 사이드바: 실적 현장 선택 (auto_sites가 session에 저장된 이후에!)
-# =========================
-selected_site_codes = None
-
-if use_site_filter:
-    st.sidebar.markdown("---")
-    st.sidebar.subheader("🏗️ 실적 현장 선택")
-
-    # ✅ (선택) 디버그 초기화 버튼: 누르면 상태만 지우고 rerun
-    if st.sidebar.button("🧹 강제 초기화(디버그)"):
-        for k in ["selected_auto_labels", "selected_extra_labels", "auto_sites", "selected_feature_ids"]:
-            if k in st.session_state:
-                del st.session_state[k]
-        st.rerun()
-
-    # ✅ 항상 auto_sites를 읽고 UI를 그려야 함 (버튼 if 밖!)
-    auto_sites = st.session_state.get("auto_sites", [])
-
-    # 1) cost_db에서 전체 현장 목록 만들기
-    site_df = cost_db[["현장코드", "현장명"]].copy()
-    site_df = site_df.dropna(subset=["현장코드"])
-
-    site_df["현장코드"] = site_df["현장코드"].apply(norm_site_code)
-    site_df["현장명"] = site_df["현장명"].astype(str).fillna("").str.strip()
-    site_df.loc[site_df["현장명"].isin(["", "nan", "None"]), "현장명"] = "(현장명없음)"
-
-    site_df = site_df.drop_duplicates(subset=["현장코드"])
-    site_df["label"] = site_df["현장코드"] + " | " + site_df["현장명"]
-
-    all_codes = site_df["현장코드"].tolist()
-    code_to_label = dict(zip(site_df["현장코드"], site_df["label"]))
-
-    # 2) auto_sites -> auto_codes (존재하는 코드만)
-    auto_codes_raw = [norm_site_code(x) for x in (auto_sites or [])]
-    auto_codes = [c for c in auto_codes_raw if c in code_to_label]
-
-    auto_labels = [code_to_label[c] for c in auto_codes]
-    other_labels = [code_to_label[c] for c in all_codes if c not in set(auto_codes)]
-
-    st.sidebar.caption(f"자동 후보 {len(auto_labels)}개 / 기타 {len(other_labels)}개")
-
-    # =========================
-    # ✅ auto 후보가 바뀌면: 사이드바 자동 후보를 "즉시 전체 선택" 상태로 세팅
-    #    (사용자는 체크 해제로 제외 가능)
-    # =========================
-    auto_sig = "|".join(auto_labels)  # auto 후보가 달라지면 시그니처도 달라짐
-
-    # 1) auto 후보가 바뀐 최초 1회에만 '전체 선택'으로 초기화
-    if st.session_state.get("_auto_sig") != auto_sig:
-        st.session_state["_auto_sig"] = auto_sig
-        st.session_state["selected_auto_labels"] = list(auto_labels)
-
-    # 2) 키가 아예 없으면(최초 진입 등) 기본값 세팅
-    if "selected_auto_labels" not in st.session_state:
-        st.session_state["selected_auto_labels"] = list(auto_labels)
-    if "selected_extra_labels" not in st.session_state:
-        st.session_state["selected_extra_labels"] = []
-
-    # 3) default를 쓰지 말고 session_state 값으로 렌더링
-    selected_auto_labels = st.sidebar.multiselect(
-        "자동 후보(제외 가능)",
-        options=auto_labels,
-        key="selected_auto_labels",
-    )
-    selected_auto_codes = [x.split(" | ")[0] for x in selected_auto_labels]
-
-    selected_extra_labels = st.sidebar.multiselect(
-        "기타 현장(추가 가능)",
-        options=other_labels,
-        key="selected_extra_labels",
-    )
-    selected_extra_codes = [x.split(" | ")[0] for x in selected_extra_labels]
-
-    selected_site_codes = sorted(set(selected_auto_codes + selected_extra_codes))
-    st.sidebar.caption(f"최종 선택 현장: {len(selected_site_codes)}개")
 
 
 # =========================
@@ -1600,6 +1603,7 @@ if st.session_state.get("has_results", False):
             rep_det.to_excel(writer, index=False, sheet_name="report_detail")
     bio.seek(0)
     st.download_button("⬇️ Excel 다운로드", data=bio.read(), file_name="result_unitrate.xlsx")
+
 
 
 
