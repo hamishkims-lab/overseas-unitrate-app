@@ -533,6 +533,7 @@ def fast_recompute_from_pool(
             "내역": one.get("BOQ_내역", ""),
             "Unit": one.get("BOQ_Unit", ""),
             "Final Price": f"{final_price:,.2f}" if final_price is not None else None,
+            "산출통화": target_currency,   # ✅ 추가
             "산출근거": reason_text,
             "근거공종(최빈)": top_work,
         })
@@ -1398,23 +1399,27 @@ if st.session_state.get("has_results", False):
         for boq_id, g in edited_log.groupby("BOQ_ID"):
             g2 = g[g["Include"] == True].copy()
             if g2.empty:
-                out_prices.append((int(boq_id), None, "매칭 후보 없음(또는 전부 제외)", ""))
+                out_prices.append((int(boq_id), None, target_currency, "매칭 후보 없음(또는 전부 제외)", ""))
                 continue
-
+        
             final_price = float(pd.to_numeric(g2["__adj_price"], errors="coerce").mean())
-
+        
             currencies = sorted(g2["통화"].astype(str).str.upper().unique().tolist())
             reason_text = f"{len(currencies)}개국({', '.join(currencies)}) {len(g2)}개 내역 근거"
-
+        
             vc = g2["공종코드"].astype(str).value_counts()
             top_code = vc.index[0] if len(vc) else ""
             top_cnt = int(vc.iloc[0]) if len(vc) else 0
             top_work = f"{top_code} ({top_cnt}/{len(g2)})" if top_code else ""
-
-            out_prices.append((int(boq_id), f"{final_price:,.2f}", reason_text, top_work))
-
-        upd = pd.DataFrame(out_prices, columns=["BOQ_ID", "Final Price", "산출근거", "근거공종(최빈)"])
-        base = base.drop(columns=[c for c in ["Final Price", "산출근거", "근거공종(최빈)"] if c in base.columns], errors="ignore")
+        
+            out_prices.append((int(boq_id), f"{final_price:,.2f}", target_currency, reason_text, top_work))
+        
+        upd = pd.DataFrame(out_prices, columns=["BOQ_ID", "Final Price", "산출통화", "산출근거", "근거공종(최빈)"])
+        
+        base = base.drop(
+            columns=[c for c in ["Final Price","산출통화","산출근거","근거공종(최빈)"] if c in base.columns],
+            errors="ignore"
+        )
         base = base.merge(upd, on="BOQ_ID", how="left")
         return base
 
@@ -1632,8 +1637,22 @@ if st.session_state.get("has_results", False):
 
     with tab1:
         show_df = st.session_state.get("result_df_adjusted", result_df).copy()
+    
+        # (원래 있던 통화 컬럼 제거 로직은 유지)
         if "통화" in show_df.columns:
             show_df = show_df.drop(columns=["통화"])
+    
+        # ✅ Final Price 바로 다음에 산출통화 위치시키기
+        if "Final Price" in show_df.columns:
+            if "산출통화" not in show_df.columns:
+                show_df["산출통화"] = target_currency
+    
+            cols = show_df.columns.tolist()
+            cols.remove("산출통화")
+            fp_idx = cols.index("Final Price")
+            cols.insert(fp_idx + 1, "산출통화")
+            show_df = show_df[cols]
+    
         st.dataframe(show_df, use_container_width=True)
    
     with tab3:
@@ -1726,6 +1745,7 @@ if st.session_state.get("has_results", False):
             rep_det.to_excel(writer, index=False, sheet_name="report_detail")
     bio.seek(0)
     st.download_button("⬇️ Excel 다운로드", data=bio.read(), file_name="result_unitrate.xlsx")
+
 
 
 
