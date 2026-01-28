@@ -948,7 +948,11 @@ def render_boq_scatter(log_df: pd.DataFrame, base_result: pd.DataFrame):
             x=alt.X("계약월_dt:T", title="계약년월"),
             y=alt.Y("산출단가:Q", title="산출단가(산출통화 기준)"),
             color=alt.Color("포함여부:N", title="포함"),
-            size=alt.Size("포함여부:N", title="포함(크기)", scale=alt.Scale(range=[40, 140])),
+            size=alt.condition(
+                alt.datum.포함여부 == True,
+                alt.value(260),   # 포함(True) 점 크기 (더 크게)
+                alt.value(70)     # 미포함(False) 점 크기
+            ),
             tooltip=[
                 alt.Tooltip("표시내역:N", title="내역"),
                 alt.Tooltip("산출단가:Q", title="산출단가", format=",.4f"),
@@ -1686,14 +1690,8 @@ if st.session_state.get("has_results", False):
         else:
             st.dataframe(base_result, use_container_width=True)
     
-        # 6) 보고서 테이블 생성/갱신
-        if st.button("📝 보고서 생성/갱신", key="btn_build_report"):
-            summary_df, detail_df = build_report_tables(log_for_report, base_result)
-            st.session_state["report_summary_df"] = summary_df
-            st.session_state["report_detail_df"] = detail_df
-    
-        summary_df = st.session_state.get("report_summary_df", pd.DataFrame())
-        detail_df = st.session_state.get("report_detail_df", pd.DataFrame())
+        # 6) 보고서 테이블 생성/갱신 (버튼 없이 자동)
+        summary_df, detail_df = build_report_tables(log_for_report, base_result)
     
         st.markdown("### 6) 각 내역별 단가 근거(요약)")
         if summary_df is None or summary_df.empty:
@@ -1719,14 +1717,15 @@ if st.session_state.get("has_results", False):
     with pd.ExcelWriter(bio, engine="openpyxl") as writer:
         out_result.to_excel(writer, index=False, sheet_name="boq_with_price")
         out_log.to_excel(writer, index=False, sheet_name="calculation_log")
-        rep_sum = st.session_state.get("report_summary_df", pd.DataFrame())
-        rep_det = st.session_state.get("report_detail_df", pd.DataFrame())
+        rep_sum = summary_df if 'summary_df' in locals() else pd.DataFrame()
+        rep_det = detail_df if 'detail_df' in locals() else pd.DataFrame()
         if rep_sum is not None and not rep_sum.empty:
             rep_sum.to_excel(writer, index=False, sheet_name="report_summary")
         if rep_det is not None and not rep_det.empty:
             rep_det.to_excel(writer, index=False, sheet_name="report_detail")
     bio.seek(0)
     st.download_button("⬇️ Excel 다운로드", data=bio.read(), file_name="result_unitrate.xlsx")
+
 
 
 
