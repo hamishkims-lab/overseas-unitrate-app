@@ -1247,7 +1247,7 @@ def make_params_signature() -> str:
 def run_calculation_and_store(run_sig: str):
     """'산출 실행'과 동일한 효과: 계산 → session_state 저장 → 편집값 초기화"""
 
-    # ✅ 메인 화면 상태 텍스트(산출중 표시) - 항상 먼저 만들어둠
+    # ✅ 메인 화면 상태 텍스트(항상 먼저 생성)
     status_box = st.empty()
 
     if boq_file is None:
@@ -1259,8 +1259,11 @@ def run_calculation_and_store(run_sig: str):
         st.error("산출통화에 필요한 환율/지수 정보가 없습니다.")
         return
 
-    # ✅ 여기서부터 산출중 표시
-    status_box.markdown("### ⏳ 산출중...")
+    # ✅ 진행 UI
+    progress = st.progress(0.0)
+    prog_text = st.empty()
+
+    status_box.markdown("### ⏳ 산출중... (BOQ 로드/필터링)")
 
     boq = pd.read_excel(boq_file, engine="openpyxl")
 
@@ -1271,26 +1274,9 @@ def run_calculation_and_store(run_sig: str):
     else:
         cost_db_run = cost_db.copy()
 
-    st.sidebar.caption(
-        f"전체 {len(cost_db):,}개 내역 중 {len(cost_db_run):,}개 내역으로 산출 실행"
-    )
+    st.sidebar.caption(f"전체 {len(cost_db):,}개 내역 중 {len(cost_db_run):,}개 내역으로 산출 실행")
 
-    progress = st.progress(0.0)
-    prog_text = st.empty()
-
-    # ... (기존 후보풀/재계산 로직 그대로)
-
-    progress.progress(1.0)
-    prog_text.text("산출 진행률: 완료")
-
-    # ✅ 완료 표시로 교체(원하면 status_box.empty()로 지워도 됨)
-    status_box.markdown("### ✅ 산출 완료")
-
-    st.success("✅ 완료! 결과 확인 및 다운로드 가능")
-
-    # ... (session_state 저장 로직 그대로)
-
-    # ✅ 후보풀 재사용을 위한 시그니처(현장필터/BOQ/DB가 바뀔 때만 새로 생성)
+    # ✅ 후보풀 재사용 시그니처(현장/BOQ/DB가 바뀔 때만 새로)
     pool_sig_payload = {
         "boq": boq_file_signature(boq_file),
         "use_site_filter": bool(use_site_filter),
@@ -1302,10 +1288,11 @@ def run_calculation_and_store(run_sig: str):
     }
     pool_sig = hashlib.md5(json.dumps(pool_sig_payload, sort_keys=True).encode("utf-8")).hexdigest()
 
-    # 1) 후보풀 생성(무거움) - 필요한 경우에만
     need_new_pool = (st.session_state.get("candidate_pool_sig") != pool_sig) or ("candidate_pool" not in st.session_state)
 
+    # 1) 후보풀 생성(무거움)
     if need_new_pool:
+        status_box.markdown("### ⏳ 산출중... (후보 풀 생성)")
         with st.spinner("후보 풀 생성(최초/현장변경 시 오래 걸릴 수 있음)..."):
             pool = build_candidate_pool(
                 cost_db=cost_db_run,
@@ -1323,7 +1310,8 @@ def run_calculation_and_store(run_sig: str):
     else:
         pool = st.session_state["candidate_pool"]
 
-    # 2) 빠른 재계산(가벼움) - Threshold/컷/산출통화는 여기서만 반영
+    # 2) 빠른 재계산(가벼움)
+    status_box.markdown("### ⏳ 산출중... (Threshold/컷/산출통화 반영)")
     with st.spinner("빠른 재계산(Threshold/컷/산출통화 반영 중)..."):
         result_df, log_df = fast_recompute_from_pool(
             pool=pool,
@@ -1334,19 +1322,13 @@ def run_calculation_and_store(run_sig: str):
             target_currency=target_currency,
         )
 
-    progress.progress(1.0)
-    prog_text.text("산출 진행률: 완료")
-    st.success("✅ 완료! 결과 확인 및 다운로드 가능")
-
-    # ✅ 계산 결과 저장 (rerun 되어도 유지)
+ 
     st.session_state["boq_df"] = boq
     st.session_state["result_df_base"] = result_df.copy()
     st.session_state["log_df_base"] = log_df.copy()
-    st.session_state["log_df_edited"] = log_df.copy()   # ✅ 편집값 초기화(재산출=실행과 동일효과)
-    st.session_state.pop("result_df_adjusted", None)    # ✅ 조정 결과 초기화
+    st.session_state["log_df_edited"] = log_df.copy()
+    st.session_state.pop("result_df_adjusted", None)
     st.session_state["has_results"] = True
-
-    # ✅ 이번 실행 조건 서명 저장
     st.session_state["last_run_sig"] = run_sig
 
 
@@ -1745,6 +1727,7 @@ if st.session_state.get("has_results", False):
             rep_det.to_excel(writer, index=False, sheet_name="report_detail")
     bio.seek(0)
     st.download_button("⬇️ Excel 다운로드", data=bio.read(), file_name="result_unitrate.xlsx")
+
 
 
 
