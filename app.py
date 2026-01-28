@@ -1432,6 +1432,9 @@ if st.session_state.get("has_results", False):
         log_all = st.session_state["log_df_edited"]
 
         # ✅ BOQ 선택을 "ID | 내역"으로 표시
+        if log_all is None or log_all.empty or "BOQ_ID" not in log_all.columns:
+        st.warning("산출 로그가 비어있습니다. (Threshold가 너무 높거나 후보가 없어 로그가 생성되지 않았습니다) 조건을 조정한 뒤 다시 산출 실행하세요.")
+        st.stop()
         boq_ids = sorted(log_all["BOQ_ID"].dropna().astype(int).unique().tolist())
 
         # result_df_base에서 BOQ_ID별 내역 텍스트 가져오기(있으면 더 정확)
@@ -1737,6 +1740,7 @@ if st.session_state.get("has_results", False):
             rep_det.to_excel(writer, index=False, sheet_name="report_detail")
     bio.seek(0)
     st.download_button("⬇️ Excel 다운로드", data=bio.read(), file_name="result_unitrate.xlsx")
+
 
 
 
