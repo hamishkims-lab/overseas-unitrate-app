@@ -1429,22 +1429,27 @@ if st.session_state.get("has_results", False):
         if "log_df_edited" not in st.session_state:
             st.session_state["log_df_edited"] = log_df.copy()
 
-            log_all = st.session_state["log_df_edited"]
-    
-            # ✅ 방어코드: 로그가 비었거나 BOQ_ID가 없으면 안내 후 중단
-            if log_all is None or log_all.empty or "BOQ_ID" not in log_all.columns:
-                st.warning("산출 로그가 비어있습니다. (Threshold가 너무 높거나 후보가 없어 로그가 생성되지 않았습니다) 조건을 조정한 뒤 다시 산출 실행하세요.")
-                st.stop()
-    
-            # ✅ BOQ 선택을 "ID | 내역"으로 표시
-            boq_ids = sorted(log_all["BOQ_ID"].dropna().astype(int).unique().tolist())
+            log_all = st.session_state.get("log_df_edited", None)
 
-        # result_df_base에서 BOQ_ID별 내역 텍스트 가져오기(있으면 더 정확)
+        # ✅ 방어코드 1: 로그 자체가 없거나 비어있거나 BOQ_ID가 없으면 종료
+        if log_all is None or (isinstance(log_all, pd.DataFrame) and (log_all.empty or "BOQ_ID" not in log_all.columns)):
+            st.warning("산출 로그가 비어있습니다. (Threshold가 너무 높거나 후보가 없어 로그가 생성되지 않았습니다) 조건을 조정한 뒤 다시 산출 실행하세요.")
+            st.stop()
+
+        # ✅ boq_ids는 여기서 항상 정의됨
+        boq_ids = sorted(log_all["BOQ_ID"].dropna().astype(int).unique().tolist())
+
+        # ✅ 방어코드 2: BOQ_ID는 있으나 값이 비어있을 때
+        if len(boq_ids) == 0:
+            st.warning("산출 로그에 BOQ_ID가 없습니다. 다시 산출 실행하거나 조건을 조정하세요.")
+            st.stop()
+
+        # ✅ BOQ 선택을 "ID | 내역"으로 표시
         base_for_label = st.session_state.get("result_df_base", pd.DataFrame()).copy()
         boq_text_col = "내역" if ("내역" in base_for_label.columns) else None
 
         id_to_text = {}
-        if boq_text_col and ("BOQ_ID" in base_for_label.columns):
+        if boq_text_col and ("BOQ_ID" in base_for_label.columns) and (not base_for_label.empty):
             id_to_text = (
                 base_for_label.dropna(subset=["BOQ_ID"])
                 .assign(BOQ_ID=lambda d: d["BOQ_ID"].astype(int))
@@ -1453,15 +1458,13 @@ if st.session_state.get("has_results", False):
                 .to_dict()
             )
         else:
-            # fallback: log_df의 BOQ_내역 사용
-            tmp_map = (
+            id_to_text = (
                 log_all.dropna(subset=["BOQ_ID"])
                 .assign(BOQ_ID=lambda d: d["BOQ_ID"].astype(int))
                 .groupby("BOQ_ID")["BOQ_내역"].first()
                 .astype(str)
                 .to_dict()
             )
-            id_to_text = tmp_map
 
         def fmt_boq_id(x: int) -> str:
             t = id_to_text.get(int(x), "")
@@ -1742,6 +1745,7 @@ if st.session_state.get("has_results", False):
             rep_det.to_excel(writer, index=False, sheet_name="report_detail")
     bio.seek(0)
     st.download_button("⬇️ Excel 다운로드", data=bio.read(), file_name="result_unitrate.xlsx")
+
 
 
 
