@@ -451,23 +451,35 @@ def fast_recompute_from_pool(
     cut_ratio: float,
     target_currency: str,
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
-    """
-    ✅ 2단계(가벼움): 후보 풀에서 빠른 재계산
-    - Threshold 필터
-    - 산출통화 변경: __fx_ratio, __fac_ratio만 다시 계산
-    - 컷비율로 Include/DefaultInclude 설정
-    - __adj_price = Unit Price * __cpi_ratio * __fx_ratio * __fac_ratio
-    """
+
+    # ✅ 항상 같은 스키마로 반환하기 위한 빈 DF 템플릿
+    result_cols = ["BOQ_ID", "내역", "Unit", "Final Price", "산출통화", "산출근거", "근거공종(최빈)"]
+    log_cols = [
+        "BOQ_ID","BOQ_내역","BOQ_Unit",
+        "Include","DefaultInclude",
+        "공종코드","공종명",
+        "내역","Unit",
+        "Unit Price","통화","계약년월",
+        "__adj_price","산출통화",
+        "__cpi_ratio","__latest_ym",
+        "__fx_ratio","__fac_ratio",
+        "__hyb",
+        "현장코드","현장명",
+        "협력사코드","협력사명",
+    ]
+    empty_result = pd.DataFrame(columns=result_cols)
+    empty_log = pd.DataFrame(columns=log_cols)
+
     if pool is None or pool.empty:
-        return pd.DataFrame(), pd.DataFrame()
+        return empty_result, empty_log
 
     df = pool.copy()
 
     # 1) Threshold 적용
     df = df[pd.to_numeric(df["__hyb"], errors="coerce").fillna(0) >= float(sim_threshold)].copy()
     if df.empty:
-        # BOQ 결과도 BOQ_ID 기반으로 만들기 어렵기 때문에, 빈 결과 반환
-        return pd.DataFrame(), pd.DataFrame()
+        # ✅ 컬럼 없는 빈 DF 말고, 스키마 유지해서 반환
+        return empty_result, empty_log
 
     # 2) FX/Factor 맵(통화별) 만들어 vectorized 계산
     currencies = df["통화"].astype(str).str.upper().unique().tolist()
@@ -1725,6 +1737,7 @@ if st.session_state.get("has_results", False):
             rep_det.to_excel(writer, index=False, sheet_name="report_detail")
     bio.seek(0)
     st.download_button("⬇️ Excel 다운로드", data=bio.read(), file_name="result_unitrate.xlsx")
+
 
 
 
