@@ -451,35 +451,23 @@ def fast_recompute_from_pool(
     cut_ratio: float,
     target_currency: str,
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
-
-    # ✅ 항상 같은 스키마로 반환하기 위한 빈 DF 템플릿
-    result_cols = ["BOQ_ID", "내역", "Unit", "Final Price", "산출통화", "산출근거", "근거공종(최빈)"]
-    log_cols = [
-        "BOQ_ID","BOQ_내역","BOQ_Unit",
-        "Include","DefaultInclude",
-        "공종코드","공종명",
-        "내역","Unit",
-        "Unit Price","통화","계약년월",
-        "__adj_price","산출통화",
-        "__cpi_ratio","__latest_ym",
-        "__fx_ratio","__fac_ratio",
-        "__hyb",
-        "현장코드","현장명",
-        "협력사코드","협력사명",
-    ]
-    empty_result = pd.DataFrame(columns=result_cols)
-    empty_log = pd.DataFrame(columns=log_cols)
-
+    """
+    ✅ 2단계(가벼움): 후보 풀에서 빠른 재계산
+    - Threshold 필터
+    - 산출통화 변경: __fx_ratio, __fac_ratio만 다시 계산
+    - 컷비율로 Include/DefaultInclude 설정
+    - __adj_price = Unit Price * __cpi_ratio * __fx_ratio * __fac_ratio
+    """
     if pool is None or pool.empty:
-        return empty_result, empty_log
+        return pd.DataFrame(), pd.DataFrame()
 
     df = pool.copy()
 
     # 1) Threshold 적용
     df = df[pd.to_numeric(df["__hyb"], errors="coerce").fillna(0) >= float(sim_threshold)].copy()
     if df.empty:
-        # ✅ 컬럼 없는 빈 DF 말고, 스키마 유지해서 반환
-        return empty_result, empty_log
+        # BOQ 결과도 BOQ_ID 기반으로 만들기 어렵기 때문에, 빈 결과 반환
+        return pd.DataFrame(), pd.DataFrame()
 
     # 2) FX/Factor 맵(통화별) 만들어 vectorized 계산
     currencies = df["통화"].astype(str).str.upper().unique().tolist()
@@ -960,11 +948,7 @@ def render_boq_scatter(log_df: pd.DataFrame, base_result: pd.DataFrame):
             x=alt.X("계약월_dt:T", title="계약년월"),
             y=alt.Y("산출단가:Q", title="산출단가(산출통화 기준)"),
             color=alt.Color("포함여부:N", title="포함"),
-            size=alt.condition(
-                alt.datum.포함여부 == True,
-                alt.value(260),   # 포함(True) 점 크기 (더 크게)
-                alt.value(70)     # 미포함(False) 점 크기
-            ),
+            size=alt.Size("포함여부:N", title="포함(크기)", scale=alt.Scale(range=[40, 140])),
             tooltip=[
                 alt.Tooltip("표시내역:N", title="내역"),
                 alt.Tooltip("산출단가:Q", title="산출단가", format=",.4f"),
@@ -1429,27 +1413,17 @@ if st.session_state.get("has_results", False):
         if "log_df_edited" not in st.session_state:
             st.session_state["log_df_edited"] = log_df.copy()
 
-            log_all = st.session_state.get("log_df_edited", None)
-
-        # ✅ 방어코드 1: 로그 자체가 없거나 비어있거나 BOQ_ID가 없으면 종료
-        if log_all is None or (isinstance(log_all, pd.DataFrame) and (log_all.empty or "BOQ_ID" not in log_all.columns)):
-            st.warning("산출 로그가 비어있습니다. (Threshold가 너무 높거나 후보가 없어 로그가 생성되지 않았습니다) 조건을 조정한 뒤 다시 산출 실행하세요.")
-            st.stop()
-
-        # ✅ boq_ids는 여기서 항상 정의됨
-        boq_ids = sorted(log_all["BOQ_ID"].dropna().astype(int).unique().tolist())
-
-        # ✅ 방어코드 2: BOQ_ID는 있으나 값이 비어있을 때
-        if len(boq_ids) == 0:
-            st.warning("산출 로그에 BOQ_ID가 없습니다. 다시 산출 실행하거나 조건을 조정하세요.")
-            st.stop()
+        log_all = st.session_state["log_df_edited"]
 
         # ✅ BOQ 선택을 "ID | 내역"으로 표시
+        boq_ids = sorted(log_all["BOQ_ID"].dropna().astype(int).unique().tolist())
+
+        # result_df_base에서 BOQ_ID별 내역 텍스트 가져오기(있으면 더 정확)
         base_for_label = st.session_state.get("result_df_base", pd.DataFrame()).copy()
         boq_text_col = "내역" if ("내역" in base_for_label.columns) else None
 
         id_to_text = {}
-        if boq_text_col and ("BOQ_ID" in base_for_label.columns) and (not base_for_label.empty):
+        if boq_text_col and ("BOQ_ID" in base_for_label.columns):
             id_to_text = (
                 base_for_label.dropna(subset=["BOQ_ID"])
                 .assign(BOQ_ID=lambda d: d["BOQ_ID"].astype(int))
@@ -1458,13 +1432,15 @@ if st.session_state.get("has_results", False):
                 .to_dict()
             )
         else:
-            id_to_text = (
+            # fallback: log_df의 BOQ_내역 사용
+            tmp_map = (
                 log_all.dropna(subset=["BOQ_ID"])
                 .assign(BOQ_ID=lambda d: d["BOQ_ID"].astype(int))
                 .groupby("BOQ_ID")["BOQ_내역"].first()
                 .astype(str)
                 .to_dict()
             )
+            id_to_text = tmp_map
 
         def fmt_boq_id(x: int) -> str:
             t = id_to_text.get(int(x), "")
@@ -1710,8 +1686,14 @@ if st.session_state.get("has_results", False):
         else:
             st.dataframe(base_result, use_container_width=True)
     
-        # 6) 보고서 테이블 생성/갱신 (버튼 없이 자동)
-        summary_df, detail_df = build_report_tables(log_for_report, base_result)
+        # 6) 보고서 테이블 생성/갱신
+        if st.button("📝 보고서 생성/갱신", key="btn_build_report"):
+            summary_df, detail_df = build_report_tables(log_for_report, base_result)
+            st.session_state["report_summary_df"] = summary_df
+            st.session_state["report_detail_df"] = detail_df
+    
+        summary_df = st.session_state.get("report_summary_df", pd.DataFrame())
+        detail_df = st.session_state.get("report_detail_df", pd.DataFrame())
     
         st.markdown("### 6) 각 내역별 단가 근거(요약)")
         if summary_df is None or summary_df.empty:
@@ -1737,65 +1719,12 @@ if st.session_state.get("has_results", False):
     with pd.ExcelWriter(bio, engine="openpyxl") as writer:
         out_result.to_excel(writer, index=False, sheet_name="boq_with_price")
         out_log.to_excel(writer, index=False, sheet_name="calculation_log")
-        rep_sum = summary_df if 'summary_df' in locals() else pd.DataFrame()
-        rep_det = detail_df if 'detail_df' in locals() else pd.DataFrame()
+        rep_sum = st.session_state.get("report_summary_df", pd.DataFrame())
+        rep_det = st.session_state.get("report_detail_df", pd.DataFrame())
         if rep_sum is not None and not rep_sum.empty:
             rep_sum.to_excel(writer, index=False, sheet_name="report_summary")
         if rep_det is not None and not rep_det.empty:
             rep_det.to_excel(writer, index=False, sheet_name="report_detail")
     bio.seek(0)
     st.download_button("⬇️ Excel 다운로드", data=bio.read(), file_name="result_unitrate.xlsx")
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
