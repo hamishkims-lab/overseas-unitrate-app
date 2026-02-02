@@ -836,15 +836,18 @@ import matplotlib.pyplot as plt
 
 def build_feature_context_table(feature_master: pd.DataFrame, selected_feature_ids: list) -> pd.DataFrame:
     if not selected_feature_ids:
-        return pd.DataFrame(columns=["특성ID","대공종","중공종","소공종","Cost Driver Type","Cost Driver Method","Cost Driver Condition"])
+        return pd.DataFrame(columns=["특성ID","대공종","중공종","소공종","Cost Driver Method","Cost Driver Condition"])
+
     fm = feature_master.copy()
-    cols6 = ["대공종","중공종","소공종","Cost Driver Type","Cost Driver Method","Cost Driver Condition"]
-    keep = ["특성ID"] + cols6
+    cols5 = ["대공종","중공종","소공종","Cost Driver Method","Cost Driver Condition"]
+    keep = ["특성ID"] + cols5
+
     for c in keep:
         if c in fm.columns:
             fm[c] = fm[c].astype(str).fillna("").str.strip()
         else:
             fm[c] = ""
+
     out = fm[fm["특성ID"].astype(str).isin([str(x) for x in selected_feature_ids])][keep].copy()
     out = out.drop_duplicates(subset=["특성ID"]).reset_index(drop=True)
     return out
@@ -1039,7 +1042,7 @@ if boq_file is not None:
 
     fm["라벨"] = fm.apply(
         lambda r: f'{r["특성ID"]} | {r["대공종"]}/{r["중공종"]}/{r["소공종"]} | '
-                  f'{r["Cost Driver Type"]}/{r["Cost Driver Method"]}/{r["Cost Driver Condition"]} | '
+                  f'{r["Cost Driver Method"]}/{r["Cost Driver Condition"]} | '
                   f'현장 {r["현장수"]}개',
         axis=1
     )
@@ -1727,4 +1730,5 @@ if st.session_state.get("has_results", False):
             rep_det.to_excel(writer, index=False, sheet_name="report_detail")
     bio.seek(0)
     st.download_button("⬇️ Excel 다운로드", data=bio.read(), file_name="result_unitrate.xlsx")
+
 
