@@ -562,11 +562,10 @@ def boq_file_signature(uploaded_file) -> str:
         return f"{getattr(uploaded_file, 'name', 'boq')}_{getattr(uploaded_file, 'size', '')}"
 
 def make_params_signature() -> str:
+    sel_sites = st.session_state.get("selected_site_codes", [])
     payload = {
         "boq": boq_file_signature(boq_file),
         "use_site_filter": bool(use_site_filter),
-        sel_sites = st.session_state.get("selected_site_codes", [])
-        ...
         "selected_site_codes": sorted([norm_site_code(x) for x in (sel_sites or [])]),
         "sim_threshold": float(sim_threshold),
         "cut_ratio": float(cut_ratio),
@@ -602,7 +601,7 @@ def run_calculation_and_store(run_sig: str):
         sel_sites = st.session_state.get("selected_site_codes", [])
         if use_site_filter and sel_sites:
             cost_db_run = cost_db[
-                cost_db["현장코드"].apply(norm_site_code).isin([norm_site_code(x) for x in selected_site_codes])
+                cost_db["현장코드"].apply(norm_site_code).isin([norm_site_code(x) for x in sel_sites])
             ].copy()
         else:
             cost_db_run = cost_db.copy()
@@ -612,7 +611,7 @@ def run_calculation_and_store(run_sig: str):
         pool_sig_payload = {
             "boq": boq_file_signature(boq_file),
             "use_site_filter": bool(use_site_filter),
-            "selected_site_codes": sorted([norm_site_code(x) for x in (selected_site_codes or [])]),
+            "selected_site_codes": sorted([norm_site_code(x) for x in (sel_sites or [])]),
             "top_k_sem": int(top_k_sem),
             "w_str": float(w_str),
             "w_sem": float(w_sem),
@@ -1066,6 +1065,7 @@ if st.session_state.get("has_results", False):
             rep_det.to_excel(writer, index=False, sheet_name="report_detail")
     bio.seek(0)
     st.download_button("⬇️ Excel 다운로드", data=bio.read(), file_name="result_unitrate.xlsx")
+
 
 
 
