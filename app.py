@@ -1027,15 +1027,15 @@ exchange    = load_excel_from_repo("exchange.xlsx")
 factor      = load_excel_from_repo("Factor.xlsx")
 project_feature_long = load_excel_from_repo("project_feature_long.xlsx")
 feature_master = load_excel_from_repo("feature_master_FID.xlsx")
-normalize_loaded_tables()
 
+# ✅ 로드 직후에 실행(여기서부터는 함수가 이미 정의돼 있어야 함!)
+normalize_loaded_tables()
 # =========================
 # ✅ 컬럼명 표준화 + alias 매핑 (KeyError 방지)
 # =========================
 import re
 
 def _std_colname(s: str) -> str:
-    # 컬럼명 표준화: 양끝공백 제거 + 다중공백 1칸 + 언더바를 공백으로
     s = str(s)
     s = s.replace("_", " ")
     s = re.sub(r"\s+", " ", s)
@@ -1045,6 +1045,52 @@ def standardize_columns(df: pd.DataFrame) -> pd.DataFrame:
     df = df.copy()
     df.columns = [_std_colname(c) for c in df.columns]
     return df
+
+def apply_feature_column_alias(df: pd.DataFrame) -> pd.DataFrame:
+    df = df.copy()
+    col_map = {}
+
+    aliases = {
+        "특성ID": ["특성ID", "특성 Id", "FeatureID", "Feature Id", "FID"],
+        "대공종": ["대공종", "대 공종", "Major", "Main"],
+        "중공종": ["중공종", "중 공종", "Middle"],
+        "소공종": ["소공종", "소 공종", "Minor", "Sub"],
+        "Cost Driver Type": [
+            "Cost Driver Type", "CostDriver Type", "Cost DriverType",
+            "Cost Driver_Type", "CostDriver_Type", "Type", "Driver Type"
+        ],
+        "Cost Driver Method": [
+            "Cost Driver Method", "CostDriver Method", "Cost DriverMethod",
+            "Cost Driver_Method", "CostDriver_Method", "Method"
+        ],
+        "Cost Driver Condition": [
+            "Cost Driver Condition", "CostDriver Condition", "Cost DriverCondition",
+            "Cost Driver_Condition", "CostDriver_Condition", "Condition"
+        ],
+        "현장코드": ["현장코드", "현장 코드", "Site Code", "SiteCode"],
+        "현장명": ["현장명", "현장 명", "Site Name", "SiteName"],
+    }
+
+    cols = list(df.columns)
+    for std_name, cand_list in aliases.items():
+        for cand in cand_list:
+            cand_std = _std_colname(cand)
+            if cand_std in cols:
+                col_map[cand_std] = std_name
+                break
+
+    df = df.rename(columns=col_map)
+
+    must_cols = [
+        "특성ID","대공종","중공종","소공종",
+        "Cost Driver Type","Cost Driver Method","Cost Driver Condition"
+    ]
+    for c in must_cols:
+        if c not in df.columns:
+            df[c] = ""
+
+    return df
+
 
 # =========================
 # ✅ 필수 컬럼 보장(파일 열 변경 대비)
@@ -1059,11 +1105,9 @@ def ensure_columns(df: pd.DataFrame, must_cols: list, fill_value=None) -> pd.Dat
 def normalize_loaded_tables():
     """
     로드 직후 표준화 + 필수 컬럼 보장.
-    (열 이름이 바뀌거나 누락돼도 앱이 안 죽게 하는 최소 안전장치)
     """
     global cost_db, price_index, exchange, factor, project_feature_long, feature_master
 
-    # 1) 표준화(공백/언더바 등)
     cost_db = standardize_columns(cost_db)
     price_index = standardize_columns(price_index)
     exchange = standardize_columns(exchange)
@@ -1071,20 +1115,16 @@ def normalize_loaded_tables():
     project_feature_long = standardize_columns(project_feature_long)
     feature_master = standardize_columns(feature_master)
 
-    # 2) feature 관련 alias는 기존 함수 그대로 사용
     project_feature_long = apply_feature_column_alias(project_feature_long)
     feature_master = apply_feature_column_alias(feature_master)
 
-    # 3) 나머지 테이블은 "필수 컬럼만" 보장 (터짐 방지)
     cost_db = ensure_columns(cost_db, [
         "내역","Unit","Unit Price","통화","계약년월",
         "현장코드","현장명","협력사코드","협력사명","공종코드","공종명"
     ], fill_value="")
 
     price_index = ensure_columns(price_index, ["국가","년월","Index"], fill_value=np.nan)
-
     exchange = ensure_columns(exchange, ["통화","USD당환율"], fill_value=np.nan)
-
     factor = ensure_columns(factor, ["국가","지수"], fill_value=np.nan)
     
 
@@ -1914,6 +1954,7 @@ if st.session_state.get("has_results", False):
             rep_det.to_excel(writer, index=False, sheet_name="report_detail")
     bio.seek(0)
     st.download_button("⬇️ Excel 다운로드", data=bio.read(), file_name="result_unitrate.xlsx")
+
 
 
 
