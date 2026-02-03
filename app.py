@@ -46,6 +46,7 @@ def init_session():
         "auto_sites": [],
         "selected_auto_codes": [],
         "selected_extra_codes": [],
+        "selected_site_codes": [],
         "has_results": False,
 
         "candidate_pool": None,
@@ -476,6 +477,7 @@ normalize_loaded_tables()
 # =========================
 st.sidebar.header("⚙️ 설정")
 sidebar_hr(thick=True, mt=6, mb=6)
+selected_site_codes = st.session_state.get("selected_site_codes", [])
 
 use_site_filter = True
 
@@ -563,7 +565,9 @@ def make_params_signature() -> str:
     payload = {
         "boq": boq_file_signature(boq_file),
         "use_site_filter": bool(use_site_filter),
-        "selected_site_codes": sorted([norm_site_code(x) for x in (selected_site_codes or [])]),
+        sel_sites = st.session_state.get("selected_site_codes", [])
+        ...
+        "selected_site_codes": sorted([norm_site_code(x) for x in (sel_sites or [])]),
         "sim_threshold": float(sim_threshold),
         "cut_ratio": float(cut_ratio),
         "target_currency": str(target_currency),
@@ -595,7 +599,8 @@ def run_calculation_and_store(run_sig: str):
 
         boq = pd.read_excel(boq_file, engine="openpyxl")
 
-        if use_site_filter and selected_site_codes is not None:
+        sel_sites = st.session_state.get("selected_site_codes", [])
+        if use_site_filter and sel_sites:
             cost_db_run = cost_db[
                 cost_db["현장코드"].apply(norm_site_code).isin([norm_site_code(x) for x in selected_site_codes])
             ].copy()
@@ -1061,6 +1066,7 @@ if st.session_state.get("has_results", False):
             rep_det.to_excel(writer, index=False, sheet_name="report_detail")
     bio.seek(0)
     st.download_button("⬇️ Excel 다운로드", data=bio.read(), file_name="result_unitrate.xlsx")
+
 
 
 
