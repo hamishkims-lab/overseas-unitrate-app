@@ -1432,6 +1432,14 @@ def run_calculation_and_store(run_sig: str):
     st.session_state["has_results"] = True
     st.session_state["last_run_sig"] = run_sig
 
+    # ✅ 산출 완료 후 진행/상태 문구 제거
+    try:
+        prog_text.empty()
+        progress.empty()
+        status_box.empty()
+    except Exception:
+        pass
+
 
 # =========================
 # (1) 실행 트리거 결정
@@ -1770,7 +1778,7 @@ if st.session_state.get("has_results", False):
         st.markdown("### 3) 단가 추출 근거(조건)")
         c1, c2, c3 = st.columns(3)
         with c1:
-            st.metric("Threshold(컷 기준, %)", f"{float(sim_threshold):.0f}")
+            st.metric("유사도 컷오프 기준(%)", f"{float(sim_threshold):.0f}")
         with c2:
             st.metric("상/하위 컷 비율(%)", f"{float(cut_ratio)*100:.0f}")
         with c3:
@@ -1828,6 +1836,7 @@ if st.session_state.get("has_results", False):
             rep_det.to_excel(writer, index=False, sheet_name="report_detail")
     bio.seek(0)
     st.download_button("⬇️ Excel 다운로드", data=bio.read(), file_name="result_unitrate.xlsx")
+
 
 
 
