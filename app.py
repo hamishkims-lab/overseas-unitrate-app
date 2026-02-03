@@ -1028,8 +1028,7 @@ factor      = load_excel_from_repo("Factor.xlsx")
 project_feature_long = load_excel_from_repo("project_feature_long.xlsx")
 feature_master = load_excel_from_repo("feature_master_FID.xlsx")
 
-# ✅ 로드 직후에 실행(여기서부터는 함수가 이미 정의돼 있어야 함!)
-normalize_loaded_tables()
+
 # =========================
 # ✅ 컬럼명 표준화 + alias 매핑 (KeyError 방지)
 # =========================
@@ -1047,6 +1046,10 @@ def standardize_columns(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 def apply_feature_column_alias(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    feature_master_FID / project_feature_long 컬럼이 조금 달라도
+    아래 '표준 컬럼명'으로 강제 맞춤
+    """
     df = df.copy()
     col_map = {}
 
@@ -1055,6 +1058,7 @@ def apply_feature_column_alias(df: pd.DataFrame) -> pd.DataFrame:
         "대공종": ["대공종", "대 공종", "Major", "Main"],
         "중공종": ["중공종", "중 공종", "Middle"],
         "소공종": ["소공종", "소 공종", "Minor", "Sub"],
+
         "Cost Driver Type": [
             "Cost Driver Type", "CostDriver Type", "Cost DriverType",
             "Cost Driver_Type", "CostDriver_Type", "Type", "Driver Type"
@@ -1067,6 +1071,8 @@ def apply_feature_column_alias(df: pd.DataFrame) -> pd.DataFrame:
             "Cost Driver Condition", "CostDriver Condition", "Cost DriverCondition",
             "Cost Driver_Condition", "CostDriver_Condition", "Condition"
         ],
+
+        # project_feature_long 전용
         "현장코드": ["현장코드", "현장 코드", "Site Code", "SiteCode"],
         "현장명": ["현장명", "현장 명", "Site Name", "SiteName"],
     }
@@ -1091,10 +1097,6 @@ def apply_feature_column_alias(df: pd.DataFrame) -> pd.DataFrame:
 
     return df
 
-
-# =========================
-# ✅ 필수 컬럼 보장(파일 열 변경 대비)
-# =========================
 def ensure_columns(df: pd.DataFrame, must_cols: list, fill_value=None) -> pd.DataFrame:
     df = df.copy()
     for c in must_cols:
@@ -1105,9 +1107,22 @@ def ensure_columns(df: pd.DataFrame, must_cols: list, fill_value=None) -> pd.Dat
 def normalize_loaded_tables():
     """
     로드 직후 표준화 + 필수 컬럼 보장.
+    ※ cost_db/price_index/exchange/factor/project_feature_long/feature_master 로드된 다음에만 호출할 것
     """
     global cost_db, price_index, exchange, factor, project_feature_long, feature_master
 
+    # ✅ None 방어(로드 실패/파일 누락 등)
+    def _safe_df(x):
+        return x if isinstance(x, pd.DataFrame) else pd.DataFrame()
+
+    cost_db = _safe_df(cost_db)
+    price_index = _safe_df(price_index)
+    exchange = _safe_df(exchange)
+    factor = _safe_df(factor)
+    project_feature_long = _safe_df(project_feature_long)
+    feature_master = _safe_df(feature_master)
+
+    # ✅ 컬럼 표준화(공백/언더바/중복공백 정리)
     cost_db = standardize_columns(cost_db)
     price_index = standardize_columns(price_index)
     exchange = standardize_columns(exchange)
@@ -1115,18 +1130,24 @@ def normalize_loaded_tables():
     project_feature_long = standardize_columns(project_feature_long)
     feature_master = standardize_columns(feature_master)
 
+    # ✅ feature 관련 테이블만 alias 강제
     project_feature_long = apply_feature_column_alias(project_feature_long)
     feature_master = apply_feature_column_alias(feature_master)
 
+    # ✅ 필수 컬럼 보장(파일 열 변경 대비)
     cost_db = ensure_columns(cost_db, [
-        "내역","Unit","Unit Price","통화","계약년월",
-        "현장코드","현장명","협력사코드","협력사명","공종코드","공종명"
+        "내역", "Unit", "Unit Price", "통화", "계약년월",
+        "현장코드", "현장명", "협력사코드", "협력사명", "공종코드", "공종명"
     ], fill_value="")
 
-    price_index = ensure_columns(price_index, ["국가","년월","Index"], fill_value=np.nan)
-    exchange = ensure_columns(exchange, ["통화","USD당환율"], fill_value=np.nan)
-    factor = ensure_columns(factor, ["국가","지수"], fill_value=np.nan)
+    price_index = ensure_columns(price_index, ["국가", "년월", "Index"], fill_value=np.nan)
+    exchange = ensure_columns(exchange, ["통화", "USD당환율"], fill_value=np.nan)
+    factor = ensure_columns(factor, ["국가", "지수"], fill_value=np.nan)
+
+    # ✅ 여기서 return은 선택이지만, "함수 종료"가 명확해져서 사고가 줄어듦
+    return
     
+normalize_loaded_tables()
 
 def apply_feature_column_alias(df: pd.DataFrame) -> pd.DataFrame:
     """
@@ -1954,6 +1975,7 @@ if st.session_state.get("has_results", False):
             rep_det.to_excel(writer, index=False, sheet_name="report_detail")
     bio.seek(0)
     st.download_button("⬇️ Excel 다운로드", data=bio.read(), file_name="result_unitrate.xlsx")
+
 
 
 
