@@ -1012,41 +1012,54 @@ def apply_feature_column_alias(df: pd.DataFrame) -> pd.DataFrame:
     df = df.copy()
     col_map = {}
 
-    # 가능한 alias들을 전부 흡수
     aliases = {
-    "특성ID": ["특성ID", "특성 Id", "FeatureID", "Feature Id", "FID"],
-    "대공종": ["대공종", "대 공종", "Major", "Main"],
-    "중공종": ["중공종", "중 공종", "Middle"],
-    "소공종": ["소공종", "소 공종", "Minor", "Sub"],
+        "특성ID": ["특성ID", "특성 Id", "FeatureID", "Feature Id", "FID"],
+        "대공종": ["대공종", "대 공종", "Major", "Main"],
+        "중공종": ["중공종", "중 공종", "Middle"],
+        "소공종": ["소공종", "소 공종", "Minor", "Sub"],
 
-    # ✅ 추가: Cost Driver Type
-    "Cost Driver Type": [
-        "Cost Driver Type", "CostDriver Type", "Cost DriverType",
-        "Cost Driver_Type", "CostDriver_Type", "Type", "Driver Type"
-    ],
+        # ✅ 추가: Cost Driver Type
+        "Cost Driver Type": [
+            "Cost Driver Type", "CostDriver Type", "Cost DriverType",
+            "Cost Driver_Type", "CostDriver_Type", "Type", "Driver Type"
+        ],
 
-    "Cost Driver Method": [
-        "Cost Driver Method", "CostDriver Method", "Cost DriverMethod",
-        "Cost Driver_Method", "CostDriver_Method", "Method"
-    ],
-    "Cost Driver Condition": [
-        "Cost Driver Condition", "CostDriver Condition", "Cost DriverCondition",
-        "Cost Driver_Condition", "CostDriver_Condition", "Condition"
-    ],
+        "Cost Driver Method": [
+            "Cost Driver Method", "CostDriver Method", "Cost DriverMethod",
+            "Cost Driver_Method", "CostDriver_Method", "Method"
+        ],
+        "Cost Driver Condition": [
+            "Cost Driver Condition", "CostDriver Condition", "Cost DriverCondition",
+            "Cost Driver_Condition", "CostDriver_Condition", "Condition"
+        ],
 
-    # project_feature_long 전용
-    "현장코드": ["현장코드", "현장 코드", "Site Code", "SiteCode"],
-    "현장명": ["현장명", "현장 명", "Site Name", "SiteName"],
-}
+        # project_feature_long 전용
+        "현장코드": ["현장코드", "현장 코드", "Site Code", "SiteCode"],
+        "현장명": ["현장명", "현장 명", "Site Name", "SiteName"],
+    }
 
-# ...
-must_cols = [
-    "특성ID","대공종","중공종","소공종",
-    "Cost Driver Type","Cost Driver Method","Cost Driver Condition"
-]
-for c in must_cols:
-    if c not in df.columns:
-        df[c] = ""
+    # 현재 df 컬럼 목록(표준화된 상태라고 가정)
+    cols = list(df.columns)
+
+    # alias 매칭해서 rename map 구성
+    for std_name, cand_list in aliases.items():
+        for cand in cand_list:
+            cand_std = _std_colname(cand)
+            if cand_std in cols:
+                col_map[cand_std] = std_name
+                break
+
+    # rename
+    df = df.rename(columns=col_map)
+
+    # ✅ 혹시 누락된 표준 컬럼은 만들어 둠(후속 코드 KeyError 방지)
+    must_cols = [
+        "특성ID","대공종","중공종","소공종",
+        "Cost Driver Type","Cost Driver Method","Cost Driver Condition"
+    ]
+    for c in must_cols:
+        if c not in df.columns:
+            df[c] = ""
 
     return df
 
@@ -1815,6 +1828,7 @@ if st.session_state.get("has_results", False):
             rep_det.to_excel(writer, index=False, sheet_name="report_detail")
     bio.seek(0)
     st.download_button("⬇️ Excel 다운로드", data=bio.read(), file_name="result_unitrate.xlsx")
+
 
 
 
