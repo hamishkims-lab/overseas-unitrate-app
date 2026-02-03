@@ -26,9 +26,50 @@ except ImportError:
 # =========================
 st.set_page_config(page_title="Overseas Unit Rate App", layout="wide")
 
+# =========================
+# UI Labels / Constants
+# =========================
+LABEL_SIM_THRESHOLD = "매칭 유사도 기준값(%)"
+LABEL_CUT_RATIO     = "상/하위 컷 비율 (%)"
+LABEL_TARGET_CURR   = "산출통화"
+
 CI_BLUE   = "#005EB8"
 CI_TEAL   = "#00BFB3"
 BG_LIGHT  = "#F6FAFC"
+
+# =========================
+# Session Init (안전장치)
+# =========================
+def init_session():
+    defaults = {
+        "selected_feature_ids": [],
+        "auto_sites": [],
+        "selected_auto_codes": [],
+        "selected_extra_codes": [],
+        "has_results": False,
+
+        "candidate_pool": None,
+        "candidate_pool_sig": None,
+        "last_run_sig": None,
+
+        "boq_df": None,
+        "result_df_base": None,
+        "log_df_base": None,
+        "log_df_edited": None,
+        "result_df_adjusted": None,
+
+        "ai_last_applied": None,
+        "_include_backup": {},
+        "_include_backup_all": None,
+
+        "report_summary_df": pd.DataFrame(),
+        "report_detail_df": pd.DataFrame(),
+    }
+    for k, v in defaults.items():
+        if k not in st.session_state:
+            st.session_state[k] = v
+
+init_session()
 
 st.markdown("""
 <style>
@@ -986,6 +1027,7 @@ exchange    = load_excel_from_repo("exchange.xlsx")
 factor      = load_excel_from_repo("Factor.xlsx")
 project_feature_long = load_excel_from_repo("project_feature_long.xlsx")
 feature_master = load_excel_from_repo("feature_master_FID.xlsx")
+normalize_loaded_tables()
 
 # =========================
 # ✅ 컬럼명 표준화 + alias 매핑 (KeyError 방지)
@@ -1003,6 +1045,48 @@ def standardize_columns(df: pd.DataFrame) -> pd.DataFrame:
     df = df.copy()
     df.columns = [_std_colname(c) for c in df.columns]
     return df
+
+# =========================
+# ✅ 필수 컬럼 보장(파일 열 변경 대비)
+# =========================
+def ensure_columns(df: pd.DataFrame, must_cols: list, fill_value=None) -> pd.DataFrame:
+    df = df.copy()
+    for c in must_cols:
+        if c not in df.columns:
+            df[c] = fill_value
+    return df
+
+def normalize_loaded_tables():
+    """
+    로드 직후 표준화 + 필수 컬럼 보장.
+    (열 이름이 바뀌거나 누락돼도 앱이 안 죽게 하는 최소 안전장치)
+    """
+    global cost_db, price_index, exchange, factor, project_feature_long, feature_master
+
+    # 1) 표준화(공백/언더바 등)
+    cost_db = standardize_columns(cost_db)
+    price_index = standardize_columns(price_index)
+    exchange = standardize_columns(exchange)
+    factor = standardize_columns(factor)
+    project_feature_long = standardize_columns(project_feature_long)
+    feature_master = standardize_columns(feature_master)
+
+    # 2) feature 관련 alias는 기존 함수 그대로 사용
+    project_feature_long = apply_feature_column_alias(project_feature_long)
+    feature_master = apply_feature_column_alias(feature_master)
+
+    # 3) 나머지 테이블은 "필수 컬럼만" 보장 (터짐 방지)
+    cost_db = ensure_columns(cost_db, [
+        "내역","Unit","Unit Price","통화","계약년월",
+        "현장코드","현장명","협력사코드","협력사명","공종코드","공종명"
+    ], fill_value="")
+
+    price_index = ensure_columns(price_index, ["국가","년월","Index"], fill_value=np.nan)
+
+    exchange = ensure_columns(exchange, ["통화","USD당환율"], fill_value=np.nan)
+
+    factor = ensure_columns(factor, ["국가","지수"], fill_value=np.nan)
+    
 
 def apply_feature_column_alias(df: pd.DataFrame) -> pd.DataFrame:
     """
@@ -1291,11 +1375,9 @@ if use_site_filter:
 sidebar_hr(thick=True, mt=10, mb=6)  # (3) 설정값 위 진한선
 st.sidebar.subheader("🧩 설정값")
 sidebar_hr(thick=False, mt=6, mb=8)  # (4) 설정값 아래 일반선  ✅ 슬라이더 아래로 이동
-sim_threshold = st.sidebar.slider("매칭 유사도 기준값(%)", 0, 100, 60, 5)
-cut_ratio = st.sidebar.slider("상/하위 컷 비율 (%)", 0, 30, 20, 5) / 100.0
-
-
-target_options = sorted(factor["국가"].astype(str).str.upper().unique().tolist())
+sim_threshold = st.sidebar.slider(LABEL_SIM_THRESHOLD, 0, 100, 60, 5)
+cut_ratio = st.sidebar.slider(LABEL_CUT_RATIO, 0, 30, 20, 5) / 100.0
+target_currency = st.sidebar.selectbox(LABEL_TARGET_CURR, options=target_options, index=default_idx)
 default_idx = target_options.index("KRW") if "KRW" in target_options else 0
 target_currency = st.sidebar.selectbox("산출통화", options=target_options, index=default_idx)
 
@@ -1348,98 +1430,94 @@ def make_params_signature() -> str:
 def run_calculation_and_store(run_sig: str):
     """'산출 실행'과 동일한 효과: 계산 → session_state 저장 → 편집값 초기화"""
 
-    # ✅ 메인 화면 상태 텍스트(항상 먼저 생성)
     status_box = st.empty()
-
-    if boq_file is None:
-        status_box.empty()
-        st.warning("BOQ 파일을 업로드해 주세요.")
-        return
-    if missing_exchange or missing_factor:
-        status_box.empty()
-        st.error("산출통화에 필요한 환율/지수 정보가 없습니다.")
-        return
-
-    # ✅ 진행 UI
     progress = st.progress(0.0)
     prog_text = st.empty()
 
-    status_box.markdown("### ⏳ 산출중... (BOQ 로드/필터링)")
-
-    boq = pd.read_excel(boq_file, engine="openpyxl")
-
-    if use_site_filter and selected_site_codes is not None:
-        cost_db_run = cost_db[
-            cost_db["현장코드"].apply(norm_site_code).isin([norm_site_code(x) for x in selected_site_codes])
-        ].copy()
-    else:
-        cost_db_run = cost_db.copy()
-
-    st.sidebar.caption(f"전체 {len(cost_db):,}개 내역 중 {len(cost_db_run):,}개 내역으로 산출 실행")
-
-    # ✅ 후보풀 재사용 시그니처(현장/BOQ/DB가 바뀔 때만 새로)
-    pool_sig_payload = {
-        "boq": boq_file_signature(boq_file),
-        "use_site_filter": bool(use_site_filter),
-        "selected_site_codes": sorted([norm_site_code(x) for x in (selected_site_codes or [])]),
-        "top_k_sem": int(top_k_sem),
-        "w_str": float(w_str),
-        "w_sem": float(w_sem),
-        "cost_db_rows": int(len(cost_db_run)),
-    }
-    pool_sig = hashlib.md5(json.dumps(pool_sig_payload, sort_keys=True).encode("utf-8")).hexdigest()
-
-    need_new_pool = (st.session_state.get("candidate_pool_sig") != pool_sig) or ("candidate_pool" not in st.session_state)
-
-    # 1) 후보풀 생성(무거움)
-    if need_new_pool:
-        status_box.markdown("### ⏳ 산출중... (후보 풀 생성)")
-        with st.spinner("후보 풀 생성(최초/현장변경 시 오래 걸릴 수 있음)..."):
-            pool = build_candidate_pool(
-                cost_db=cost_db_run,
-                boq=boq,
-                price_index=price_index,
-                sim_w_str=w_str,
-                sim_w_sem=w_sem,
-                top_k_sem=top_k_sem,
-                pool_per_boq=400,
-                progress=progress,
-                prog_text=prog_text,
-            )
-        st.session_state["candidate_pool"] = pool
-        st.session_state["candidate_pool_sig"] = pool_sig
-    else:
-        pool = st.session_state["candidate_pool"]
-
-    # 2) 빠른 재계산(가벼움)
-    status_box.markdown("### ⏳ 산출중... (Threshold/컷/산출통화 반영)")
-    with st.spinner("빠른 재계산(Threshold/컷/산출통화 반영 중)..."):
-        result_df, log_df = fast_recompute_from_pool(
-            pool=pool,
-            exchange=exchange,
-            factor=factor,
-            sim_threshold=sim_threshold,
-            cut_ratio=cut_ratio,
-            target_currency=target_currency,
-        )
-
- 
-    st.session_state["boq_df"] = boq
-    st.session_state["result_df_base"] = result_df.copy()
-    st.session_state["log_df_base"] = log_df.copy()
-    st.session_state["log_df_edited"] = log_df.copy()
-    st.session_state.pop("result_df_adjusted", None)
-    st.session_state["has_results"] = True
-    st.session_state["last_run_sig"] = run_sig
-
-    # ✅ 산출 완료 후 진행/상태 문구 제거
     try:
-        prog_text.empty()
-        progress.empty()
-        status_box.empty()
-    except Exception:
-        pass
+        if boq_file is None:
+            status_box.empty()
+            st.warning("BOQ 파일을 업로드해 주세요.")
+            return
+        if missing_exchange or missing_factor:
+            status_box.empty()
+            st.error("산출통화에 필요한 환율/지수 정보가 없습니다.")
+            return
 
+        status_box.markdown("### ⏳ 산출중... (BOQ 로드/필터링)")
+
+        boq = pd.read_excel(boq_file, engine="openpyxl")
+
+        if use_site_filter and selected_site_codes is not None:
+            cost_db_run = cost_db[
+                cost_db["현장코드"].apply(norm_site_code).isin([norm_site_code(x) for x in selected_site_codes])
+            ].copy()
+        else:
+            cost_db_run = cost_db.copy()
+
+        st.sidebar.caption(f"전체 {len(cost_db):,}개 내역 중 {len(cost_db_run):,}개 내역으로 산출 실행")
+
+        pool_sig_payload = {
+            "boq": boq_file_signature(boq_file),
+            "use_site_filter": bool(use_site_filter),
+            "selected_site_codes": sorted([norm_site_code(x) for x in (selected_site_codes or [])]),
+            "top_k_sem": int(top_k_sem),
+            "w_str": float(w_str),
+            "w_sem": float(w_sem),
+            "cost_db_rows": int(len(cost_db_run)),
+        }
+        pool_sig = hashlib.md5(json.dumps(pool_sig_payload, sort_keys=True).encode("utf-8")).hexdigest()
+
+        need_new_pool = (st.session_state.get("candidate_pool_sig") != pool_sig) or ("candidate_pool" not in st.session_state)
+
+        # 1) 후보풀 생성
+        if need_new_pool:
+            status_box.markdown("### ⏳ 산출중... (후보 풀 생성)")
+            with st.spinner("후보 풀 생성(최초/현장변경 시 오래 걸릴 수 있음)..."):
+                pool = build_candidate_pool(
+                    cost_db=cost_db_run,
+                    boq=boq,
+                    price_index=price_index,
+                    sim_w_str=w_str,
+                    sim_w_sem=w_sem,
+                    top_k_sem=top_k_sem,
+                    pool_per_boq=400,
+                    progress=progress,
+                    prog_text=prog_text,
+                )
+            st.session_state["candidate_pool"] = pool
+            st.session_state["candidate_pool_sig"] = pool_sig
+        else:
+            pool = st.session_state["candidate_pool"]
+
+        # 2) 빠른 재계산
+        status_box.markdown("### ⏳ 산출중... (조건 반영/산출통화 반영)")
+        with st.spinner("빠른 재계산(조건 반영 중)..."):
+            result_df, log_df = fast_recompute_from_pool(
+                pool=pool,
+                exchange=exchange,
+                factor=factor,
+                sim_threshold=sim_threshold,
+                cut_ratio=cut_ratio,
+                target_currency=target_currency,
+            )
+
+        st.session_state["boq_df"] = boq
+        st.session_state["result_df_base"] = result_df.copy()
+        st.session_state["log_df_base"] = log_df.copy()
+        st.session_state["log_df_edited"] = log_df.copy()
+        st.session_state.pop("result_df_adjusted", None)
+        st.session_state["has_results"] = True
+        st.session_state["last_run_sig"] = run_sig
+
+    finally:
+        # ✅ 어떤 상황이든 산출중 UI 제거
+        try:
+            prog_text.empty()
+            progress.empty()
+            status_box.empty()
+        except Exception:
+            pass
 
 # =========================
 # (1) 실행 트리거 결정
@@ -1836,6 +1914,7 @@ if st.session_state.get("has_results", False):
             rep_det.to_excel(writer, index=False, sheet_name="report_detail")
     bio.seek(0)
     st.download_button("⬇️ Excel 다운로드", data=bio.read(), file_name="result_unitrate.xlsx")
+
 
 
 
