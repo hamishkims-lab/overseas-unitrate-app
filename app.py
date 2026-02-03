@@ -538,8 +538,6 @@ if missing_factor:
 
 sidebar_hr(thick=True, mt=10, mb=8)
 
-# --- 이하 Run/결과/TAB/다운로드 로직은 사용자 원문 그대로 유지 ---
-
 
 # =========================
 # Run / Auto Recompute
@@ -1063,6 +1061,7 @@ if st.session_state.get("has_results", False):
             rep_det.to_excel(writer, index=False, sheet_name="report_detail")
     bio.seek(0)
     st.download_button("⬇️ Excel 다운로드", data=bio.read(), file_name="result_unitrate.xlsx")
+
 
 
 
