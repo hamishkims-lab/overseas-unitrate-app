@@ -302,99 +302,133 @@ section[data-testid="stSidebar"] .sb-hr{
 }
 
 /* =========================
-   Main UI Design Reset
-   - Background / Typography / Spacing / Tabs / Tables
+   Dashboard Style (B)
+   - Airy spacing, cards, soft shadow
 ========================= */
 :root{
-  --bg: #F7F9FC;
+  --bg: #F6F8FC;
   --card: #FFFFFF;
-  --border: #E6EAF2;
+  --border: rgba(15, 23, 42, 0.08);
+  --shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
+  --shadow-sm: 0 6px 14px rgba(15, 23, 42, 0.05);
 
   --text: #0F172A;
-  --subtext: #475569;
+  --sub: #334155;
   --muted: #64748B;
 
   --primary: #2563EB;
-  --primary-soft: #EEF2FF;
+  --primary-soft: rgba(37, 99, 235, 0.10);
 }
 
-/* 전체 메인 배경 */
-.main, [data-testid="stAppViewContainer"]{
-  background-color: var(--bg) !important;
+/* App background */
+[data-testid="stAppViewContainer"]{
+  background: var(--bg) !important;
+}
+
+/* Main area width + padding (make it feel like a dashboard) */
+.main > div{
+  padding-left: 24px !important;
+  padding-right: 24px !important;
+  padding-top: 16px !important;
+  padding-bottom: 24px !important;
+  max-width: 1280px;  /* dashboard container 느낌 */
+  margin: 0 auto;
+}
+
+/* Typography scale (airy) */
+html, body{
+  font-size: 14px !important;
   color: var(--text) !important;
 }
 
-/* 메인 컨테이너 여백(기본 padding이 애매하게 큰 경우 정리) */
-[data-testid="stAppViewContainer"] > .main{
-  padding-top: 12px !important;
-}
-
-/* 기본 본문 폰트 크기(메인 전반) */
-html, body, [data-testid="stAppViewContainer"]{
-  font-size: 13px !important;
-  color: var(--text) !important;
-}
-
-/* =========================
-   제목 계층(메인)
-========================= */
-/* Streamlit markdown title/h1~h3 통일 */
+/* Headings */
 .main h1{
-  font-size: 22px !important;
-  font-weight: 800 !important;
-  letter-spacing: -0.3px !important;
+  font-size: 26px !important;
+  font-weight: 900 !important;
+  letter-spacing: -0.5px !important;
+  margin: 4px 0 14px 0 !important;
   color: var(--text) !important;
-  margin: 4px 0 10px 0 !important;
 }
 .main h2{
-  font-size: 18px !important;
-  font-weight: 800 !important;
-  letter-spacing: -0.2px !important;
+  font-size: 20px !important;
+  font-weight: 850 !important;
+  letter-spacing: -0.3px !important;
+  margin: 20px 0 12px 0 !important;
   color: var(--text) !important;
-  margin: 14px 0 10px 0 !important;
 }
 .main h3{
-  font-size: 15px !important;
-  font-weight: 800 !important;
+  font-size: 16px !important;
+  font-weight: 850 !important;
+  margin: 18px 0 10px 0 !important;
   color: var(--text) !important;
-  margin: 12px 0 8px 0 !important;
 }
 
-/* caption/설명 텍스트 톤 */
+/* caption/description */
 .main .stCaption, .main small{
   color: var(--muted) !important;
-  font-size: 12px !important;
+  font-size: 12.5px !important;
 }
 
 /* =========================
-   카드 디자인(.gs-card 사용중이라면 강화)
+   Card system
 ========================= */
 .gs-card{
   background: var(--card) !important;
   border: 1px solid var(--border) !important;
-  border-radius: 12px !important;
-  padding: 16px !important;
-  margin: 12px 0 16px 0 !important;
-  box-shadow: 0 1px 0 rgba(15, 23, 42, 0.03) !important;
+  border-radius: 16px !important;
+  padding: 18px !important;
+  margin: 14px 0 18px 0 !important;
+  box-shadow: var(--shadow-sm) !important;
 }
 
-/* 상단 헤더(.gs-header 사용중이라면 톤다운) */
-.gs-header{
-  font-size: 20px !important;
-  font-weight: 900 !important;
-  color: var(--text) !important;
-  letter-spacing: -0.3px !important;
-  margin: 2px 0 10px 0 !important;
+/* Create a generic card class too */
+.dash-card{
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 18px;
+  box-shadow: var(--shadow-sm);
+}
+
+/* Section header row */
+.dash-section-title{
+  font-size: 16px;
+  font-weight: 900;
+  letter-spacing: -0.2px;
+  color: var(--text);
+  margin: 0 0 10px 0;
+}
+
+/* Sub text */
+.dash-sub{
+  color: var(--muted);
+  font-size: 12.5px;
 }
 
 /* =========================
-   Tabs 디자인
+   Metrics
 ========================= */
+[data-testid="stMetricValue"]{
+  font-size: 20px !important;
+  font-weight: 900 !important;
+  color: var(--text) !important;
+}
+[data-testid="stMetricLabel"]{
+  font-size: 12.5px !important;
+  color: var(--muted) !important;
+}
+
+/* =========================
+   Tabs (clean)
+========================= */
+[data-testid="stTabs"]{
+  margin-top: 10px !important;
+}
 button[data-baseweb="tab"]{
-  font-size: 13px !important;
-  font-weight: 700 !important;
-  color: var(--subtext) !important;
-  padding: 8px 12px !important;
+  font-size: 13.5px !important;
+  font-weight: 800 !important;
+  color: var(--sub) !important;
+  padding: 10px 14px !important;
 }
 button[data-baseweb="tab"][aria-selected="true"]{
   color: var(--text) !important;
@@ -402,87 +436,37 @@ button[data-baseweb="tab"][aria-selected="true"]{
 div[data-baseweb="tab-highlight"]{
   background-color: var(--primary) !important;
   height: 3px !important;
-  border-radius: 3px !important;
-}
-
-/* 탭 내용 영역 위 여백 */
-[data-testid="stTabs"]{
-  margin-top: 8px !important;
+  border-radius: 999px !important;
 }
 
 /* =========================
-   버튼(메인)
+   Buttons
 ========================= */
 .main button{
-  border-radius: 10px !important;
-  font-weight: 800 !important;
+  border-radius: 12px !important;
+  font-weight: 900 !important;
 }
 .main button[kind="primary"]{
   background: var(--primary) !important;
 }
 
 /* =========================
-   입력 위젯(메인)
+   Table (make it feel secondary)
 ========================= */
-.main label{
-  color: var(--subtext) !important;
-  font-size: 12.5px !important;
-  margin-bottom: 6px !important;
-}
-.main input, .main textarea{
-  font-size: 13px !important;
-}
-
-/* =========================
-   DataFrame / Data Editor(표) 가독성
-========================= */
-/* 전체 표 글자 */
 [data-testid="stDataFrame"],
 [data-testid="stDataEditor"]{
-  font-size: 12.5px !important;
+  font-size: 12.8px !important;
   color: var(--text) !important;
 }
-
-/* 표 헤더 배경/글자 */
 [data-testid="stDataFrame"] thead th,
 [data-testid="stDataEditor"] thead th{
-  background: #F1F5F9 !important;
+  background: #F3F6FB !important;
   color: #334155 !important;
-  font-weight: 800 !important;
+  font-weight: 900 !important;
 }
-
-/* 표 행 높이(너무 넓으면 compact 느낌) */
 [data-testid="stDataFrame"] tbody tr,
 [data-testid="stDataEditor"] tbody tr{
-  height: 34px !important;
-}
-
-/* 표 셀 패딩(빽빽함 완화) */
-[data-testid="stDataFrame"] td,
-[data-testid="stDataEditor"] td{
-  padding-top: 6px !important;
-  padding-bottom: 6px !important;
-}
-
-/* =========================
-   Metric(요약 카드 수치) 톤 정리
-========================= */
-[data-testid="stMetricValue"]{
-  font-size: 18px !important;
-  font-weight: 900 !important;
-  color: var(--text) !important;
-}
-[data-testid="stMetricLabel"]{
-  font-size: 12px !important;
-  color: var(--muted) !important;
-}
-
-/* =========================
-   알림/메시지 박스 둥글게
-========================= */
-.stAlert{
-  border-radius: 10px !important;
-  font-size: 12.5px !important;
+  height: 36px !important;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -2208,6 +2192,7 @@ with tab_dom:
         st.info("현재 활성 화면은 해외 탭입니다. 전환 버튼을 눌러 활성화하세요.")
     else:
         render_domestic()
+
 
 
 
