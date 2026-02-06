@@ -1483,6 +1483,41 @@ def render_domestic():
 
     run_dom_btn = st.sidebar.button("🚀 산출 실행(국내)", key="dom_run_btn")
 
+    # ✅ 대시보드 요약 바(메인 상단)
+c1, c2, c3, c4 = st.columns(4)
+
+# 예시 값 (있는 값으로 교체)
+total_items = len(st.session_state.get("result_df_adjusted", st.session_state.get("result_df_base", pd.DataFrame())))
+sel_sites = len(selected_site_codes or [])
+thr = float(sim_threshold)
+cutp = float(cut_ratio) * 100
+
+with c1:
+    st.markdown("<div class='dash-card'>", unsafe_allow_html=True)
+    st.metric("BOQ 내역 수", f"{total_items:,}")
+    st.markdown("<div class='dash-sub'>현재 결과 기준</div>", unsafe_allow_html=True)
+    st.markdown("</div>", unsafe_allow_html=True)
+
+with c2:
+    st.markdown("<div class='dash-card'>", unsafe_allow_html=True)
+    st.metric("선택 현장", f"{sel_sites:,}개")
+    st.markdown("<div class='dash-sub'>실적 현장 필터</div>", unsafe_allow_html=True)
+    st.markdown("</div>", unsafe_allow_html=True)
+
+with c3:
+    st.markdown("<div class='dash-card'>", unsafe_allow_html=True)
+    st.metric("유사도 기준", f"{thr:.0f}%")
+    st.markdown("<div class='dash-sub'>Threshold</div>", unsafe_allow_html=True)
+    st.markdown("</div>", unsafe_allow_html=True)
+
+with c4:
+    st.markdown("<div class='dash-card'>", unsafe_allow_html=True)
+    st.metric("컷 비율", f"{cutp:.0f}%")
+    st.markdown("<div class='dash-sub'>상/하위 컷</div>", unsafe_allow_html=True)
+    st.markdown("</div>", unsafe_allow_html=True)
+
+st.write("")  # 여백
+
     tab1, tab2, tab3 = st.tabs(["📄 BOQ 결과(국내)", "🧾 산출 로그(국내)", "📝 근거 보고서(국내)"])
 
     with tab1:
@@ -2192,6 +2227,7 @@ with tab_dom:
         st.info("현재 활성 화면은 해외 탭입니다. 전환 버튼을 눌러 활성화하세요.")
     else:
         render_domestic()
+
 
 
 
