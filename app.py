@@ -233,6 +233,26 @@ section[data-testid="stSidebar"] .sb-section-title{
   color: var(--sb-title) !important;
   margin: 6px 0 8px 0 !important;
 }
+
+/* =========================
+   Sidebar title row (B안)
+========================= */
+section[data-testid="stSidebar"] .sb-row{
+  display:flex;
+  align-items:baseline;
+  justify-content:space-between;
+  margin: 2px 0 6px 0;
+}
+section[data-testid="stSidebar"] .sb-title{
+  font-size: 14px;
+  font-weight: 800;
+  color: #0F172A;
+  letter-spacing: -0.2px;
+}
+section[data-testid="stSidebar"] .sb-muted{
+  font-size: 12px;
+  color: #64748B;
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -1389,9 +1409,9 @@ def render_overseas():
 
         st.sidebar.markdown(
             f"""
-            <div style="display:flex; align-items:baseline; justify-content:space-between;">
-              <div style="font-size:1.05rem; font-weight:600;">🏗️ 실적 현장 선택</div>
-              <div style="font-size:0.8rem; opacity:0.7;">선택 현장: {_sel_cnt}개</div>
+            <div class="sb-row">
+              <div class="sb-title">🏗️ 실적 현장 선택</div>
+              <div class="sb-muted">선택 현장: {_sel_cnt}개</div>
             </div>
             """,
             unsafe_allow_html=True
@@ -1944,5 +1964,6 @@ with tab_dom:
         st.info("현재 활성 화면은 해외 탭입니다. 전환 버튼을 눌러 활성화하세요.")
     else:
         render_domestic()
+
 
 
