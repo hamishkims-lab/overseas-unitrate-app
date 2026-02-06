@@ -253,6 +253,53 @@ section[data-testid="stSidebar"] .sb-muted{
   font-size: 12px;
   color: #64748B;
 }
+
+/* =========================
+   Sidebar Section Template
+========================= */
+:root{
+  --sb-title: #0F172A;
+  --sb-muted: #64748B;
+  --sb-border: #E6EAF2;
+}
+
+/* 대제목(설정) */
+section[data-testid="stSidebar"] .sb-major{
+  font-size: 16px !important;
+  font-weight: 900 !important;
+  color: var(--sb-title) !important;
+  margin: 6px 0 10px 0 !important;
+  letter-spacing: -0.2px !important;
+}
+
+/* 소제목 행(좌/우) */
+section[data-testid="stSidebar"] .sb-row{
+  display:flex;
+  align-items:baseline;
+  justify-content:space-between;
+  gap: 10px;
+  margin: 2px 0 6px 0;
+}
+
+section[data-testid="stSidebar"] .sb-title{
+  font-size: 14px !important;
+  font-weight: 800 !important;
+  color: var(--sb-title) !important;
+  letter-spacing: -0.2px !important;
+}
+
+section[data-testid="stSidebar"] .sb-muted{
+  font-size: 12px !important;
+  color: var(--sb-muted) !important;
+  white-space: nowrap !important;
+}
+
+/* 구분선(섹션 전용) */
+section[data-testid="stSidebar"] .sb-hr{
+  border: none !important;
+  border-top: 1px solid var(--sb-border) !important;
+  margin: 10px 0 !important;
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -1210,16 +1257,29 @@ def render_domestic():
     st.write("")
 
     # 국내용 사이드바
-    st.sidebar.header("⚙️ 설정(국내)")
-    sidebar_hr(thick=True, mt=6, mb=6)
+    st.sidebar.markdown("<div class='sb-major'>⚙️ 설정(국내)</div>", unsafe_allow_html=True)
+    st.sidebar.markdown("<hr class='sb-hr'/>", unsafe_allow_html=True)
 
     with st.container():
         st.markdown("<div class='gs-card'>", unsafe_allow_html=True)
         dom_boq_file = st.file_uploader("📤 BOQ 파일 업로드(국내)", type=["xlsx"], key="dom_boq_uploader")
         st.markdown("</div>", unsafe_allow_html=True)
 
-    st.sidebar.subheader("🏗️ 실적 현장 선택(국내)")
-    sidebar_hr(thick=False, mt=6, mb=6)
+    _dom_sel_cnt = len(set(
+        st.session_state.get("dom_selected_auto_codes", [])
+        + st.session_state.get("dom_selected_extra_codes", [])
+    ))
+    
+    st.sidebar.markdown(
+        f"""
+        <div class="sb-row">
+          <div class="sb-title">🏗️ 실적 현장 선택</div>
+          <div class="sb-muted">선택 현장: {_dom_sel_cnt}개</div>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+    st.sidebar.markdown("<hr class='sb-hr'/>", unsafe_allow_html=True)
 
     # TODO: domestic_cost_db 연결 시 교체
     try:
@@ -1247,10 +1307,8 @@ def render_domestic():
     except Exception:
         st.sidebar.info("국내 현장 목록 로드 불가(국내 DB 연결 전).")
 
-    sidebar_hr(thick=True, mt=10, mb=6)
-
-    st.sidebar.subheader("🧩 설정값(국내)")
-    sidebar_hr(thick=False, mt=6, mb=8)
+    st.sidebar.markdown("<div class='sb-title'>🧩 설정값</div>", unsafe_allow_html=True)
+    st.sidebar.markdown("<hr class='sb-hr'/>", unsafe_allow_html=True)
 
     st.sidebar.slider("매칭 유사도 기준값(%)", 0, 100, 60, 5, key="dom_sim_threshold")
     st.sidebar.slider("상/하위 컷 비율 (%)", 0, 30, 20, 5, key="dom_cut_ratio")
@@ -1285,8 +1343,8 @@ def render_overseas():
     # =========================
     # Sidebar: 설정
     # =========================
-    st.sidebar.header("⚙️ 설정")
-    sidebar_hr(thick=True, mt=6, mb=6)
+    st.sidebar.markdown("<div class='sb-major'>⚙️ 설정</div>", unsafe_allow_html=True)
+    st.sidebar.markdown("<hr class='sb-hr'/>", unsafe_allow_html=True)
 
     # ✅ 현장필터는 기능적으로 계속 사용(항상 True)하되, 화면에는 노출하지 않음
     use_site_filter = True
@@ -1405,8 +1463,11 @@ def render_overseas():
     selected_site_codes = None
 
     if use_site_filter:
-        _sel_cnt = len(set(st.session_state.get("selected_auto_codes", []) + st.session_state.get("selected_extra_codes", [])))
-
+        _sel_cnt = len(set(
+            st.session_state.get("selected_auto_codes", [])
+            + st.session_state.get("selected_extra_codes", [])
+        ))
+        
         st.sidebar.markdown(
             f"""
             <div class="sb-row">
@@ -1416,7 +1477,7 @@ def render_overseas():
             """,
             unsafe_allow_html=True
         )
-        sidebar_hr(thick=False, mt=6, mb=6)
+        st.sidebar.markdown("<hr class='sb-hr'/>", unsafe_allow_html=True)
 
         auto_sites = st.session_state.get("auto_sites", [])
 
@@ -1473,9 +1534,8 @@ def render_overseas():
     # =========================
     # 기타 슬라이더/통화 선택
     # =========================
-    sidebar_hr(thick=True, mt=10, mb=6)
-    st.sidebar.subheader("🧩 설정값")
-    sidebar_hr(thick=False, mt=6, mb=8)
+    st.sidebar.markdown("<div class='sb-title'>🧩 설정값</div>", unsafe_allow_html=True)
+    st.sidebar.markdown("<hr class='sb-hr'/>", unsafe_allow_html=True)
 
     sim_threshold = st.sidebar.slider("매칭 유사도 기준값(%)", 0, 100, 60, 5)
     cut_ratio = st.sidebar.slider("상/하위 컷 비율 (%)", 0, 30, 20, 5) / 100.0
@@ -1964,6 +2024,7 @@ with tab_dom:
         st.info("현재 활성 화면은 해외 탭입니다. 전환 버튼을 눌러 활성화하세요.")
     else:
         render_domestic()
+
 
 
 
