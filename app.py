@@ -300,6 +300,190 @@ section[data-testid="stSidebar"] .sb-hr{
   border-top: 1px solid var(--sb-border) !important;
   margin: 10px 0 !important;
 }
+
+/* =========================
+   Main UI Design Reset
+   - Background / Typography / Spacing / Tabs / Tables
+========================= */
+:root{
+  --bg: #F7F9FC;
+  --card: #FFFFFF;
+  --border: #E6EAF2;
+
+  --text: #0F172A;
+  --subtext: #475569;
+  --muted: #64748B;
+
+  --primary: #2563EB;
+  --primary-soft: #EEF2FF;
+}
+
+/* 전체 메인 배경 */
+.main, [data-testid="stAppViewContainer"]{
+  background-color: var(--bg) !important;
+  color: var(--text) !important;
+}
+
+/* 메인 컨테이너 여백(기본 padding이 애매하게 큰 경우 정리) */
+[data-testid="stAppViewContainer"] > .main{
+  padding-top: 12px !important;
+}
+
+/* 기본 본문 폰트 크기(메인 전반) */
+html, body, [data-testid="stAppViewContainer"]{
+  font-size: 13px !important;
+  color: var(--text) !important;
+}
+
+/* =========================
+   제목 계층(메인)
+========================= */
+/* Streamlit markdown title/h1~h3 통일 */
+.main h1{
+  font-size: 22px !important;
+  font-weight: 800 !important;
+  letter-spacing: -0.3px !important;
+  color: var(--text) !important;
+  margin: 4px 0 10px 0 !important;
+}
+.main h2{
+  font-size: 18px !important;
+  font-weight: 800 !important;
+  letter-spacing: -0.2px !important;
+  color: var(--text) !important;
+  margin: 14px 0 10px 0 !important;
+}
+.main h3{
+  font-size: 15px !important;
+  font-weight: 800 !important;
+  color: var(--text) !important;
+  margin: 12px 0 8px 0 !important;
+}
+
+/* caption/설명 텍스트 톤 */
+.main .stCaption, .main small{
+  color: var(--muted) !important;
+  font-size: 12px !important;
+}
+
+/* =========================
+   카드 디자인(.gs-card 사용중이라면 강화)
+========================= */
+.gs-card{
+  background: var(--card) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 12px !important;
+  padding: 16px !important;
+  margin: 12px 0 16px 0 !important;
+  box-shadow: 0 1px 0 rgba(15, 23, 42, 0.03) !important;
+}
+
+/* 상단 헤더(.gs-header 사용중이라면 톤다운) */
+.gs-header{
+  font-size: 20px !important;
+  font-weight: 900 !important;
+  color: var(--text) !important;
+  letter-spacing: -0.3px !important;
+  margin: 2px 0 10px 0 !important;
+}
+
+/* =========================
+   Tabs 디자인
+========================= */
+button[data-baseweb="tab"]{
+  font-size: 13px !important;
+  font-weight: 700 !important;
+  color: var(--subtext) !important;
+  padding: 8px 12px !important;
+}
+button[data-baseweb="tab"][aria-selected="true"]{
+  color: var(--text) !important;
+}
+div[data-baseweb="tab-highlight"]{
+  background-color: var(--primary) !important;
+  height: 3px !important;
+  border-radius: 3px !important;
+}
+
+/* 탭 내용 영역 위 여백 */
+[data-testid="stTabs"]{
+  margin-top: 8px !important;
+}
+
+/* =========================
+   버튼(메인)
+========================= */
+.main button{
+  border-radius: 10px !important;
+  font-weight: 800 !important;
+}
+.main button[kind="primary"]{
+  background: var(--primary) !important;
+}
+
+/* =========================
+   입력 위젯(메인)
+========================= */
+.main label{
+  color: var(--subtext) !important;
+  font-size: 12.5px !important;
+  margin-bottom: 6px !important;
+}
+.main input, .main textarea{
+  font-size: 13px !important;
+}
+
+/* =========================
+   DataFrame / Data Editor(표) 가독성
+========================= */
+/* 전체 표 글자 */
+[data-testid="stDataFrame"],
+[data-testid="stDataEditor"]{
+  font-size: 12.5px !important;
+  color: var(--text) !important;
+}
+
+/* 표 헤더 배경/글자 */
+[data-testid="stDataFrame"] thead th,
+[data-testid="stDataEditor"] thead th{
+  background: #F1F5F9 !important;
+  color: #334155 !important;
+  font-weight: 800 !important;
+}
+
+/* 표 행 높이(너무 넓으면 compact 느낌) */
+[data-testid="stDataFrame"] tbody tr,
+[data-testid="stDataEditor"] tbody tr{
+  height: 34px !important;
+}
+
+/* 표 셀 패딩(빽빽함 완화) */
+[data-testid="stDataFrame"] td,
+[data-testid="stDataEditor"] td{
+  padding-top: 6px !important;
+  padding-bottom: 6px !important;
+}
+
+/* =========================
+   Metric(요약 카드 수치) 톤 정리
+========================= */
+[data-testid="stMetricValue"]{
+  font-size: 18px !important;
+  font-weight: 900 !important;
+  color: var(--text) !important;
+}
+[data-testid="stMetricLabel"]{
+  font-size: 12px !important;
+  color: var(--muted) !important;
+}
+
+/* =========================
+   알림/메시지 박스 둥글게
+========================= */
+.stAlert{
+  border-radius: 10px !important;
+  font-size: 12.5px !important;
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -2024,6 +2208,7 @@ with tab_dom:
         st.info("현재 활성 화면은 해외 탭입니다. 전환 버튼을 눌러 활성화하세요.")
     else:
         render_domestic()
+
 
 
 
