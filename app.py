@@ -34,105 +34,204 @@ BG_LIGHT  = "#F6FAFC"
 st.markdown("""
 <style>
 /* =========================
-   Global
+   Sidebar Design Reset
+   (only sidebar)
 ========================= */
-.main {
-  background-color: #F7F9FC;
-  color: #0F172A;
-  font-size: 13px;
+
+:root{
+  --sb-bg: #FFFFFF;
+  --sb-border: #E6EAF2;
+  --sb-title: #0F172A;
+  --sb-text: #1F2937;
+  --sb-muted: #64748B;
+  --sb-accent: #2563EB;   /* main blue */
+  --sb-chip-bg: #EEF2FF;  /* soft indigo */
+  --sb-chip-border: #C7D2FE;
+  --sb-chip-text: #1E3A8A;
 }
 
-/* =========================
-   Headers
-========================= */
-.gs-header {
-  font-size: 20px;
-  font-weight: 700;
-  margin-bottom: 12px;
-  color: #0F172A;
+/* Sidebar container */
+section[data-testid="stSidebar"]{
+  background: var(--sb-bg) !important;
+  border-right: 1px solid var(--sb-border) !important;
 }
 
-h2, h3 {
-  color: #0F172A;
-  font-weight: 600;
+/* Sidebar padding a bit wider */
+section[data-testid="stSidebar"] > div{
+  padding-top: 14px !important;
 }
 
-/* =========================
-   Cards
-========================= */
-.gs-card {
-  background-color: #FFFFFF;
-  border: 1px solid #E5E8EF;
-  border-radius: 10px;
-  padding: 16px;
-  margin-bottom: 16px;
-}
-
-/* =========================
-   Sidebar
-========================= */
-section[data-testid="stSidebar"] {
-  background-color: #FFFFFF;
-  border-right: 1px solid #E5E8EF;
-}
-
+/* Headings / labels */
 section[data-testid="stSidebar"] h1,
 section[data-testid="stSidebar"] h2,
-section[data-testid="stSidebar"] h3 {
-  font-size: 14px;
-  font-weight: 600;
+section[data-testid="stSidebar"] h3{
+  color: var(--sb-title) !important;
+  font-weight: 700 !important;
+  letter-spacing: -0.2px !important;
 }
 
-section[data-testid="stSidebar"] label {
-  font-size: 12px;
-  color: #475569;
+section[data-testid="stSidebar"] label,
+section[data-testid="stSidebar"] p,
+section[data-testid="stSidebar"] span{
+  color: var(--sb-text);
+}
+
+/* Make captions/sub labels muted */
+section[data-testid="stSidebar"] .stCaption,
+section[data-testid="stSidebar"] small{
+  color: var(--sb-muted) !important;
+}
+
+/* Spacing between blocks (Streamlit widgets) */
+section[data-testid="stSidebar"] [data-testid="stVerticalBlock"] > div{
+  gap: 10px !important;  /* widget spacing */
+}
+
+/* Widget label spacing */
+section[data-testid="stSidebar"] label{
+  margin-bottom: 6px !important;
+  font-size: 12.5px !important;
+}
+
+/* Divider line (your <hr>) */
+section[data-testid="stSidebar"] hr{
+  border: none !important;
+  border-top: 1px solid var(--sb-border) !important;
+  margin: 10px 0 !important;
+}
+
+/* =========================
+   Select / Multiselect inputs (BaseWeb)
+========================= */
+
+/* Outer control */
+section[data-testid="stSidebar"] div[data-baseweb="select"] > div{
+  background-color: #FFFFFF !important;
+  border: 1px solid var(--sb-border) !important;
+  border-radius: 10px !important;
+  box-shadow: none !important;
+  min-height: 40px !important;
+}
+
+/* Input text */
+section[data-testid="stSidebar"] div[data-baseweb="select"] input{
+  color: var(--sb-text) !important;
+  -webkit-text-fill-color: var(--sb-text) !important;
+  caret-color: var(--sb-text) !important;
+  font-size: 13px !important;
+}
+
+/* Placeholder */
+section[data-testid="stSidebar"] div[data-baseweb="select"] input::placeholder{
+  color: var(--sb-muted) !important;
+  -webkit-text-fill-color: var(--sb-muted) !important;
+  opacity: 1 !important;
+}
+
+/* Chevron icon */
+section[data-testid="stSidebar"] div[data-baseweb="select"] svg,
+section[data-testid="stSidebar"] div[data-baseweb="select"] svg path{
+  fill: var(--sb-muted) !important;
+}
+
+/* =========================
+   MultiSelect chips (tags)
+   - remove red, make calm
+========================= */
+section[data-testid="stSidebar"] div[data-baseweb="tag"],
+section[data-testid="stSidebar"] span[data-baseweb="tag"]{
+  background: var(--sb-chip-bg) !important;
+  border: 1px solid var(--sb-chip-border) !important;
+  color: var(--sb-chip-text) !important;
+
+  border-radius: 999px !important;
+  height: 30px !important;
+  min-height: 30px !important;
+
+  padding: 0 10px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+}
+
+/* chip label */
+section[data-testid="stSidebar"] div[data-baseweb="tag"] > span:first-child,
+section[data-testid="stSidebar"] span[data-baseweb="tag"] > span:first-child{
+  color: var(--sb-chip-text) !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+
+  flex: 1 1 auto !important;
+  min-width: 0 !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+/* chip "x" button area */
+section[data-testid="stSidebar"] div[data-baseweb="tag"] > span:last-child,
+section[data-testid="stSidebar"] span[data-baseweb="tag"] > span:last-child{
+  flex: 0 0 26px !important;
+  width: 26px !important;
+  min-width: 26px !important;
+
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+/* chip x icon */
+section[data-testid="stSidebar"] div[data-baseweb="tag"] svg,
+section[data-testid="stSidebar"] span[data-baseweb="tag"] svg,
+section[data-testid="stSidebar"] div[data-baseweb="tag"] path,
+section[data-testid="stSidebar"] span[data-baseweb="tag"] path{
+  fill: var(--sb-chip-text) !important;
+  opacity: 0.85 !important;
+}
+
+/* =========================
+   Slider: make less "red"
+========================= */
+section[data-testid="stSidebar"] [role="slider"]{
+  accent-color: var(--sb-accent) !important;
+}
+
+/* Slider value text */
+section[data-testid="stSidebar"] .stSlider > div{
+  color: var(--sb-text) !important;
 }
 
 /* =========================
    Buttons
 ========================= */
-button[kind="primary"] {
-  background-color: #2563EB !important;
-  border-radius: 8px !important;
+section[data-testid="stSidebar"] button{
+  border-radius: 10px !important;
+  font-weight: 700 !important;
 }
 
-button[kind="secondary"] {
-  border-radius: 8px !important;
+/* Primary-ish button styling (Streamlit sometimes uses kind="secondary") */
+section[data-testid="stSidebar"] button[kind="secondary"],
+section[data-testid="stSidebar"] button[kind="primary"]{
+  background: var(--sb-accent) !important;
+  color: #FFFFFF !important;
+  border: 1px solid rgba(0,0,0,0) !important;
+  box-shadow: none !important;
 }
 
-/* =========================
-   Tables / Data Editor
-========================= */
-[data-testid="stDataFrame"] {
-  font-size: 12.5px;
-}
-
-[data-testid="stDataFrame"] thead th {
-  background-color: #F1F5F9;
-  color: #334155;
-  font-weight: 600;
+section[data-testid="stSidebar"] button[kind="secondary"] * ,
+section[data-testid="stSidebar"] button[kind="primary"] *{
+  color: #FFFFFF !important;
 }
 
 /* =========================
-   Metrics
+   Section title helper
+   (if you use markdown titles)
 ========================= */
-[data-testid="stMetricValue"] {
-  font-size: 18px;
-  font-weight: 700;
-  color: #0F172A;
-}
-
-[data-testid="stMetricLabel"] {
-  font-size: 12px;
-  color: #64748B;
-}
-
-/* =========================
-   Alerts
-========================= */
-.stAlert {
-  border-radius: 8px;
-  font-size: 12.5px;
+section[data-testid="stSidebar"] .sb-section-title{
+  font-size: 13px !important;
+  font-weight: 800 !important;
+  color: var(--sb-title) !important;
+  margin: 6px 0 8px 0 !important;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -1845,4 +1944,5 @@ with tab_dom:
         st.info("현재 활성 화면은 해외 탭입니다. 전환 버튼을 눌러 활성화하세요.")
     else:
         render_domestic()
+
 
