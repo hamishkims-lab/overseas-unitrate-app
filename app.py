@@ -33,108 +33,106 @@ BG_LIGHT  = "#F6FAFC"
 
 st.markdown("""
 <style>
-  /* 전체 배경 */
-  .main { background-color: #F6FAFC; }
-
-  /* ====== 사이드바에서만 강제 적용(우선순위 ↑) ====== */
-  section[data-testid="stSidebar"] div[data-baseweb="select"] > div{
-    background-color: #ffffff !important;
-    border: 1px solid #005EB8 !important;
-    border-radius: 6px !important;
-  }
-
-  /* ✅ 산출통화(Selectbox) 선택 텍스트를 검정으로 강제 */
-  section[data-testid="stSidebar"] div[data-baseweb="select"] input{
-    color:#000000 !important;
-    -webkit-text-fill-color:#000000 !important;
-    caret-color:#000000 !important;
-  }
-
-  /* ✅ placeholder/비활성 텍스트도 검정 계열로 */
-  section[data-testid="stSidebar"] div[data-baseweb="select"] input::placeholder{
-    color:#000000 !important;
-    -webkit-text-fill-color:#000000 !important;
-    opacity: 0.7 !important;
-  }
-
-  /* ✅ tag(칩) 자체는 한 줄 꽉 차게. X가 잘리지 않게 */
-section[data-testid="stSidebar"] div[data-baseweb="tag"],
-section[data-testid="stSidebar"] span[data-baseweb="tag"]{
-  width: 100% !important;
-  max-width: 100% !important;
-  overflow: visible !important;
-
-  display: inline-flex !important;
-  align-items: center !important;
-  gap: 8px !important;
-
-  background-color:#4DA3FF !important;   /* 밝은 파란색 */
-  border:1px solid #2F80ED !important;
-  color:#ffffff !important;
-
-  padding: 0 10px !important;
-  box-sizing: border-box !important;
-
-  height: 30px !important;
-  min-height: 30px !important;
+/* =========================
+   Global
+========================= */
+.main {
+  background-color: #F7F9FC;
+  color: #0F172A;
+  font-size: 13px;
 }
 
-/* ✅ tag 안의 '텍스트 라벨'은 남은 공간만 쓰고 ellipsis 처리 */
-section[data-testid="stSidebar"] div[data-baseweb="tag"] > span:first-child,
-section[data-testid="stSidebar"] span[data-baseweb="tag"] > span:first-child{
-  flex: 1 1 auto !important;
-  min-width: 0 !important;          /* 이게 핵심: flex에서 ellipsis가 먹게 */
-  overflow: hidden !important;
-  text-overflow: ellipsis !important;
-  white-space: nowrap !important;
-
-  font-size: 12px !important;       /* 글자 약간 축소 */
-  line-height: 1 !important;
-  color:#ffffff !important;   /* ✅ 이 줄 추가 */
+/* =========================
+   Headers
+========================= */
+.gs-header {
+  font-size: 20px;
+  font-weight: 700;
+  margin-bottom: 12px;
+  color: #0F172A;
 }
 
-/* ✅ 마지막 X(삭제) 버튼 영역은 고정폭으로 확보해서 항상 보이게 */
-section[data-testid="stSidebar"] div[data-baseweb="tag"] > span:last-child,
-section[data-testid="stSidebar"] span[data-baseweb="tag"] > span:last-child{
-  flex: 0 0 26px !important;
-  width: 26px !important;
-  min-width: 26px !important;
-
-  display: inline-flex !important;
-  align-items: center !important;
-  justify-content: center !important;
+h2, h3 {
+  color: #0F172A;
+  font-weight: 600;
 }
 
-section[data-testid="stSidebar"] div[data-baseweb="tag"] svg,
-section[data-testid="stSidebar"] span[data-baseweb="tag"] svg,
-section[data-testid="stSidebar"] div[data-baseweb="tag"] path,
-section[data-testid="stSidebar"] span[data-baseweb="tag"] path{
-  fill:#ffffff !important;
+/* =========================
+   Cards
+========================= */
+.gs-card {
+  background-color: #FFFFFF;
+  border: 1px solid #E5E8EF;
+  border-radius: 10px;
+  padding: 16px;
+  margin-bottom: 16px;
 }
 
-/* ✅ (닫힌 상태) 선택된 산출통화 값만 검정 텍스트로 강제 */
-section[data-testid="stSidebar"] div[data-baseweb="select"] input{
-  color:#000000 !important;
-  -webkit-text-fill-color:#000000 !important;
-  caret-color:#000000 !important;
+/* =========================
+   Sidebar
+========================= */
+section[data-testid="stSidebar"] {
+  background-color: #FFFFFF;
+  border-right: 1px solid #E5E8EF;
 }
 
-/* 일부 버전에서 input 대신 내부 span/div로 값이 보이는 케이스 대응 */
-section[data-testid="stSidebar"] div[data-baseweb="select"] [data-testid="stMarkdownContainer"],
-section[data-testid="stSidebar"] div[data-baseweb="select"] span{
-  color:#000000 !important;
-  -webkit-text-fill-color:#000000 !important;
+section[data-testid="stSidebar"] h1,
+section[data-testid="stSidebar"] h2,
+section[data-testid="stSidebar"] h3 {
+  font-size: 14px;
+  font-weight: 600;
 }
 
-section[data-testid="stSidebar"] div[data-baseweb="select"] > div *{
-  color:#000000 !important;
-  -webkit-text-fill-color:#000000 !important;
+section[data-testid="stSidebar"] label {
+  font-size: 12px;
+  color: #475569;
 }
 
-/* ✅ 화살표(chevron) 아이콘도 흰색이면 안 보일 수 있어서 같이 정리 */
-section[data-testid="stSidebar"] div[data-baseweb="select"] svg,
-section[data-testid="stSidebar"] div[data-baseweb="select"] svg path{
-  fill:#000000 !important;
+/* =========================
+   Buttons
+========================= */
+button[kind="primary"] {
+  background-color: #2563EB !important;
+  border-radius: 8px !important;
+}
+
+button[kind="secondary"] {
+  border-radius: 8px !important;
+}
+
+/* =========================
+   Tables / Data Editor
+========================= */
+[data-testid="stDataFrame"] {
+  font-size: 12.5px;
+}
+
+[data-testid="stDataFrame"] thead th {
+  background-color: #F1F5F9;
+  color: #334155;
+  font-weight: 600;
+}
+
+/* =========================
+   Metrics
+========================= */
+[data-testid="stMetricValue"] {
+  font-size: 18px;
+  font-weight: 700;
+  color: #0F172A;
+}
+
+[data-testid="stMetricLabel"] {
+  font-size: 12px;
+  color: #64748B;
+}
+
+/* =========================
+   Alerts
+========================= */
+.stAlert {
+  border-radius: 8px;
+  font-size: 12.5px;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -1847,3 +1845,4 @@ with tab_dom:
         st.info("현재 활성 화면은 해외 탭입니다. 전환 버튼을 눌러 활성화하세요.")
     else:
         render_domestic()
+
