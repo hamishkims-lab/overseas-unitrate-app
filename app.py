@@ -648,6 +648,70 @@ div[data-baseweb="popover"] input::placeholder{
   -webkit-text-fill-color: var(--muted) !important;
   opacity: 1 !important;
 }
+/* =====================================================
+   FIX: Select/MultiSelect 옵션 hover/active/focus가 검정으로 먹는 문제
+   - BaseWeb이 data-highlighted / focus 상태를 쓰는 케이스까지 강제
+===================================================== */
+
+/* 1) 옵션 hover / highlighted / focus / active 모두 같은 톤으로 */
+body div[data-baseweb="popover"] [role="option"]:hover,
+body div[data-baseweb="portal"]  [role="option"]:hover,
+body div[data-baseweb="popover"] [role="option"][data-highlighted="true"],
+body div[data-baseweb="portal"]  [role="option"][data-highlighted="true"],
+body div[data-baseweb="popover"] [role="option"]:focus,
+body div[data-baseweb="portal"]  [role="option"]:focus,
+body div[data-baseweb="popover"] [role="option"]:active,
+body div[data-baseweb="portal"]  [role="option"]:active{
+  background: rgba(37, 99, 235, 0.10) !important; /* 연한 파랑 */
+  color: var(--text) !important;
+}
+
+/* 옵션 내부 텍스트도 같이 다크로 강제(hover 시 흰색으로 바뀌는 것 방지) */
+body div[data-baseweb="popover"] [role="option"]:hover *,
+body div[data-baseweb="portal"]  [role="option"]:hover *,
+body div[data-baseweb="popover"] [role="option"][data-highlighted="true"] *,
+body div[data-baseweb="portal"]  [role="option"][data-highlighted="true"] *,
+body div[data-baseweb="popover"] [role="option"]:focus *,
+body div[data-baseweb="portal"]  [role="option"]:focus *{
+  color: var(--text) !important;
+  -webkit-text-fill-color: var(--text) !important;
+}
+
+/* 2) 선택된 옵션(aria-selected=true)도 동일 계열로 */
+body div[data-baseweb="popover"] [role="option"][aria-selected="true"],
+body div[data-baseweb="portal"]  [role="option"][aria-selected="true"]{
+  background: rgba(37, 99, 235, 0.14) !important;
+}
+body div[data-baseweb="popover"] [role="option"][aria-selected="true"] *,
+body div[data-baseweb="portal"]  [role="option"][aria-selected="true"] *{
+  color: var(--text) !important;
+  -webkit-text-fill-color: var(--text) !important;
+}
+
+/* 3) 선택된 "특성 칩(tag)"도 스샷처럼 유지 + hover 시도 동일 */
+div[data-baseweb="tag"],
+span[data-baseweb="tag"]{
+  background: var(--chip-bg) !important;
+  border: 1px solid var(--chip-border) !important;
+  color: var(--chip-text) !important;
+  border-radius: 999px !important;
+}
+div[data-baseweb="tag"]:hover,
+span[data-baseweb="tag"]:hover{
+  background: var(--chip-bg) !important;        /* hover 때 검정으로 변하는 것 방지 */
+  border-color: var(--chip-border) !important;
+}
+div[data-baseweb="tag"] *,
+span[data-baseweb="tag"] *{
+  color: var(--chip-text) !important;
+  -webkit-text-fill-color: var(--chip-text) !important;
+}
+
+/* 4) 아주 가끔 li 레벨에 스타일이 붙는 경우까지 추가 커버 */
+body div[data-baseweb="popover"] li:hover,
+body div[data-baseweb="portal"]  li:hover{
+  background: rgba(37, 99, 235, 0.10) !important;
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -2408,6 +2472,7 @@ with tab_dom:
         st.info("현재 활성 화면은 해외 탭입니다. 전환 버튼을 눌러 활성화하세요.")
     else:
         render_domestic()
+
 
 
 
