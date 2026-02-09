@@ -417,6 +417,75 @@ div[data-baseweb="popover"] input{
   color: var(--text) !important;
   -webkit-text-fill-color: var(--text) !important;
 }
+/* =====================================================
+   TEXT INPUT (st.text_input) — 멀티셀렉트와 동일한 외곽선/라운드/높이로 통일
+===================================================== */
+
+/* text_input(검색창) 바깥 컨테이너 */
+div[data-testid="stTextInput"] > div{
+  border-radius: 12px !important;   /* 멀티셀렉트와 동일 */
+}
+
+/* 실제 input 박스 (BaseWeb input) */
+div[data-testid="stTextInput"] div[data-baseweb="input"] > div{
+  background: #FFFFFF !important;
+  border: 1px solid var(--border) !important;  /* 두께 통일(1px) */
+  border-radius: 12px !important;
+  min-height: 42px !important;                 /* 멀티셀렉트 높이와 통일 */
+  box-shadow: none !important;
+}
+
+/* input 텍스트/placeholder 색 */
+div[data-testid="stTextInput"] input{
+  color: var(--text) !important;
+  -webkit-text-fill-color: var(--text) !important;
+  caret-color: var(--text) !important;
+  font-size: 13px !important;
+}
+div[data-testid="stTextInput"] input::placeholder{
+  color: var(--muted) !important;
+  -webkit-text-fill-color: var(--muted) !important;
+  opacity: 1 !important;
+}
+
+/* 포커스(클릭) 시 파란/두꺼운 테두리로 바뀌는 것 방지 → 동일 톤 유지 */
+div[data-testid="stTextInput"] div[data-baseweb="input"] > div:focus-within{
+  border: 1px solid var(--border) !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
+
+/* =====================================================
+   SELECT MENU (Choose options dropdown) — 검정 배경 제거하고 흰색으로 강제
+===================================================== */
+
+/* 드롭다운(메뉴) 배경/테두리 */
+div[data-baseweb="popover"] div[role="listbox"],
+div[data-baseweb="menu"]{
+  background: #FFFFFF !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 12px !important;
+  box-shadow: var(--shadow-sm) !important;
+}
+
+/* 메뉴 안의 모든 텍스트를 검정으로 */
+div[data-baseweb="popover"] div[role="listbox"] *,
+div[data-baseweb="menu"] *{
+  color: var(--text) !important;
+  -webkit-text-fill-color: var(--text) !important;
+}
+
+/* 옵션 행(hover/active) 배경 */
+div[data-baseweb="menu"] [role="option"]:hover,
+div[data-baseweb="popover"] [role="option"]:hover{
+  background: rgba(37, 99, 235, 0.08) !important; /* 연한 primary 느낌 */
+}
+
+/* 선택된 옵션(강조) 배경 */
+div[data-baseweb="menu"] [aria-selected="true"],
+div[data-baseweb="popover"] [aria-selected="true"]{
+  background: rgba(37, 99, 235, 0.12) !important;
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -2177,6 +2246,7 @@ with tab_dom:
         st.info("현재 활성 화면은 해외 탭입니다. 전환 버튼을 눌러 활성화하세요.")
     else:
         render_domestic()
+
 
 
 
