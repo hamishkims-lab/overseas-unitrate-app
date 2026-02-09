@@ -355,6 +355,30 @@ div[data-testid="stVerticalBlockBorderWrapper"] > div{
 [data-testid="stFileUploaderDropzone"] button{
   -webkit-text-fill-color: #FFFFFF !important;
 }
+/* =========================================
+   FILE UPLOADER : 업로드된 파일명(boq.xlsx 14KB) 텍스트 색
+========================================= */
+
+/* 업로드된 파일 카드 전체 텍스트를 다크로 */
+[data-testid="stFileUploaderFile"] *{
+  color: var(--text) !important;
+  -webkit-text-fill-color: var(--text) !important;
+}
+
+/* 파일명(첫 줄)만 조금 더 진하게 */
+[data-testid="stFileUploaderFileName"]{
+  color: var(--text) !important;
+  -webkit-text-fill-color: var(--text) !important;
+  font-weight: 800 !important;
+}
+
+/* 파일 크기/부가정보(14.0KB 등) */
+[data-testid="stFileUploaderFile"] small,
+[data-testid="stFileUploaderFile"] [data-testid="stCaptionContainer"]{
+  color: var(--muted) !important;
+  -webkit-text-fill-color: var(--muted) !important;
+}
+
 </style>
 """, unsafe_allow_html=True)
 
@@ -2111,6 +2135,7 @@ with tab_dom:
         st.info("현재 활성 화면은 해외 탭입니다. 전환 버튼을 눌러 활성화하세요.")
     else:
         render_domestic()
+
 
 
 
