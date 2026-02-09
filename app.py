@@ -1407,7 +1407,7 @@ def render_overseas():
     # =========================
     with st.container():
         card_begin()
-        card_title("📤 BOQ 파일 업로드", "XLSX")
+        card_title("📤 BOQ 파일 업로드")
     
         boq_file = st.file_uploader(
             label="",
@@ -2076,6 +2076,7 @@ with tab_dom:
         st.info("현재 활성 화면은 해외 탭입니다. 전환 버튼을 눌러 활성화하세요.")
     else:
         render_domestic()
+
 
 
 
