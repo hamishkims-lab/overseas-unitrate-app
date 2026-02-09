@@ -2,6 +2,31 @@ import re
 import io
 import json
 import hashlib
+# =========================
+# Altair: Force Light Theme
+# =========================
+def _altair_light_theme():
+    return {
+        "config": {
+            "background": "white",
+            "view": {"fill": "white", "stroke": "rgba(15,23,42,0.10)"},
+            "axis": {
+                "labelColor": "#0F172A",
+                "titleColor": "#0F172A",
+                "gridColor": "rgba(15,23,42,0.08)",
+                "domainColor": "rgba(15,23,42,0.18)",
+                "tickColor": "rgba(15,23,42,0.18)",
+            },
+            "legend": {
+                "labelColor": "#0F172A",
+                "titleColor": "#0F172A",
+            },
+            "title": {"color": "#0F172A"},
+        }
+    }
+
+alt.themes.register("light_force", _altair_light_theme)
+alt.themes.enable("light_force")
 from pathlib import Path
 from typing import Optional
 
@@ -814,6 +839,111 @@ div[data-testid="stTextInput"] div[data-baseweb="input"] > div:focus-within{
 div[data-testid="stTextInput"] > div{
   border: none !important;
   box-shadow: none !important;
+}
+/* =====================================================
+   GLOBAL LIGHT ENFORCE (Tabs/Markdown/Metric/Expander/Alerts)
+===================================================== */
+
+/* 탭 라벨(📄/🧾/📝) 글자색 */
+.stTabs [data-baseweb="tab"] *{
+  color: var(--text) !important;
+  -webkit-text-fill-color: var(--text) !important;
+}
+.stTabs [aria-selected="true"]{
+  background: rgba(37,99,235,0.06) !important;
+  border-radius: 10px !important;
+}
+
+/* 일반 텍스트/마크다운(혹시 남아있는 흰색 글자 제거) */
+[data-testid="stMarkdownContainer"] *,
+[data-testid="stCaptionContainer"] *,
+label, p, span, small{
+  color: var(--text) !important;
+  -webkit-text-fill-color: var(--text) !important;
+}
+[data-testid="stCaptionContainer"] *,
+.stCaption, small{
+  color: var(--muted) !important;
+  -webkit-text-fill-color: var(--muted) !important;
+}
+
+/* metric(값/라벨) */
+[data-testid="stMetric"]{
+  background: #FFFFFF !important;
+}
+[data-testid="stMetric"] *{
+  color: var(--text) !important;
+  -webkit-text-fill-color: var(--text) !important;
+}
+
+/* expander */
+[data-testid="stExpander"]{
+  background: #FFFFFF !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 14px !important;
+}
+[data-testid="stExpander"] *{
+  color: var(--text) !important;
+  -webkit-text-fill-color: var(--text) !important;
+}
+
+/* info/success/warning/error 알림 박스 */
+[data-testid="stAlert"]{
+  background: #FFFFFF !important;
+  border: 1px solid var(--border) !important;
+  color: var(--text) !important;
+}
+[data-testid="stAlert"] *{
+  color: var(--text) !important;
+  -webkit-text-fill-color: var(--text) !important;
+}
+
+/* 다운로드 버튼/일반 버튼(메인 화면에서도 톤 유지) */
+[data-testid="stDownloadButton"] button,
+[data-testid="stButton"] button{
+  border-radius: 10px !important;
+  font-weight: 800 !important;
+}
+[data-testid="stDownloadButton"] button{
+  background: var(--primary) !important;
+  color: #FFFFFF !important;
+  border: 0 !important;
+}
+[data-testid="stDownloadButton"] button *{
+  color: #FFFFFF !important;
+  fill: #FFFFFF !important;
+  -webkit-text-fill-color: #FFFFFF !important;
+}
+
+/* =====================================================
+   DataEditor/DataFrame 잔여 다크/편집상태 input/선택상태 추가 보강
+===================================================== */
+
+/* 편집중 셀 input(가끔 다크로 뜸) */
+[data-testid="stDataEditor"] input,
+[data-testid="stDataEditor"] textarea{
+  background: #FFFFFF !important;
+  color: var(--text) !important;
+  -webkit-text-fill-color: var(--text) !important;
+  caret-color: var(--text) !important;
+  border: 1px solid rgba(15,23,42,0.12) !important;
+}
+
+/* 선택된 셀 테두리/배경이 과하게 다크로 변하는 케이스 보정 */
+[data-testid="stDataEditor"] .ag-cell-focus,
+[data-testid="stDataFrame"] .ag-cell-focus{
+  border: 1px solid rgba(37,99,235,0.35) !important;
+  box-shadow: none !important;
+}
+[data-testid="stDataEditor"] .ag-range-selected,
+[data-testid="stDataFrame"] .ag-range-selected{
+  background: rgba(37,99,235,0.10) !important;
+}
+
+/* 체크박스/아이콘 색 */
+[data-testid="stDataEditor"] .ag-icon,
+[data-testid="stDataFrame"] .ag-icon{
+  color: var(--muted) !important;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -2575,6 +2705,7 @@ with tab_dom:
         st.info("현재 활성 화면은 해외 탭입니다. 전환 버튼을 눌러 활성화하세요.")
     else:
         render_domestic()
+
 
 
 
