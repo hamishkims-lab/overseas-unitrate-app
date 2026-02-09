@@ -655,6 +655,38 @@ section[data-testid="stSidebar"] span[data-baseweb="tag"]{
   border: none !important;
 }
 
+/* =========================
+   sb-* 스타일을 메인에도 적용
+========================= */
+.main .sb-row{
+  display:flex;
+  align-items:baseline;
+  justify-content:space-between;
+  gap: 10px;
+  margin: 2px 0 6px 0;
+}
+.main .sb-title{
+  font-size: 14px !important;
+  font-weight: 800 !important;
+  color: #0F172A !important;
+  letter-spacing: -0.2px !important;
+}
+.main .sb-muted{
+  font-size: 12px !important;
+  color: #64748B !important;
+  white-space: nowrap !important;
+}
+.main .sb-hr{
+  border: none !important;
+  border-top: 1px solid #E6EAF2 !important;
+  margin: 10px 0 !important;
+}
+
+.main [data-testid="stFileUploaderDropzone"] *{
+  color: #0F172A !important;
+  -webkit-text-fill-color: #0F172A !important;
+}
+
 </style>
 """, unsafe_allow_html=True)
 
@@ -1718,9 +1750,28 @@ def render_overseas():
     # (1) BOQ 업로드 (먼저!)
     # =========================
     with st.container():
-        st.markdown("<div class='gs-card'>", unsafe_allow_html=True)
-        boq_file = st.file_uploader("📤 BOQ 파일 업로드", type=["xlsx"])
-        st.markdown("</div>", unsafe_allow_html=True)
+    st.markdown("<div class='gs-card'>", unsafe_allow_html=True)
+
+    # ✅ '실적 현장 선택'과 동일한 타이틀 스타일
+    st.markdown(
+        """
+        <div class="sb-row" style="margin:0 0 10px 0;">
+          <div class="sb-title">📤 BOQ 파일 업로드</div>
+          <div class="sb-muted">XLSX</div>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+    # ✅ file_uploader 기본 라벨(흰색 문제 원인) 숨김
+    boq_file = st.file_uploader(
+        label="",
+        type=["xlsx"],
+        label_visibility="collapsed",
+        key="boq_uploader_overseas"
+    )
+
+    st.markdown("</div>", unsafe_allow_html=True)
 
     # =========================
     # (2) 메인: BOQ 업로드 아래 특성 선택 UI
@@ -2380,6 +2431,7 @@ with tab_dom:
         st.info("현재 활성 화면은 해외 탭입니다. 전환 버튼을 눌러 활성화하세요.")
     else:
         render_domestic()
+
 
 
 
