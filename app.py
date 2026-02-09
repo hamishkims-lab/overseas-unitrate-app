@@ -1320,7 +1320,6 @@ def render_domestic():
 # ============================================================
 def render_overseas():
     st.markdown("<div class='gs-header'>📦 해외 실적단가 DB</div>", unsafe_allow_html=True)
-    st.write("")
 
     # =========================
     # Sidebar: 설정
@@ -2025,6 +2024,7 @@ with tab_dom:
         st.info("현재 활성 화면은 해외 탭입니다. 전환 버튼을 눌러 활성화하세요.")
     else:
         render_domestic()
+
 
 
 
