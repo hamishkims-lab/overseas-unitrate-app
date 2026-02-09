@@ -33,345 +33,63 @@ BG_LIGHT  = "#F6FAFC"
 
 st.markdown("""
 <style>
-/* =========================
-   Sidebar Design Reset
-   (only sidebar)
-========================= */
-
+/* =====================================================
+   DESIGN TOKENS (ONE SOURCE OF TRUTH)
+===================================================== */
 :root{
+  /* App */
+  --bg: #F6F8FC;
+  --card: #FFFFFF;
+  --text: #0F172A;
+  --sub: #334155;
+  --muted: #64748B;
+  --border: rgba(15, 23, 42, 0.10);
+  --shadow-sm: 0 6px 14px rgba(15, 23, 42, 0.05);
+
+  /* Brand */
+  --primary: #2563EB;
+
+  /* Sidebar */
   --sb-bg: #FFFFFF;
   --sb-border: #E6EAF2;
   --sb-title: #0F172A;
   --sb-text: #1F2937;
   --sb-muted: #64748B;
-  --sb-accent: #2563EB;   /* main blue */
-  --sb-chip-bg: #EEF2FF;  /* soft indigo */
-  --sb-chip-border: #C7D2FE;
-  --sb-chip-text: #1E3A8A;
+
+  /* Chip */
+  --chip-bg: #EEF2FF;
+  --chip-border: #C7D2FE;
+  --chip-text: #1E3A8A;
 }
 
-/* Sidebar container */
-section[data-testid="stSidebar"]{
-  background: var(--sb-bg) !important;
-  border-right: 1px solid var(--sb-border) !important;
-}
-
-/* Sidebar padding a bit wider */
-section[data-testid="stSidebar"] > div{
-  padding-top: 14px !important;
-}
-
-/* Headings / labels */
-section[data-testid="stSidebar"] h1,
-section[data-testid="stSidebar"] h2,
-section[data-testid="stSidebar"] h3{
-  color: var(--sb-title) !important;
-  font-weight: 700 !important;
-  letter-spacing: -0.2px !important;
-}
-
-section[data-testid="stSidebar"] label,
-section[data-testid="stSidebar"] p,
-section[data-testid="stSidebar"] span{
-  color: var(--sb-text);
-}
-
-/* Make captions/sub labels muted */
-section[data-testid="stSidebar"] .stCaption,
-section[data-testid="stSidebar"] small{
-  color: var(--sb-muted) !important;
-}
-
-/* Spacing between blocks (Streamlit widgets) */
-section[data-testid="stSidebar"] [data-testid="stVerticalBlock"] > div{
-  gap: 10px !important;  /* widget spacing */
-}
-
-/* Widget label spacing */
-section[data-testid="stSidebar"] label{
-  margin-bottom: 6px !important;
-  font-size: 12.5px !important;
-}
-
-/* Divider line (your <hr>) */
-section[data-testid="stSidebar"] hr{
-  border: none !important;
-  border-top: 1px solid var(--sb-border) !important;
-  margin: 10px 0 !important;
-}
-
-/* =========================
-   Select / Multiselect inputs (BaseWeb)
-========================= */
-
-/* Outer control */
-section[data-testid="stSidebar"] div[data-baseweb="select"] > div{
-  background-color: #FFFFFF !important;
-  border: 1px solid var(--sb-border) !important;
-  border-radius: 10px !important;
-  box-shadow: none !important;
-  min-height: 40px !important;
-}
-
-/* Input text */
-section[data-testid="stSidebar"] div[data-baseweb="select"] input{
-  color: var(--sb-text) !important;
-  -webkit-text-fill-color: var(--sb-text) !important;
-  caret-color: var(--sb-text) !important;
-  font-size: 13px !important;
-}
-
-/* Placeholder */
-section[data-testid="stSidebar"] div[data-baseweb="select"] input::placeholder{
-  color: var(--sb-muted) !important;
-  -webkit-text-fill-color: var(--sb-muted) !important;
-  opacity: 1 !important;
-}
-
-/* Chevron icon */
-section[data-testid="stSidebar"] div[data-baseweb="select"] svg,
-section[data-testid="stSidebar"] div[data-baseweb="select"] svg path{
-  fill: var(--sb-muted) !important;
-}
-
-/* =========================
-   MultiSelect chips (tags)
-   - remove red, make calm
-========================= */
-section[data-testid="stSidebar"] div[data-baseweb="tag"],
-section[data-testid="stSidebar"] span[data-baseweb="tag"]{
-  background: var(--sb-chip-bg) !important;
-  border: 1px solid var(--sb-chip-border) !important;
-  color: var(--sb-chip-text) !important;
-
-  border-radius: 999px !important;
-  height: 30px !important;
-  min-height: 30px !important;
-
-  padding: 0 10px !important;
-  display: inline-flex !important;
-  align-items: center !important;
-  gap: 8px !important;
-}
-
-/* chip label */
-section[data-testid="stSidebar"] div[data-baseweb="tag"] > span:first-child,
-section[data-testid="stSidebar"] span[data-baseweb="tag"] > span:first-child{
-  color: var(--sb-chip-text) !important;
-  font-size: 12px !important;
-  font-weight: 600 !important;
-
-  flex: 1 1 auto !important;
-  min-width: 0 !important;
-  overflow: hidden !important;
-  text-overflow: ellipsis !important;
-  white-space: nowrap !important;
-}
-
-/* chip "x" button area */
-section[data-testid="stSidebar"] div[data-baseweb="tag"] > span:last-child,
-section[data-testid="stSidebar"] span[data-baseweb="tag"] > span:last-child{
-  flex: 0 0 26px !important;
-  width: 26px !important;
-  min-width: 26px !important;
-
-  display: inline-flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-}
-
-/* chip x icon */
-section[data-testid="stSidebar"] div[data-baseweb="tag"] svg,
-section[data-testid="stSidebar"] span[data-baseweb="tag"] svg,
-section[data-testid="stSidebar"] div[data-baseweb="tag"] path,
-section[data-testid="stSidebar"] span[data-baseweb="tag"] path{
-  fill: var(--sb-chip-text) !important;
-  opacity: 0.85 !important;
-}
-
-/* =========================
-   Slider: make less "red"
-========================= */
-section[data-testid="stSidebar"] [role="slider"]{
-  accent-color: var(--sb-accent) !important;
-}
-
-/* Slider value text */
-section[data-testid="stSidebar"] .stSlider > div{
-  color: var(--sb-text) !important;
-}
-
-/* =========================
-   Buttons
-========================= */
-section[data-testid="stSidebar"] button{
-  border-radius: 10px !important;
-  font-weight: 700 !important;
-}
-
-/* Primary-ish button styling (Streamlit sometimes uses kind="secondary") */
-section[data-testid="stSidebar"] button[kind="secondary"],
-section[data-testid="stSidebar"] button[kind="primary"]{
-  background: var(--sb-accent) !important;
-  color: #FFFFFF !important;
-  border: 1px solid rgba(0,0,0,0) !important;
-  box-shadow: none !important;
-}
-
-section[data-testid="stSidebar"] button[kind="secondary"] * ,
-section[data-testid="stSidebar"] button[kind="primary"] *{
-  color: #FFFFFF !important;
-}
-
-/* =========================
-   Section title helper
-   (if you use markdown titles)
-========================= */
-section[data-testid="stSidebar"] .sb-section-title{
-  font-size: 13px !important;
-  font-weight: 800 !important;
-  color: var(--sb-title) !important;
-  margin: 6px 0 8px 0 !important;
-}
-
-/* =========================
-   Sidebar title row (B안)
-========================= */
-section[data-testid="stSidebar"] .sb-row{
-  display:flex;
-  align-items:baseline;
-  justify-content:space-between;
-  margin: 2px 0 6px 0;
-}
-section[data-testid="stSidebar"] .sb-title{
-  font-size: 14px;
-  font-weight: 800;
-  color: #0F172A;
-  letter-spacing: -0.2px;
-}
-section[data-testid="stSidebar"] .sb-muted{
-  font-size: 12px;
-  color: #64748B;
-}
-
-/* =========================
-   Sidebar Section Template
-========================= */
-:root{
-  --sb-title: #0F172A;
-  --sb-muted: #64748B;
-  --sb-border: #E6EAF2;
-}
-
-/* 대제목(설정) */
-section[data-testid="stSidebar"] .sb-major{
-  font-size: 16px !important;
-  font-weight: 900 !important;
-  color: var(--sb-title) !important;
-  margin: 6px 0 10px 0 !important;
-  letter-spacing: -0.2px !important;
-}
-
-/* 소제목 행(좌/우) */
-section[data-testid="stSidebar"] .sb-row{
-  display:flex;
-  align-items:baseline;
-  justify-content:space-between;
-  gap: 10px;
-  margin: 2px 0 6px 0;
-}
-
-section[data-testid="stSidebar"] .sb-title{
-  font-size: 14px !important;
-  font-weight: 800 !important;
-  color: var(--sb-title) !important;
-  letter-spacing: -0.2px !important;
-}
-
-section[data-testid="stSidebar"] .sb-muted{
-  font-size: 12px !important;
-  color: var(--sb-muted) !important;
-  white-space: nowrap !important;
-}
-
-/* 구분선(섹션 전용) */
-section[data-testid="stSidebar"] .sb-hr{
-  border: none !important;
-  border-top: 1px solid var(--sb-border) !important;
-  margin: 10px 0 !important;
-}
-
-/* =========================
-   Dashboard Style (B)
-   - Airy spacing, cards, soft shadow
-========================= */
-:root{
-  --bg: #F6F8FC;
-  --card: #FFFFFF;
-  --border: rgba(15, 23, 42, 0.08);
-  --shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
-  --shadow-sm: 0 6px 14px rgba(15, 23, 42, 0.05);
-
-  --text: #0F172A;
-  --sub: #334155;
-  --muted: #64748B;
-
-  --primary: #2563EB;
-  --primary-soft: rgba(37, 99, 235, 0.10);
-}
-
-/* App background */
+/* =====================================================
+   APP BACKGROUND & TYPO
+===================================================== */
 [data-testid="stAppViewContainer"]{
   background: var(--bg) !important;
 }
-
-/* Main area width + padding (make it feel like a dashboard) */
-.main > div{
-  padding-left: 24px !important;
-  padding-right: 24px !important;
-  padding-top: 16px !important;
-  padding-bottom: 24px !important;
-  max-width: 1280px;  /* dashboard container 느낌 */
-  margin: 0 auto;
-}
-
-/* Typography scale (airy) */
 html, body{
   font-size: 14px !important;
   color: var(--text) !important;
 }
+.main{
+  color: var(--text) !important;
+}
+.main > div{
+  padding: 16px 24px 24px 24px !important;
+  max-width: 1280px;
+  margin: 0 auto;
+}
 
 /* Headings */
-.main h1{
-  font-size: 26px !important;
-  font-weight: 900 !important;
-  letter-spacing: -0.5px !important;
-  margin: 4px 0 14px 0 !important;
-  color: var(--text) !important;
-}
-.main h2{
-  font-size: 20px !important;
-  font-weight: 850 !important;
-  letter-spacing: -0.3px !important;
-  margin: 20px 0 12px 0 !important;
-  color: var(--text) !important;
-}
-.main h3{
-  font-size: 16px !important;
-  font-weight: 850 !important;
-  margin: 18px 0 10px 0 !important;
-  color: var(--text) !important;
-}
+.main h1{ font-size: 26px !important; font-weight: 900 !important; letter-spacing: -0.5px !important; color: var(--text) !important; }
+.main h2{ font-size: 20px !important; font-weight: 850 !important; letter-spacing: -0.3px !important; color: var(--text) !important; }
+.main h3{ font-size: 16px !important; font-weight: 850 !important; color: var(--text) !important; }
+.main .stCaption, .main small{ color: var(--muted) !important; font-size: 12.5px !important; }
 
-/* caption/description */
-.main .stCaption, .main small{
-  color: var(--muted) !important;
-  font-size: 12.5px !important;
-}
-
-/* =========================
-   Card system
-========================= */
+/* =====================================================
+   CARD
+===================================================== */
 .gs-card{
   background: var(--card) !important;
   border: 1px solid var(--border) !important;
@@ -381,78 +99,173 @@ html, body{
   box-shadow: var(--shadow-sm) !important;
 }
 
-/* Create a generic card class too */
-.dash-card{
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: 16px;
-  padding: 18px;
-  box-shadow: var(--shadow-sm);
-}
+/* (옵션) 빈 카드가 생기면 숨김: :has() 미지원 환경이면 이 줄은 지워도 됨 */
+.gs-card:has(:empty){ display:none !important; }
 
-/* Section header row */
-.dash-section-title{
-  font-size: 16px;
-  font-weight: 900;
-  letter-spacing: -0.2px;
-  color: var(--text);
-  margin: 0 0 10px 0;
+/* =====================================================
+   SB-ROW (Sidebar + Main 공통)
+===================================================== */
+.sb-row{
+  display:flex;
+  align-items:baseline;
+  justify-content:space-between;
+  gap: 10px;
+  margin: 2px 0 6px 0;
 }
-
-/* Sub text */
-.dash-sub{
-  color: var(--muted);
-  font-size: 12.5px;
-}
-
-/* =========================
-   Metrics
-========================= */
-[data-testid="stMetricValue"]{
-  font-size: 20px !important;
-  font-weight: 900 !important;
-  color: var(--text) !important;
-}
-[data-testid="stMetricLabel"]{
-  font-size: 12.5px !important;
-  color: var(--muted) !important;
-}
-
-/* =========================
-   Tabs (clean)
-========================= */
-[data-testid="stTabs"]{
-  margin-top: 10px !important;
-}
-button[data-baseweb="tab"]{
-  font-size: 13.5px !important;
+.sb-title{
+  font-size: 14px !important;
   font-weight: 800 !important;
-  color: var(--sub) !important;
-  padding: 10px 14px !important;
+  color: var(--sb-title) !important;
+  letter-spacing: -0.2px !important;
 }
-button[data-baseweb="tab"][aria-selected="true"]{
+.sb-muted{
+  font-size: 12px !important;
+  color: var(--sb-muted) !important;
+  white-space: nowrap !important;
+}
+.sb-hr{
+  border: none !important;
+  border-top: 1px solid var(--sb-border) !important;
+  margin: 10px 0 !important;
+}
+.sb-major{
+  font-size: 16px !important;
+  font-weight: 900 !important;
+  color: var(--sb-title) !important;
+  margin: 6px 0 10px 0 !important;
+  letter-spacing: -0.2px !important;
+}
+
+/* =====================================================
+   SIDEBAR
+===================================================== */
+section[data-testid="stSidebar"]{
+  background: var(--sb-bg) !important;
+  border-right: 1px solid var(--sb-border) !important;
+}
+section[data-testid="stSidebar"] > div{
+  padding-top: 14px !important;
+}
+section[data-testid="stSidebar"] label{
+  margin-bottom: 6px !important;
+  font-size: 12.5px !important;
+  color: var(--sb-text) !important;
+}
+section[data-testid="stSidebar"] .stCaption,
+section[data-testid="stSidebar"] small{
+  color: var(--sb-muted) !important;
+}
+section[data-testid="stSidebar"] hr{
+  border: none !important;
+  border-top: 1px solid var(--sb-border) !important;
+  margin: 10px 0 !important;
+}
+
+/* =====================================================
+   BASEWEB (Select / Multiselect) — MAIN + SIDEBAR
+   - 흰 글자/검은 바탕 문제의 핵심 해결
+===================================================== */
+
+/* 공통: 컨트롤 외곽 */
+div[data-baseweb="select"] > div{
+  background: #FFFFFF !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 12px !important;
+  min-height: 42px !important;
+  box-shadow: none !important;
+}
+
+/* 공통: 내부 텍스트를 강제로 Dark */
+div[data-baseweb="select"] *,
+div[data-baseweb="menu"] *,
+div[data-baseweb="popover"] *{
   color: var(--text) !important;
+  -webkit-text-fill-color: var(--text) !important;
 }
-div[data-baseweb="tab-highlight"]{
-  background-color: var(--primary) !important;
-  height: 3px !important;
+
+/* input/placeholder */
+div[data-baseweb="select"] input{
+  color: var(--text) !important;
+  -webkit-text-fill-color: var(--text) !important;
+  caret-color: var(--text) !important;
+  font-size: 13px !important;
+}
+div[data-baseweb="select"] input::placeholder{
+  color: var(--muted) !important;
+  -webkit-text-fill-color: var(--muted) !important;
+  opacity: 1 !important;
+}
+
+/* chevron icon */
+div[data-baseweb="select"] svg,
+div[data-baseweb="select"] svg path{
+  fill: var(--muted) !important;
+}
+
+/* =====================================================
+   CHIPS (Tag) — 빨간칩 제거
+===================================================== */
+div[data-baseweb="tag"],
+span[data-baseweb="tag"]{
+  background: var(--chip-bg) !important;
+  border: 1px solid var(--chip-border) !important;
+  color: var(--chip-text) !important;
   border-radius: 999px !important;
 }
-
-/* =========================
-   Buttons
-========================= */
-.main button{
-  border-radius: 12px !important;
-  font-weight: 900 !important;
+div[data-baseweb="tag"] span,
+div[data-baseweb="tag"] svg,
+div[data-baseweb="tag"] path{
+  color: var(--chip-text) !important;
+  -webkit-text-fill-color: var(--chip-text) !important;
+  fill: var(--chip-text) !important;
 }
-.main button[kind="primary"]{
+
+/* =====================================================
+   SLIDER & BUTTONS (Sidebar 중심)
+===================================================== */
+section[data-testid="stSidebar"] [role="slider"]{
+  accent-color: var(--primary) !important;
+}
+section[data-testid="stSidebar"] button{
+  border-radius: 10px !important;
+  font-weight: 700 !important;
+}
+section[data-testid="stSidebar"] button[kind="secondary"],
+section[data-testid="stSidebar"] button[kind="primary"]{
   background: var(--primary) !important;
+  color: #FFFFFF !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+section[data-testid="stSidebar"] button[kind="secondary"] * ,
+section[data-testid="stSidebar"] button[kind="primary"] *{
+  color: #FFFFFF !important;
 }
 
-/* =========================
-   Table (make it feel secondary)
-========================= */
+/* =====================================================
+   FILE UPLOADER — 검은 드롭존 제거 + 텍스트 색 강제
+===================================================== */
+[data-testid="stFileUploaderDropzone"]{
+  background: #FFFFFF !important;
+  border: 1px dashed rgba(15,23,42,0.18) !important;
+  border-radius: 16px !important;
+  padding: 16px !important;
+}
+[data-testid="stFileUploaderDropzone"] *{
+  color: var(--text) !important;
+  -webkit-text-fill-color: var(--text) !important;
+}
+[data-testid="stFileUploaderDropzone"] button{
+  background: var(--primary) !important;
+  color: #FFFFFF !important;
+  border-radius: 12px !important;
+  font-weight: 800 !important;
+  border: 0 !important;
+}
+
+/* =====================================================
+   TABLE
+===================================================== */
 [data-testid="stDataFrame"],
 [data-testid="stDataEditor"]{
   font-size: 12.8px !important;
@@ -468,225 +281,6 @@ div[data-baseweb="tab-highlight"]{
 [data-testid="stDataEditor"] tbody tr{
   height: 36px !important;
 }
-/* =========================
-   🔥 White text bug fix (MAIN + SIDEBAR)
-   - BaseWeb select/multiselect text color reset
-========================= */
-
-/* 메인 영역(BaseWeb) */
-.main div[data-baseweb="select"] *{
-  color: #0F172A !important;
-  -webkit-text-fill-color: #0F172A !important;
-}
-
-/* 사이드바(BaseWeb) - 이미 일부 있으나, 내부 요소까지 강제 */
-section[data-testid="stSidebar"] div[data-baseweb="select"] *{
-  color: var(--sb-text) !important;
-  -webkit-text-fill-color: var(--sb-text) !important;
-}
-
-/* placeholder */
-.main div[data-baseweb="select"] input::placeholder,
-section[data-testid="stSidebar"] div[data-baseweb="select"] input::placeholder{
-  color: #64748B !important;
-  -webkit-text-fill-color: #64748B !important;
-  opacity: 1 !important;
-}
-
-/* input / textarea 전반(메인) */
-.main input, .main textarea{
-  color: #0F172A !important;
-  -webkit-text-fill-color: #0F172A !important;
-}
-
-/* multiselect tag(메인 + 사이드바) 텍스트 */
-.main div[data-baseweb="tag"] span,
-section[data-testid="stSidebar"] div[data-baseweb="tag"] span{
-  color: #1E3A8A !important;
-  -webkit-text-fill-color: #1E3A8A !important;
-}
-/* =========================
-   🎨 Tone down black/red
-   - chips / inputs / uploader
-========================= */
-
-/* (1) 선택 태그(칩) - 빨강 제거, 부드러운 인디고 */
-.main div[data-baseweb="tag"],
-.main span[data-baseweb="tag"],
-section[data-testid="stSidebar"] div[data-baseweb="tag"],
-section[data-testid="stSidebar"] span[data-baseweb="tag"]{
-  background: #EEF2FF !important;
-  border: 1px solid #C7D2FE !important;
-  color: #1E3A8A !important;
-  border-radius: 999px !important;
-}
-
-/* (2) X 아이콘/화살표 아이콘도 너무 진하면 같이 정리 */
-.main div[data-baseweb="tag"] svg,
-.main div[data-baseweb="tag"] path,
-.main div[data-baseweb="select"] svg,
-.main div[data-baseweb="select"] path{
-  fill: #64748B !important;
-}
-
-/* (3) 메인 입력창/셀렉트가 "검은색"으로 뜨는 경우 밝게 */
-.main div[data-baseweb="select"] > div{
-  background: #FFFFFF !important;
-  border: 1px solid rgba(15,23,42,0.10) !important;
-  border-radius: 12px !important;
-  box-shadow: none !important;
-  min-height: 42px !important;
-}
-
-/* (4) 파일 업로더(드래그 영역) 검은색 박스 제거 */
-.main [data-testid="stFileUploaderDropzone"]{
-  background: #FFFFFF !important;
-  border: 1px dashed rgba(15,23,42,0.18) !important;
-  border-radius: 16px !important;
-  padding: 16px !important;
-}
-
-/* 파일 업로더 내부 글자색 */
-.main [data-testid="stFileUploaderDropzone"] *{
-  color: #0F172A !important;
-  -webkit-text-fill-color: #0F172A !important;
-}
-
-/* 업로더 버튼(Browse files) */
-.main [data-testid="stFileUploaderDropzone"] button{
-  background: #2563EB !important;
-  color: #FFFFFF !important;
-  border-radius: 12px !important;
-  font-weight: 800 !important;
-  border: 0 !important;
-}
-/* =========================
-   🧽 Remove "empty white boxes"
-========================= */
-
-/* gs-card가 빈 상태로 렌더되면 숨김(지원 브라우저: 최신 Chrome/Edge) */
-.gs-card:has(:empty){
-  display: none !important;
-}
-/* =====================================================
-   🚨 FORCE LIGHT MODE (MAIN AREA)
-   - remove dark baseweb styles completely
-===================================================== */
-
-/* 메인 영역 전체 배경 */
-.main,
-[data-testid="stAppViewContainer"]{
-  background: #F6F8FC !important;
-  color: #0F172A !important;
-}
-
-/* 모든 input / select / textarea */
-.main input,
-.main textarea{
-  background: #FFFFFF !important;
-  color: #0F172A !important;
-  -webkit-text-fill-color: #0F172A !important;
-  border: 1px solid rgba(15,23,42,0.12) !important;
-}
-
-/* BaseWeb Select / Multiselect */
-.main div[data-baseweb="select"] > div{
-  background: #FFFFFF !important;
-  border: 1px solid rgba(15,23,42,0.12) !important;
-  border-radius: 12px !important;
-  min-height: 42px !important;
-  box-shadow: none !important;
-}
-
-/* BaseWeb 내부 텍스트 (🔥 흰 글자 제거 핵심) */
-.main div[data-baseweb="select"] *,
-.main div[data-baseweb="menu"] *,
-.main div[data-baseweb="popover"] *{
-  color: #0F172A !important;
-  -webkit-text-fill-color: #0F172A !important;
-}
-
-/* placeholder */
-.main input::placeholder{
-  color: #64748B !important;
-  -webkit-text-fill-color: #64748B !important;
-}
-
-/* =====================================================
-   🟥 REMOVE RED TAGS (선택칩)
-===================================================== */
-.main div[data-baseweb="tag"],
-.main span[data-baseweb="tag"]{
-  background: #EEF2FF !important;
-  border: 1px solid #C7D2FE !important;
-  color: #1E3A8A !important;
-  border-radius: 999px !important;
-}
-
-/* tag 내부 텍스트/아이콘 */
-.main div[data-baseweb="tag"] span,
-.main div[data-baseweb="tag"] svg,
-.main div[data-baseweb="tag"] path{
-  color: #1E3A8A !important;
-  fill: #1E3A8A !important;
-}
-
-/* =====================================================
-   📤 FILE UPLOADER (검은 바 제거)
-===================================================== */
-.main [data-testid="stFileUploaderDropzone"]{
-  background: #FFFFFF !important;
-  border: 1px dashed rgba(15,23,42,0.18) !important;
-  border-radius: 16px !important;
-}
-
-/* 업로더 내부 텍스트 */
-.main [data-testid="stFileUploaderDropzone"] *{
-  color: #0F172A !important;
-  -webkit-text-fill-color: #0F172A !important;
-}
-
-/* Browse files 버튼 */
-.main [data-testid="stFileUploaderDropzone"] button{
-  background: #2563EB !important;
-  color: #FFFFFF !important;
-  border-radius: 12px !important;
-  font-weight: 800 !important;
-  border: none !important;
-}
-
-/* =========================
-   sb-* 스타일을 메인에도 적용
-========================= */
-.main .sb-row{
-  display:flex;
-  align-items:baseline;
-  justify-content:space-between;
-  gap: 10px;
-  margin: 2px 0 6px 0;
-}
-.main .sb-title{
-  font-size: 14px !important;
-  font-weight: 800 !important;
-  color: #0F172A !important;
-  letter-spacing: -0.2px !important;
-}
-.main .sb-muted{
-  font-size: 12px !important;
-  color: #64748B !important;
-  white-space: nowrap !important;
-}
-.main .sb-hr{
-  border: none !important;
-  border-top: 1px solid #E6EAF2 !important;
-  margin: 10px 0 !important;
-}
-
-.main [data-testid="stFileUploaderDropzone"] *{
-  color: #0F172A !important;
-  -webkit-text-fill-color: #0F172A !important;
-}
-
 </style>
 """, unsafe_allow_html=True)
 
@@ -2431,6 +2025,7 @@ with tab_dom:
         st.info("현재 활성 화면은 해외 탭입니다. 전환 버튼을 눌러 활성화하세요.")
     else:
         render_domestic()
+
 
 
 
