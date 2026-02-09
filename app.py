@@ -1750,28 +1750,28 @@ def render_overseas():
     # (1) BOQ 업로드 (먼저!)
     # =========================
     with st.container():
-    st.markdown("<div class='gs-card'>", unsafe_allow_html=True)
+        st.markdown("<div class='gs-card'>", unsafe_allow_html=True)
+    
+        # ✅ '실적 현장 선택'과 동일한 타이틀 스타일
+        st.markdown(
+            """
+            <div class="sb-row" style="margin:0 0 10px 0;">
+              <div class="sb-title">📤 BOQ 파일 업로드</div>
+              <div class="sb-muted">XLSX</div>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+    
+        # ✅ file_uploader 기본 라벨(흰색 문제 원인) 숨김
+        boq_file = st.file_uploader(
+            label="",
+            type=["xlsx"],
+            label_visibility="collapsed",
+            key="boq_uploader_overseas"
+        )
 
-    # ✅ '실적 현장 선택'과 동일한 타이틀 스타일
-    st.markdown(
-        """
-        <div class="sb-row" style="margin:0 0 10px 0;">
-          <div class="sb-title">📤 BOQ 파일 업로드</div>
-          <div class="sb-muted">XLSX</div>
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
-
-    # ✅ file_uploader 기본 라벨(흰색 문제 원인) 숨김
-    boq_file = st.file_uploader(
-        label="",
-        type=["xlsx"],
-        label_visibility="collapsed",
-        key="boq_uploader_overseas"
-    )
-
-    st.markdown("</div>", unsafe_allow_html=True)
+        st.markdown("</div>", unsafe_allow_html=True)
 
     # =========================
     # (2) 메인: BOQ 업로드 아래 특성 선택 UI
@@ -2431,6 +2431,7 @@ with tab_dom:
         st.info("현재 활성 화면은 해외 탭입니다. 전환 버튼을 눌러 활성화하세요.")
     else:
         render_domestic()
+
 
 
 
