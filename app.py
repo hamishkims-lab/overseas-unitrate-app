@@ -794,6 +794,27 @@ div[data-baseweb="popover"] li[role="option"] * {
 div[data-baseweb="popover"] li[role="option"][aria-selected="true"]:hover {
     background-color: rgba(37, 99, 235, 0.15) !important;
 }
+/* =====================================================
+   TEXT INPUT 테두리/포커스 라인 제거
+===================================================== */
+div[data-testid="stTextInput"] div[data-baseweb="input"] > div{
+  border: none !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
+
+/* 포커스(클릭) 시 생기는 링까지 제거 */
+div[data-testid="stTextInput"] div[data-baseweb="input"] > div:focus-within{
+  border: none !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
+
+/* 혹시 바깥 wrapper에 테두리가 잡히는 경우까지 */
+div[data-testid="stTextInput"] > div{
+  border: none !important;
+  box-shadow: none !important;
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -2554,6 +2575,7 @@ with tab_dom:
         st.info("현재 활성 화면은 해외 탭입니다. 전환 버튼을 눌러 활성화하세요.")
     else:
         render_domestic()
+
 
 
 
