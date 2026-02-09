@@ -2,9 +2,6 @@ import re
 import io
 import json
 import hashlib
-
-alt.themes.register("light_force", _altair_light_theme)
-alt.themes.enable("light_force")
 from pathlib import Path
 from typing import Optional
 
@@ -2683,6 +2680,7 @@ with tab_dom:
         st.info("현재 활성 화면은 해외 탭입니다. 전환 버튼을 눌러 활성화하세요.")
     else:
         render_domestic()
+
 
 
 
