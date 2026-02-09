@@ -314,6 +314,23 @@ section[data-testid="stSidebar"] button[kind="primary"] *{
 [data-testid="stDataEditor"] tbody tr{
   height: 36px !important;
 }
+/* =====================================================
+   STREAMLIT BORDER CONTAINER -> CARD LOOK
+   (st.container(border=True) 카드화)
+===================================================== */
+div[data-testid="stVerticalBlockBorderWrapper"]{
+  background: var(--card) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 16px !important;
+  padding: 18px !important;
+  margin: 14px 0 18px 0 !important;
+  box-shadow: var(--shadow-sm) !important;
+}
+
+/* border wrapper 안쪽 기본 padding 정리 */
+div[data-testid="stVerticalBlockBorderWrapper"] > div{
+  padding: 0 !important;
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -1296,8 +1313,7 @@ def render_domestic():
     st.sidebar.markdown("<div class='sb-major'>⚙️ 설정(국내)</div>", unsafe_allow_html=True)
     st.sidebar.markdown("<hr class='sb-hr'/>", unsafe_allow_html=True)
 
-    with st.container():
-        card_begin()
+    with st.container(border=True):
         card_title("📤 BOQ 파일 업로드")
     
         dom_boq_file = st.file_uploader(
@@ -1403,19 +1419,15 @@ def render_overseas():
     # =========================
     # (1) BOQ 업로드 (먼저!)
     # =========================
-    with st.container():
-        card_begin()
+    with st.container(border=True):
         card_title("📤 BOQ 파일 업로드")
-
+    
         boq_file = st.file_uploader(
             label="",
             type=["xlsx"],
             label_visibility="collapsed",
             key="boq_uploader_overseas",
         )
-
-        card_end()
-
     # =========================
     # (2) 메인: BOQ 업로드 아래 특성 선택 UI
     # =========================
@@ -2075,6 +2087,7 @@ with tab_dom:
         st.info("현재 활성 화면은 해외 탭입니다. 전환 버튼을 눌러 활성화하세요.")
     else:
         render_domestic()
+
 
 
 
