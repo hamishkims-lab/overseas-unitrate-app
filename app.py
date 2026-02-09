@@ -103,6 +103,39 @@ html, body{
 .gs-card:has(:empty){ display:none !important; }
 
 /* =====================================================
+   HEADER (Top title)
+===================================================== */
+.gs-header{
+  font-size: 18px !important;
+  font-weight: 900 !important;
+  color: var(--text) !important;
+  letter-spacing: -0.3px !important;
+  margin: 6px 0 14px 0 !important;
+}
+
+/* =====================================================
+   CARD TITLE (Main area)
+===================================================== */
+.dash-row{
+  display:flex;
+  align-items:baseline;
+  justify-content:space-between;
+  gap: 10px;
+  margin: 0 0 10px 0;
+}
+.dash-title{
+  font-size: 14px !important;
+  font-weight: 850 !important;
+  color: var(--text) !important;
+  letter-spacing: -0.2px !important;
+}
+.dash-muted{
+  font-size: 12px !important;
+  color: var(--muted) !important;
+  white-space: nowrap !important;
+}
+
+/* =====================================================
    SB-ROW (Sidebar + Main 공통)
 ===================================================== */
 .sb-row{
@@ -291,6 +324,29 @@ def sidebar_hr(thick: bool = False, mt: int = 6, mb: int = 6):
     h = "3px" if thick else "1px"
     st.sidebar.markdown(
         f"<hr style='margin:{mt}px 0 {mb}px 0; border:none; border-top:{h} solid {color};' />",
+        unsafe_allow_html=True
+    )
+
+# =========================
+# UI Helper (Style-aligned)
+# =========================
+def gs_header(text: str):
+    st.markdown(f"<div class='gs-header'>{text}</div>", unsafe_allow_html=True)
+
+def card_begin():
+    st.markdown("<div class='gs-card'>", unsafe_allow_html=True)
+
+def card_end():
+    st.markdown("</div>", unsafe_allow_html=True)
+
+def card_title(title: str, right: str = ""):
+    st.markdown(
+        f"""
+        <div class="dash-row">
+          <div class="dash-title">{title}</div>
+          <div class="dash-muted">{right}</div>
+        </div>
+        """,
         unsafe_allow_html=True
     )
 
@@ -1234,17 +1290,24 @@ if "active_db" not in st.session_state:
 # ✅ 국내 탭 (UI skeleton only)
 # ============================================================
 def render_domestic():
-    st.markdown("<div class='gs-header'>📦 국내 실적단가 DB</div>", unsafe_allow_html=True)
-    st.write("")
+    gs_header("📦 국내 실적단가 DB")
 
     # 국내용 사이드바
     st.sidebar.markdown("<div class='sb-major'>⚙️ 설정(국내)</div>", unsafe_allow_html=True)
     st.sidebar.markdown("<hr class='sb-hr'/>", unsafe_allow_html=True)
 
     with st.container():
-        st.markdown("<div class='gs-card'>", unsafe_allow_html=True)
-        dom_boq_file = st.file_uploader("📤 BOQ 파일 업로드(국내)", type=["xlsx"], key="dom_boq_uploader")
-        st.markdown("</div>", unsafe_allow_html=True)
+        card_begin()
+        card_title("📤 BOQ 파일 업로드", "XLSX")
+    
+        dom_boq_file = st.file_uploader(
+            label="",
+            type=["xlsx"],
+            key="dom_boq_uploader",
+            label_visibility="collapsed",
+        )
+    
+        card_end()
 
     _dom_sel_cnt = len(set(
         st.session_state.get("dom_selected_auto_codes", [])
@@ -1319,7 +1382,7 @@ def render_domestic():
 # ✅ 해외 탭 (기존 코드 전체를 함수로 감싼 버전)
 # ============================================================
 def render_overseas():
-    st.markdown("<div class='gs-header'>📦 해외 실적단가 DB</div>", unsafe_allow_html=True)
+    gs_header("📦 해외 실적단가 DB")
 
     # =========================
     # Sidebar: 설정
@@ -1343,37 +1406,26 @@ def render_overseas():
     # (1) BOQ 업로드 (먼저!)
     # =========================
     with st.container():
-        st.markdown("<div class='gs-card'>", unsafe_allow_html=True)
+        card_begin()
+        card_title("📤 BOQ 파일 업로드", "XLSX")
     
-        # ✅ '실적 현장 선택'과 동일한 타이틀 스타일
-        st.markdown(
-            """
-            <div class="sb-row" style="margin:0 0 10px 0;">
-              <div class="sb-title">📤 BOQ 파일 업로드</div>
-              <div class="sb-muted">XLSX</div>
-            </div>
-            """,
-            unsafe_allow_html=True
-        )
-    
-        # ✅ file_uploader 기본 라벨(흰색 문제 원인) 숨김
         boq_file = st.file_uploader(
             label="",
             type=["xlsx"],
             label_visibility="collapsed",
-            key="boq_uploader_overseas"
+            key="boq_uploader_overseas",
         )
-
-        st.markdown("</div>", unsafe_allow_html=True)
-
-    # =========================
-    # (2) 메인: BOQ 업로드 아래 특성 선택 UI
-    # =========================
-    auto_sites = []
+    
+        card_end()
+        # =========================
+        # (2) 메인: BOQ 업로드 아래 특성 선택 UI
+        # =========================
+        auto_sites = []
 
     if boq_file is not None:
-        st.markdown("<div class='gs-card'>", unsafe_allow_html=True)
-        st.markdown("### 🏷️ 프로젝트 특성 선택")
+        card_begin()
+        card_title("🏷️ 프로젝트 특성 선택", "")
+        st.caption("프로젝트 특성을 선택하면 관련 현장이 자동으로 추천됩니다.")
 
         fm = feature_master.copy()
 
@@ -1453,7 +1505,7 @@ def render_overseas():
         })
         st.session_state["auto_sites"] = new_auto_sites
 
-        st.markdown("</div>", unsafe_allow_html=True)
+        card_end()
     else:
         st.info("BOQ 업로드 후 프로젝트 특성을 선택할 수 있습니다.")
 
@@ -2024,6 +2076,7 @@ with tab_dom:
         st.info("현재 활성 화면은 해외 탭입니다. 전환 버튼을 눌러 활성화하세요.")
     else:
         render_domestic()
+
 
 
 
