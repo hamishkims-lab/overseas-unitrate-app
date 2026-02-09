@@ -185,7 +185,7 @@ div[data-testid="stDataEditor"]{
 
 /* 탭 버튼 전체 */
 .stTabs [data-baseweb="tab"]{
-  font-size: 16px !important;      /* ← 글자 크기 (기본 13~14 → 16) */
+  font-size: 24px !important;      /* ← 글자 크기 (기본 13~14 → 16) */
   font-weight: 800 !important;     /* 살짝 더 굵게 */
   padding: 12px 16px !important;   /* 클릭 영역도 같이 키움 */
 }
@@ -1959,6 +1959,7 @@ with tab_dom:
         st.info("현재 활성 화면은 해외 탭입니다. 전환 버튼을 눌러 활성화하세요.")
     else:
         render_domestic()
+
 
 
 
