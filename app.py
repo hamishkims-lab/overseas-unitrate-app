@@ -1298,7 +1298,7 @@ def render_domestic():
 
     with st.container():
         card_begin()
-        card_title("📤 BOQ 파일 업로드", "XLSX")
+        card_title("📤 BOQ 파일 업로드")
     
         dom_boq_file = st.file_uploader(
             label="",
@@ -1390,7 +1390,6 @@ def render_overseas():
     st.sidebar.markdown("<div class='sb-major'>⚙️ 설정</div>", unsafe_allow_html=True)
     st.sidebar.markdown("<hr class='sb-hr'/>", unsafe_allow_html=True)
 
-    # ✅ 현장필터는 기능적으로 계속 사용(항상 True)하되, 화면에는 노출하지 않음
     use_site_filter = True
 
     DEFAULT_W_STR = 0.3
@@ -1399,7 +1398,6 @@ def render_overseas():
     w_sem = 1.0 - w_str
     top_k_sem = DEFAULT_TOP_K_SEM
 
-    # ✅ 방어코드(어디든, 사용 전에 1번만)
     boq_file = None
 
     # =========================
@@ -1408,19 +1406,20 @@ def render_overseas():
     with st.container():
         card_begin()
         card_title("📤 BOQ 파일 업로드")
-    
+
         boq_file = st.file_uploader(
             label="",
             type=["xlsx"],
             label_visibility="collapsed",
             key="boq_uploader_overseas",
         )
-    
+
         card_end()
-        # =========================
-        # (2) 메인: BOQ 업로드 아래 특성 선택 UI
-        # =========================
-        auto_sites = []
+
+    # =========================
+    # (2) 메인: BOQ 업로드 아래 특성 선택 UI
+    # =========================
+    auto_sites = []
 
     if boq_file is not None:
         card_begin()
@@ -2076,6 +2075,7 @@ with tab_dom:
         st.info("현재 활성 화면은 해외 탭입니다. 전환 버튼을 눌러 활성화하세요.")
     else:
         render_domestic()
+
 
 
 
