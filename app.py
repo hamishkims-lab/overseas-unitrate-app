@@ -34,61 +34,44 @@ BG_LIGHT  = "#F6FAFC"
 st.markdown("""
 <style>
 /* =====================================================
-   DESIGN TOKENS (ONE SOURCE OF TRUTH)
+   TOKENS
 ===================================================== */
 :root{
-  /* App */
   --bg: #F6F8FC;
   --card: #FFFFFF;
   --text: #0F172A;
-  --sub: #334155;
   --muted: #64748B;
   --border: rgba(15, 23, 42, 0.10);
   --shadow-sm: 0 6px 14px rgba(15, 23, 42, 0.05);
-
-  /* Brand */
   --primary: #2563EB;
 
-  /* Sidebar */
   --sb-bg: #FFFFFF;
   --sb-border: #E6EAF2;
-  --sb-title: #0F172A;
-  --sb-text: #1F2937;
-  --sb-muted: #64748B;
 
-  /* Chip */
   --chip-bg: #EEF2FF;
   --chip-border: #C7D2FE;
   --chip-text: #1E3A8A;
 }
 
 /* =====================================================
-   APP BACKGROUND & TYPO
+   LAYOUT / TYPO
 ===================================================== */
-[data-testid="stAppViewContainer"]{
-  background: var(--bg) !important;
-}
-html, body{
-  font-size: 14px !important;
-  color: var(--text) !important;
-}
-.main{
-  color: var(--text) !important;
-}
+[data-testid="stAppViewContainer"]{ background: var(--bg) !important; }
+html, body{ font-size: 14px !important; color: var(--text) !important; }
+.main{ color: var(--text) !important; }
 .main > div{
   padding: 16px 24px 24px 24px !important;
   max-width: 1280px;
   margin: 0 auto;
 }
 
-/* Headings */
-.main h1{ font-size: 26px !important; font-weight: 900 !important; letter-spacing: -0.5px !important; color: var(--text) !important; }
-.main h2{ font-size: 20px !important; font-weight: 850 !important; letter-spacing: -0.3px !important; color: var(--text) !important; }
-.main h3{ font-size: 16px !important; font-weight: 850 !important; color: var(--text) !important; }
+.main h1{ font-size: 26px !important; font-weight: 900 !important; letter-spacing: -0.5px !important; }
+.main h2{ font-size: 20px !important; font-weight: 850 !important; letter-spacing: -0.3px !important; }
+.main h3{ font-size: 16px !important; font-weight: 850 !important; }
 .main .stCaption, .main small{ color: var(--muted) !important; font-size: 12.5px !important; }
 
 /* =====================================================
-   CARD
+   CARDS
 ===================================================== */
 .gs-card{
   background: var(--card) !important;
@@ -98,226 +81,18 @@ html, body{
   margin: 14px 0 18px 0 !important;
   box-shadow: var(--shadow-sm) !important;
 }
-
-/* (옵션) 빈 카드가 생기면 숨김: :has() 미지원 환경이면 이 줄은 지워도 됨 */
-.gs-card:has(:empty){ display:none !important; }
-
-/* =====================================================
-   HEADER (Top title)
-===================================================== */
 .gs-header{
   font-size: 18px !important;
   font-weight: 900 !important;
-  color: var(--text) !important;
   letter-spacing: -0.3px !important;
   margin: 6px 0 14px 0 !important;
 }
 
-/* =====================================================
-   CARD TITLE (Main area)
-===================================================== */
-.dash-row{
-  display:flex;
-  align-items:baseline;
-  justify-content:space-between;
-  gap: 10px;
-  margin: 0 0 10px 0;
-}
-.dash-title{
-  font-size: 14px !important;
-  font-weight: 850 !important;
-  color: var(--text) !important;
-  letter-spacing: -0.2px !important;
-}
-.dash-muted{
-  font-size: 12px !important;
-  color: var(--muted) !important;
-  white-space: nowrap !important;
-}
+.dash-row{ display:flex; align-items:baseline; justify-content:space-between; gap:10px; margin:0 0 10px 0; }
+.dash-title{ font-size: 14px !important; font-weight: 850 !important; letter-spacing: -0.2px !important; }
+.dash-muted{ font-size: 12px !important; color: var(--muted) !important; white-space: nowrap !important; }
 
-/* =====================================================
-   SB-ROW (Sidebar + Main 공통)
-===================================================== */
-.sb-row{
-  display:flex;
-  align-items:baseline;
-  justify-content:space-between;
-  gap: 10px;
-  margin: 2px 0 6px 0;
-}
-.sb-title{
-  font-size: 14px !important;
-  font-weight: 800 !important;
-  color: var(--sb-title) !important;
-  letter-spacing: -0.2px !important;
-}
-.sb-muted{
-  font-size: 12px !important;
-  color: var(--sb-muted) !important;
-  white-space: nowrap !important;
-}
-.sb-hr{
-  border: none !important;
-  border-top: 1px solid var(--sb-border) !important;
-  margin: 10px 0 !important;
-}
-.sb-major{
-  font-size: 16px !important;
-  font-weight: 900 !important;
-  color: var(--sb-title) !important;
-  margin: 6px 0 10px 0 !important;
-  letter-spacing: -0.2px !important;
-}
-
-/* =====================================================
-   SIDEBAR
-===================================================== */
-section[data-testid="stSidebar"]{
-  background: var(--sb-bg) !important;
-  border-right: 1px solid var(--sb-border) !important;
-}
-section[data-testid="stSidebar"] > div{
-  padding-top: 14px !important;
-}
-section[data-testid="stSidebar"] label{
-  margin-bottom: 6px !important;
-  font-size: 12.5px !important;
-  color: var(--sb-text) !important;
-}
-section[data-testid="stSidebar"] .stCaption,
-section[data-testid="stSidebar"] small{
-  color: var(--sb-muted) !important;
-}
-section[data-testid="stSidebar"] hr{
-  border: none !important;
-  border-top: 1px solid var(--sb-border) !important;
-  margin: 10px 0 !important;
-}
-
-/* =====================================================
-   BASEWEB (Select / Multiselect) — MAIN + SIDEBAR
-   - 흰 글자/검은 바탕 문제의 핵심 해결
-===================================================== */
-
-/* 공통: 컨트롤 외곽 */
-div[data-baseweb="select"] > div{
-  background: #FFFFFF !important;
-  border: 1px solid var(--border) !important;
-  border-radius: 12px !important;
-  min-height: 42px !important;
-  box-shadow: none !important;
-}
-
-/* 공통: 내부 텍스트를 강제로 Dark */
-div[data-baseweb="select"] *,
-div[data-baseweb="menu"] *,
-div[data-baseweb="popover"] *{
-  color: var(--text) !important;
-  -webkit-text-fill-color: var(--text) !important;
-}
-
-/* input/placeholder */
-div[data-baseweb="select"] input{
-  color: var(--text) !important;
-  -webkit-text-fill-color: var(--text) !important;
-  caret-color: var(--text) !important;
-  font-size: 13px !important;
-}
-div[data-baseweb="select"] input::placeholder{
-  color: var(--muted) !important;
-  -webkit-text-fill-color: var(--muted) !important;
-  opacity: 1 !important;
-}
-
-/* chevron icon */
-div[data-baseweb="select"] svg,
-div[data-baseweb="select"] svg path{
-  fill: var(--muted) !important;
-}
-
-/* =====================================================
-   CHIPS (Tag) — 빨간칩 제거
-===================================================== */
-div[data-baseweb="tag"],
-span[data-baseweb="tag"]{
-  background: var(--chip-bg) !important;
-  border: 1px solid var(--chip-border) !important;
-  color: var(--chip-text) !important;
-  border-radius: 999px !important;
-}
-div[data-baseweb="tag"] span,
-div[data-baseweb="tag"] svg,
-div[data-baseweb="tag"] path{
-  color: var(--chip-text) !important;
-  -webkit-text-fill-color: var(--chip-text) !important;
-  fill: var(--chip-text) !important;
-}
-
-/* =====================================================
-   SLIDER & BUTTONS (Sidebar 중심)
-===================================================== */
-section[data-testid="stSidebar"] [role="slider"]{
-  accent-color: var(--primary) !important;
-}
-section[data-testid="stSidebar"] button{
-  border-radius: 10px !important;
-  font-weight: 700 !important;
-}
-section[data-testid="stSidebar"] button[kind="secondary"],
-section[data-testid="stSidebar"] button[kind="primary"]{
-  background: var(--primary) !important;
-  color: #FFFFFF !important;
-  border: 0 !important;
-  box-shadow: none !important;
-}
-section[data-testid="stSidebar"] button[kind="secondary"] * ,
-section[data-testid="stSidebar"] button[kind="primary"] *{
-  color: #FFFFFF !important;
-}
-
-/* =====================================================
-   FILE UPLOADER — 검은 드롭존 제거 + 텍스트 색 강제
-===================================================== */
-[data-testid="stFileUploaderDropzone"]{
-  background: #FFFFFF !important;
-  border: 1px dashed rgba(15,23,42,0.18) !important;
-  border-radius: 16px !important;
-  padding: 16px !important;
-}
-[data-testid="stFileUploaderDropzone"] *{
-  color: var(--text) !important;
-  -webkit-text-fill-color: var(--text) !important;
-}
-[data-testid="stFileUploaderDropzone"] button{
-  background: var(--primary) !important;
-  color: #FFFFFF !important;
-  border-radius: 12px !important;
-  font-weight: 800 !important;
-  border: 0 !important;
-}
-
-/* =====================================================
-   TABLE
-===================================================== */
-[data-testid="stDataFrame"],
-[data-testid="stDataEditor"]{
-  font-size: 12.8px !important;
-  color: var(--text) !important;
-}
-[data-testid="stDataFrame"] thead th,
-[data-testid="stDataEditor"] thead th{
-  background: #F3F6FB !important;
-  color: #334155 !important;
-  font-weight: 900 !important;
-}
-[data-testid="stDataFrame"] tbody tr,
-[data-testid="stDataEditor"] tbody tr{
-  height: 36px !important;
-}
-/* =====================================================
-   STREAMLIT BORDER CONTAINER -> CARD LOOK
-   (st.container(border=True) 카드화)
-===================================================== */
+/* st.container(border=True) 카드화 */
 div[data-testid="stVerticalBlockBorderWrapper"]{
   background: var(--card) !important;
   border: 1px solid var(--border) !important;
@@ -326,683 +101,83 @@ div[data-testid="stVerticalBlockBorderWrapper"]{
   margin: 14px 0 18px 0 !important;
   box-shadow: var(--shadow-sm) !important;
 }
-
-/* border wrapper 안쪽 기본 padding 정리 */
-div[data-testid="stVerticalBlockBorderWrapper"] > div{
-  padding: 0 !important;
-}
-
-/* =========================================
-   FILE UPLOADER : Browse files 버튼
-========================================= */
-[data-testid="stFileUploaderDropzone"] button{
-  background: var(--primary) !important;   /* 파란색 */
-  color: #FFFFFF !important;               /* 글자 흰색 */
-  border: 0 !important;
-  border-radius: 10px !important;
-  font-weight: 800 !important;
-}
-
-/* 버튼 안 텍스트/아이콘까지 흰색 강제 */
-[data-testid="stFileUploaderDropzone"] button *,
-[data-testid="stFileUploaderDropzone"] button span,
-[data-testid="stFileUploaderDropzone"] button svg,
-[data-testid="stFileUploaderDropzone"] button path{
-  color: #FFFFFF !important;
-  fill: #FFFFFF !important;
-  -webkit-text-fill-color: #FFFFFF !important;
-}
-[data-testid="stFileUploaderDropzone"] button{
-  -webkit-text-fill-color: #FFFFFF !important;
-}
-/* =========================================
-   FILE UPLOADER : 업로드된 파일명(boq.xlsx 14KB) 텍스트 색
-========================================= */
-
-/* 업로드된 파일 카드 전체 텍스트를 다크로 */
-[data-testid="stFileUploaderFile"] *{
-  color: var(--text) !important;
-  -webkit-text-fill-color: var(--text) !important;
-}
-
-/* 파일명(첫 줄)만 조금 더 진하게 */
-[data-testid="stFileUploaderFileName"]{
-  color: var(--text) !important;
-  -webkit-text-fill-color: var(--text) !important;
-  font-weight: 800 !important;
-}
-
-/* 파일 크기/부가정보(14.0KB 등) */
-[data-testid="stFileUploaderFile"] small,
-[data-testid="stFileUploaderFile"] [data-testid="stCaptionContainer"]{
-  color: var(--muted) !important;
-  -webkit-text-fill-color: var(--muted) !important;
-}
+div[data-testid="stVerticalBlockBorderWrapper"] > div{ padding: 0 !important; }
 
 /* =====================================================
-   TEXT INPUT (예: DCM... 입력 박스) — 배경 흰색/글자 검정
+   SIDEBAR
 ===================================================== */
-[data-testid="stTextInput"] input{
+section[data-testid="stSidebar"]{
+  background: var(--sb-bg) !important;
+  border-right: 1px solid var(--sb-border) !important;
+}
+section[data-testid="stSidebar"] > div{ padding-top: 14px !important; }
+section[data-testid="stSidebar"] hr{
+  border: none !important;
+  border-top: 1px solid var(--sb-border) !important;
+  margin: 10px 0 !important;
+}
+
+.sb-row{ display:flex; align-items:baseline; justify-content:space-between; gap:10px; margin:2px 0 6px 0; }
+.sb-title{ font-size: 14px !important; font-weight: 800 !important; letter-spacing: -0.2px !important; color: var(--text) !important; }
+.sb-muted{ font-size: 12px !important; color: var(--muted) !important; white-space: nowrap !important; }
+.sb-major{ font-size: 16px !important; font-weight: 900 !important; margin: 6px 0 10px 0 !important; letter-spacing: -0.2px !important; color: var(--text) !important; }
+
+/* =====================================================
+   WIDGETS (최소만)
+===================================================== */
+
+/* Select / Multiselect 컨트롤 */
+div[data-baseweb="select"] > div{
   background: #FFFFFF !important;
-  color: var(--text) !important;
-  -webkit-text-fill-color: var(--text) !important;
   border: 1px solid var(--border) !important;
   border-radius: 12px !important;
-}
-[data-testid="stTextInput"] input::placeholder{
-  color: var(--muted) !important;
-  -webkit-text-fill-color: var(--muted) !important;
-  opacity: 1 !important;
-}
-
-
-
-
-/* =====================================================
-   TEXT INPUT (st.text_input) — 멀티셀렉트와 동일한 외곽선/라운드/높이로 통일
-===================================================== */
-
-/* text_input(검색창) 바깥 컨테이너 */
-div[data-testid="stTextInput"] > div{
-  border-radius: 12px !important;   /* 멀티셀렉트와 동일 */
-}
-
-/* 실제 input 박스 (BaseWeb input) */
-div[data-testid="stTextInput"] div[data-baseweb="input"] > div{
-  background: #FFFFFF !important;
-  border: 1px solid var(--border) !important;  /* 두께 통일(1px) */
-  border-radius: 12px !important;
-  min-height: 42px !important;                 /* 멀티셀렉트 높이와 통일 */
+  min-height: 42px !important;
   box-shadow: none !important;
 }
-
-/* input 텍스트/placeholder 색 */
-div[data-testid="stTextInput"] input{
+div[data-baseweb="select"] input{
   color: var(--text) !important;
   -webkit-text-fill-color: var(--text) !important;
   caret-color: var(--text) !important;
   font-size: 13px !important;
 }
-div[data-testid="stTextInput"] input::placeholder{
-  color: var(--muted) !important;
-  -webkit-text-fill-color: var(--muted) !important;
-  opacity: 1 !important;
-}
 
-/* 포커스(클릭) 시 파란/두꺼운 테두리로 바뀌는 것 방지 → 동일 톤 유지 */
-div[data-testid="stTextInput"] div[data-baseweb="input"] > div:focus-within{
-  border: 1px solid var(--border) !important;
-  box-shadow: none !important;
-  outline: none !important;
-}
-
-
-/* =====================================================
-   FORCE LIGHT THEME (Global Fix Pack)
-   - 검정 배경/검정 글자 잔재 제거용
-===================================================== */
-
-/* ---------- A) Portal/Popover/Menu (Select Dropdown) ---------- */
-/* 드롭다운이 body 아래 portal로 렌더링되는 케이스까지 커버 */
-body > div[data-baseweb="popover"],
-body > div[data-baseweb="portal"]{
-  background: transparent !important;
-}
-
-/* 팝오버 카드/패널 계층(버전 차이 커버) */
-body > div[data-baseweb="popover"] > div,
-body > div[data-baseweb="popover"] > div > div,
-body > div[data-baseweb="portal"] > div,
-body > div[data-baseweb="portal"] > div > div{
-  background: #FFFFFF !important;
-}
-
-/* 실제 메뉴 컨테이너 */
-body > div[data-baseweb="popover"] [data-baseweb="menu"],
-body > div[data-baseweb="portal"] [data-baseweb="menu"],
-body > div[data-baseweb="popover"] [role="listbox"],
-body > div[data-baseweb="portal"] [role="listbox"]{
-  background: #FFFFFF !important;
-  border: 1px solid var(--border) !important;
-  border-radius: 12px !important;
-  box-shadow: var(--shadow-sm) !important;
-}
-
-/* 메뉴 텍스트/아이콘 전부 다크 */
-body > div[data-baseweb="popover"] [data-baseweb="menu"] *,
-body > div[data-baseweb="portal"] [data-baseweb="menu"] *,
-body > div[data-baseweb="popover"] [role="listbox"] *,
-body > div[data-baseweb="portal"] [role="listbox"] *{
-  color: var(--text) !important;
-  -webkit-text-fill-color: var(--text) !important;
-  fill: var(--muted) !important;
-}
-
-/* hover/selected */
-body > div[data-baseweb="popover"] [role="option"]:hover,
-body > div[data-baseweb="portal"] [role="option"]:hover{
-  background-color: rgba(37, 99, 235, 0.08) !important;
-}
-body > div[data-baseweb="popover"] [aria-selected="true"],
-body > div[data-baseweb="portal"] [aria-selected="true"]{
-  background-color: rgba(37, 99, 235, 0.12) !important;
-}
-
-/* 드롭다운 내부 검색 input */
-body > div[data-baseweb="popover"] input,
-body > div[data-baseweb="portal"] input{
-  background: #FFFFFF !important;
-  color: var(--text) !important;
-  -webkit-text-fill-color: var(--text) !important;
-  caret-color: var(--text) !important;
-}
-body > div[data-baseweb="popover"] input::placeholder,
-body > div[data-baseweb="portal"] input::placeholder{
-  color: var(--muted) !important;
-  -webkit-text-fill-color: var(--muted) !important;
-  opacity: 1 !important;
-}
-
-
-/* ---------- B) DataFrame / DataEditor (AG-Grid) ---------- */
-/* st.dataframe/st.data_editor가 검정으로 뜨는 핵심: ag-theme / ag-root 계열 */
-[data-testid="stDataFrame"],
-[data-testid="stDataEditor"]{
-  background: #FFFFFF !important;
-  color: var(--text) !important;
-  border-radius: 16px !important;
-}
-
-/* 그리드 전체 배경 */
-[data-testid="stDataFrame"] .ag-root-wrapper,
-[data-testid="stDataEditor"] .ag-root-wrapper,
-[data-testid="stDataFrame"] .ag-root,
-[data-testid="stDataEditor"] .ag-root,
-[data-testid="stDataFrame"] .ag-body-viewport,
-[data-testid="stDataEditor"] .ag-body-viewport{
-  background: #FFFFFF !important;
-  color: var(--text) !important;
-}
-
-/* 헤더 배경/글자 */
-[data-testid="stDataFrame"] .ag-header,
-[data-testid="stDataEditor"] .ag-header,
-[data-testid="stDataFrame"] .ag-header-row,
-[data-testid="stDataEditor"] .ag-header-row{
-  background: #F3F6FB !important;
-  color: #334155 !important;
-}
-[data-testid="stDataFrame"] .ag-header-cell,
-[data-testid="stDataEditor"] .ag-header-cell,
-[data-testid="stDataFrame"] .ag-header-cell-text,
-[data-testid="stDataEditor"] .ag-header-cell-text{
-  color: #334155 !important;
-  font-weight: 900 !important;
-}
-
-/* 셀 배경/글자 */
-[data-testid="stDataFrame"] .ag-cell,
-[data-testid="stDataEditor"] .ag-cell{
-  background: #FFFFFF !important;
-  color: var(--text) !important;
-  border-color: rgba(15, 23, 42, 0.08) !important;
-}
-
-/* 행 hover */
-[data-testid="stDataFrame"] .ag-row-hover .ag-cell,
-[data-testid="stDataEditor"] .ag-row-hover .ag-cell{
-  background: rgba(37, 99, 235, 0.06) !important;
-}
-
-/* 선택 영역(드래그/선택) */
-[data-testid="stDataFrame"] .ag-row-selected .ag-cell,
-[data-testid="stDataEditor"] .ag-row-selected .ag-cell{
-  background: rgba(37, 99, 235, 0.10) !important;
-}
-
-/* 그리드 내부 텍스트 전체 다크 강제 */
-[data-testid="stDataFrame"] .ag-root-wrapper * ,
-[data-testid="stDataEditor"] .ag-root-wrapper *{
-  color: var(--text) !important;
-  -webkit-text-fill-color: var(--text) !important;
-}
-
-/* ---------- C) Tabs / Misc (가끔 다크 먹는 부분) ---------- */
-.stTabs [data-baseweb="tab-list"]{
-  background: transparent !important;
-}
-.stTabs [data-baseweb="tab"]{
-  color: var(--text) !important;
-}
-.stTabs [aria-selected="true"]{
-  color: var(--text) !important;
-}
-
-/* 툴팁/팝업류(드물지만 검정 남는 경우) */
-[data-baseweb="tooltip"]{
-  background: #FFFFFF !important;
-  color: var(--text) !important;
-  border: 1px solid var(--border) !important;
-}
-/* =====================================================
-   FIX: Multiselect Dropdown menu still black
-   - Portal/Popover 내부 래퍼까지 싹 흰색으로 강제
-===================================================== */
-
-/* popover 자체 + 내부 1~3단 래퍼를 전부 흰색으로 */
-div[data-baseweb="popover"],
-div[data-baseweb="popover"] > div,
-div[data-baseweb="popover"] > div > div,
-div[data-baseweb="popover"] > div > div > div{
-  background: #FFFFFF !important;
-}
-
-/* menu/listbox 컨테이너 흰색 */
-div[data-baseweb="popover"] [data-baseweb="menu"],
-div[data-baseweb="popover"] [role="listbox"]{
-  background: #FFFFFF !important;
-  border: 1px solid var(--border) !important;
-  border-radius: 12px !important;
-  box-shadow: var(--shadow-sm) !important;
-}
-
-/* 메뉴 내부 스크롤 영역/ul/래퍼 div까지 전부 흰색 */
-div[data-baseweb="popover"] [data-baseweb="menu"] > div,
-div[data-baseweb="popover"] [data-baseweb="menu"] ul,
-div[data-baseweb="popover"] [data-baseweb="menu"] li,
-div[data-baseweb="popover"] [data-baseweb="menu"] div{
-  background: #FFFFFF !important;
-}
-
-/* 옵션(각 row) 기본 배경 흰색 + 글자 검정 */
-div[data-baseweb="popover"] [role="option"]{
-  background: #FFFFFF !important;
-  color: var(--text) !important;
-  -webkit-text-fill-color: var(--text) !important;
-}
-
-/* hover/선택 상태 */
-div[data-baseweb="popover"] [role="option"]:hover{
-  background: rgba(37, 99, 235, 0.08) !important;
-}
-div[data-baseweb="popover"] [aria-selected="true"]{
-  background: rgba(37, 99, 235, 0.12) !important;
-}
-
-/* 메뉴 안 텍스트 전부 검정 */
-div[data-baseweb="popover"] [data-baseweb="menu"] *,
-div[data-baseweb="popover"] [role="listbox"] *{
-  color: var(--text) !important;
-  -webkit-text-fill-color: var(--text) !important;
-}
-
-/* 드롭다운 내부 검색 input도 흰색 */
-div[data-baseweb="popover"] input{
-  background: #FFFFFF !important;
-  color: var(--text) !important;
-  -webkit-text-fill-color: var(--text) !important;
-  caret-color: var(--text) !important;
-}
-div[data-baseweb="popover"] input::placeholder{
-  color: var(--muted) !important;
-  -webkit-text-fill-color: var(--muted) !important;
-  opacity: 1 !important;
-}
-/* =====================================================
-   FIX: Select/MultiSelect 옵션 hover/active/focus가 검정으로 먹는 문제
-   - BaseWeb이 data-highlighted / focus 상태를 쓰는 케이스까지 강제
-===================================================== */
-
-/* 1) 옵션 hover / highlighted / focus / active 모두 같은 톤으로 */
-body div[data-baseweb="popover"] [role="option"]:hover,
-body div[data-baseweb="portal"]  [role="option"]:hover,
-body div[data-baseweb="popover"] [role="option"][data-highlighted="true"],
-body div[data-baseweb="portal"]  [role="option"][data-highlighted="true"],
-body div[data-baseweb="popover"] [role="option"]:focus,
-body div[data-baseweb="portal"]  [role="option"]:focus,
-body div[data-baseweb="popover"] [role="option"]:active,
-body div[data-baseweb="portal"]  [role="option"]:active{
-  background: rgba(37, 99, 235, 0.10) !important; /* 연한 파랑 */
-  color: var(--text) !important;
-}
-
-/* 옵션 내부 텍스트도 같이 다크로 강제(hover 시 흰색으로 바뀌는 것 방지) */
-body div[data-baseweb="popover"] [role="option"]:hover *,
-body div[data-baseweb="portal"]  [role="option"]:hover *,
-body div[data-baseweb="popover"] [role="option"][data-highlighted="true"] *,
-body div[data-baseweb="portal"]  [role="option"][data-highlighted="true"] *,
-body div[data-baseweb="popover"] [role="option"]:focus *,
-body div[data-baseweb="portal"]  [role="option"]:focus *{
-  color: var(--text) !important;
-  -webkit-text-fill-color: var(--text) !important;
-}
-
-/* 2) 선택된 옵션(aria-selected=true)도 동일 계열로 */
-body div[data-baseweb="popover"] [role="option"][aria-selected="true"],
-body div[data-baseweb="portal"]  [role="option"][aria-selected="true"]{
-  background: rgba(37, 99, 235, 0.14) !important;
-}
-body div[data-baseweb="popover"] [role="option"][aria-selected="true"] *,
-body div[data-baseweb="portal"]  [role="option"][aria-selected="true"] *{
-  color: var(--text) !important;
-  -webkit-text-fill-color: var(--text) !important;
-}
-
-/* 3) 선택된 "특성 칩(tag)"도 스샷처럼 유지 + hover 시도 동일 */
-div[data-baseweb="tag"],
-span[data-baseweb="tag"]{
+/* Chip(Tag) */
+div[data-baseweb="tag"], span[data-baseweb="tag"]{
   background: var(--chip-bg) !important;
   border: 1px solid var(--chip-border) !important;
   color: var(--chip-text) !important;
   border-radius: 999px !important;
 }
-div[data-baseweb="tag"]:hover,
-span[data-baseweb="tag"]:hover{
-  background: var(--chip-bg) !important;        /* hover 때 검정으로 변하는 것 방지 */
-  border-color: var(--chip-border) !important;
-}
-div[data-baseweb="tag"] *,
-span[data-baseweb="tag"] *{
-  color: var(--chip-text) !important;
-  -webkit-text-fill-color: var(--chip-text) !important;
-}
 
-/* 4) 아주 가끔 li 레벨에 스타일이 붙는 경우까지 추가 커버 */
-body div[data-baseweb="popover"] li:hover,
-body div[data-baseweb="portal"]  li:hover{
-  background: rgba(37, 99, 235, 0.10) !important;
-}
-/* =====================================================
-   FINAL OVERRIDE: 드롭다운 옵션 hover/highlight 검정 배경 제거 (최종패치)
-   - role=option 자체뿐 아니라, option 안쪽 래퍼(div/span)까지 강제
-===================================================== */
-
-/* BaseWeb이 쓰는 highlighted/active 상태를 전부 커버 */
-[role="option"][data-highlighted="true"],
-[role="option"][data-active="true"],
-[role="option"]:hover,
-[role="option"]:focus,
-[role="option"]:active{
-  background-color: rgba(37, 99, 235, 0.10) !important;
-  color: var(--text) !important;
-}
-
-/* ✅ 핵심: 검정 배경이 option의 "자식 래퍼"에 붙는 케이스까지 */
-[role="option"][data-highlighted="true"] > div,
-[role="option"][data-active="true"] > div,
-[role="option"]:hover > div,
-[role="option"]:focus > div,
-[role="option"]:active > div{
-  background-color: rgba(37, 99, 235, 0.10) !important;
-}
-
-/* option 내부 모든 텍스트(span/div)도 다크로 고정 */
-[role="option"][data-highlighted="true"] *,
-[role="option"][data-active="true"] *,
-[role="option"]:hover *,
-[role="option"]:focus *,
-[role="option"]:active *{
-  color: var(--text) !important;
-  -webkit-text-fill-color: var(--text) !important;
-}
-
-/* 선택된 옵션은 조금 더 진하게 */
-[role="option"][aria-selected="true"],
-[role="option"][aria-selected="true"] > div{
-  background-color: rgba(37, 99, 235, 0.14) !important;
-}
-[role="option"][aria-selected="true"] *{
-  color: var(--text) !important;
-  -webkit-text-fill-color: var(--text) !important;
-}
-
-/* 혹시 "li"에 직접 하이라이트가 붙는 버전까지 */
-li[data-highlighted="true"],
-li[data-active="true"],
-li:hover{
-  background-color: rgba(37, 99, 235, 0.10) !important;
-}
-li[data-highlighted="true"] *,
-li[data-active="true"] *,
-li:hover *{
-  color: var(--text) !important;
-  -webkit-text-fill-color: var(--text) !important;
-}
-/* 1. 드롭다운 전체 메뉴 배경을 흰색으로 강제 */
-div[data-baseweb="popover"] ul {
-    background-color: #FFFFFF !important;
-}
-
-/* 2. 항목 위에 커서를 올렸을 때(Hover) 및 키보드 선택 시(Highlighted) */
-/* 검은색 배경을 없애고 연한 파란색 계열로 변경합니다. */
-div[data-baseweb="popover"] li[role="option"],
-div[data-baseweb="popover"] li[role="option"]:hover,
-div[data-baseweb="popover"] li[role="option"][data-highlighted="true"],
-div[data-baseweb="popover"] li[role="option"][aria-selected="true"] {
-    background-color: rgba(37, 99, 235, 0.1) !important; /* 연한 파란색 배경 */
-    color: #0F172A !important; /* 글자색을 다크하게 유지 */
-    transition: background-color 0.2s ease;
-}
-
-/* 3. 항목 내부의 텍스트와 보조 텍스트 색상 강제 */
-div[data-baseweb="popover"] li[role="option"] * {
-    color: #0F172A !important;
-    -webkit-text-fill-color: #0F172A !important;
-}
-
-/* 4. 선택된 상태에서 다시 마우스를 올렸을 때 검은색 방지 */
-div[data-baseweb="popover"] li[role="option"][aria-selected="true"]:hover {
-    background-color: rgba(37, 99, 235, 0.15) !important;
-}
-/* =====================================================
-   TEXT INPUT 테두리/포커스 라인 제거
-===================================================== */
+/* Text input */
 div[data-testid="stTextInput"] div[data-baseweb="input"] > div{
-  border: none !important;
-  box-shadow: none !important;
-  outline: none !important;
-}
-
-/* 포커스(클릭) 시 생기는 링까지 제거 */
-div[data-testid="stTextInput"] div[data-baseweb="input"] > div:focus-within{
-  border: none !important;
-  box-shadow: none !important;
-  outline: none !important;
-}
-
-/* 혹시 바깥 wrapper에 테두리가 잡히는 경우까지 */
-div[data-testid="stTextInput"] > div{
-  border: none !important;
-  box-shadow: none !important;
-}
-/* =====================================================
-   GLOBAL LIGHT ENFORCE (Tabs/Markdown/Metric/Expander/Alerts)
-===================================================== */
-
-/* 탭 라벨(📄/🧾/📝) 글자색 */
-.stTabs [data-baseweb="tab"] *{
-  color: var(--text) !important;
-  -webkit-text-fill-color: var(--text) !important;
-}
-.stTabs [aria-selected="true"]{
-  background: rgba(37,99,235,0.06) !important;
-  border-radius: 10px !important;
-}
-
-/* 일반 텍스트/마크다운(혹시 남아있는 흰색 글자 제거) */
-[data-testid="stMarkdownContainer"] *,
-[data-testid="stCaptionContainer"] *,
-label, p, span, small{
-  color: var(--text) !important;
-  -webkit-text-fill-color: var(--text) !important;
-}
-[data-testid="stCaptionContainer"] *,
-.stCaption, small{
-  color: var(--muted) !important;
-  -webkit-text-fill-color: var(--muted) !important;
-}
-
-/* metric(값/라벨) */
-[data-testid="stMetric"]{
-  background: #FFFFFF !important;
-}
-[data-testid="stMetric"] *{
-  color: var(--text) !important;
-  -webkit-text-fill-color: var(--text) !important;
-}
-
-/* expander */
-[data-testid="stExpander"]{
   background: #FFFFFF !important;
   border: 1px solid var(--border) !important;
-  border-radius: 14px !important;
-}
-[data-testid="stExpander"] *{
-  color: var(--text) !important;
-  -webkit-text-fill-color: var(--text) !important;
+  border-radius: 12px !important;
+  min-height: 42px !important;
+  box-shadow: none !important;
 }
 
-/* info/success/warning/error 알림 박스 */
-[data-testid="stAlert"]{
+/* File uploader */
+[data-testid="stFileUploaderDropzone"]{
   background: #FFFFFF !important;
-  border: 1px solid var(--border) !important;
-  color: var(--text) !important;
+  border: 1px dashed rgba(15,23,42,0.18) !important;
+  border-radius: 16px !important;
+  padding: 16px !important;
 }
-[data-testid="stAlert"] *{
-  color: var(--text) !important;
-  -webkit-text-fill-color: var(--text) !important;
-}
-
-/* 다운로드 버튼/일반 버튼(메인 화면에서도 톤 유지) */
-[data-testid="stDownloadButton"] button,
-[data-testid="stButton"] button{
-  border-radius: 10px !important;
-  font-weight: 800 !important;
-}
-[data-testid="stDownloadButton"] button{
+[data-testid="stFileUploaderDropzone"] button{
   background: var(--primary) !important;
   color: #FFFFFF !important;
   border: 0 !important;
-}
-[data-testid="stDownloadButton"] button *{
-  color: #FFFFFF !important;
-  fill: #FFFFFF !important;
-  -webkit-text-fill-color: #FFFFFF !important;
+  border-radius: 12px !important;
+  font-weight: 800 !important;
 }
 
-/* =====================================================
-   DataEditor/DataFrame 잔여 다크/편집상태 input/선택상태 추가 보강
-===================================================== */
-
-/* 편집중 셀 input(가끔 다크로 뜸) */
-[data-testid="stDataEditor"] input,
-[data-testid="stDataEditor"] textarea{
-  background: #FFFFFF !important;
-  color: var(--text) !important;
-  -webkit-text-fill-color: var(--text) !important;
-  caret-color: var(--text) !important;
-  border: 1px solid rgba(15,23,42,0.12) !important;
-}
-
-/* 선택된 셀 테두리/배경이 과하게 다크로 변하는 케이스 보정 */
-[data-testid="stDataEditor"] .ag-cell-focus,
-[data-testid="stDataFrame"] .ag-cell-focus{
-  border: 1px solid rgba(37,99,235,0.35) !important;
-  box-shadow: none !important;
-}
-[data-testid="stDataEditor"] .ag-range-selected,
-[data-testid="stDataFrame"] .ag-range-selected{
-  background: rgba(37,99,235,0.10) !important;
-}
-
-/* 체크박스/아이콘 색 */
-[data-testid="stDataEditor"] .ag-icon,
-[data-testid="stDataFrame"] .ag-icon{
-  color: var(--muted) !important;
-}
-/* =====================================================
-   PATCH: st.dataframe / st.data_editor (Glide Data Grid)
-   - 표가 다크로 남는 문제 해결(캔버스 기반)
-===================================================== */
-
-/* 전체를 라이트 스킴으로 강제(다크 테마 잔재 방지) */
-html, body, [data-testid="stAppViewContainer"]{
-  color-scheme: light !important;
-}
-
-/* Glide Data Grid가 참조하는 CSS 변수들(버전별 차이 커버) */
-:root{
-  --gdg-bg-cell: #FFFFFF;
-  --gdg-bg-cell-medium: #FFFFFF;
-  --gdg-bg-header: #F3F6FB;
-  --gdg-bg-header-hovered: #EAF0FF;
-  --gdg-bg-header-selected: #EAF0FF;
-  --gdg-bg-search-result: #FFF7ED;
-
-  --gdg-text-dark: #0F172A;
-  --gdg-text-medium: #334155;
-  --gdg-text-light: #64748B;
-
-  --gdg-border-color: rgba(15, 23, 42, 0.10);
-  --gdg-accent-color: rgba(37, 99, 235, 0.20);
-}
-
-/* dataframe/editor 외곽/컨테이너 */
+/* DataFrame/DataEditor: 컨테이너만 라이트 */
 div[data-testid="stDataFrame"],
 div[data-testid="stDataEditor"]{
   background: #FFFFFF !important;
-  color: #0F172A !important;
   border-radius: 16px !important;
-}
-
-/* 내부(Glide는 캔버스라서 배경이 따로 남는 경우가 있음) */
-div[data-testid="stDataFrame"] [role="grid"],
-div[data-testid="stDataEditor"] [role="grid"]{
-  background: #FFFFFF !important;
-  color: #0F172A !important;
-}
-
-/* 캔버스 배경 강제(다크 잔재 제거 핵심) */
-div[data-testid="stDataFrame"] canvas,
-div[data-testid="stDataEditor"] canvas{
-  background: #FFFFFF !important;
-}
-
-/* 혹시 텍스트가 별도 레이어로 남는 버전 커버 */
-div[data-testid="stDataFrame"] * ,
-div[data-testid="stDataEditor"] *{
-  color: #0F172A !important;
-  -webkit-text-fill-color: #0F172A !important;
-}
-
-/* 스크롤/표 영역 wrapper가 어둡게 칠해지는 케이스 커버 */
-div[data-testid="stDataFrame"] > div,
-div[data-testid="stDataEditor"] > div{
-  background: #FFFFFF !important;
-}
-
-/* =====================================================
-   PATCH: 숫자 입력(최소포함/최대포함) 같은 위젯이 다크인 경우 커버
-===================================================== */
-div[data-baseweb="input"] > div{
-  background: #FFFFFF !important;
-  color: #0F172A !important;
-}
-div[data-baseweb="input"] input{
-  color: #0F172A !important;
-  -webkit-text-fill-color: #0F172A !important;
-}
-/* =====================================================
-   PATCH: st.text_input 테두리 제거(특성 키워드 입력창 포함)
-===================================================== */
-div[data-testid="stTextInput"] div[data-baseweb="input"] > div{
-  border: 0 !important;
-  box-shadow: none !important;
-}
-div[data-testid="stTextInput"] div[data-baseweb="input"] > div:focus-within{
-  border: 0 !important;
-  box-shadow: none !important;
-  outline: none !important;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -2764,6 +1939,7 @@ with tab_dom:
         st.info("현재 활성 화면은 해외 탭입니다. 전환 버튼을 눌러 활성화하세요.")
     else:
         render_domestic()
+
 
 
 
