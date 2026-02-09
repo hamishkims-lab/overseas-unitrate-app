@@ -352,6 +352,9 @@ div[data-testid="stVerticalBlockBorderWrapper"] > div{
   fill: #FFFFFF !important;
   -webkit-text-fill-color: #FFFFFF !important;
 }
+[data-testid="stFileUploaderDropzone"] button{
+  -webkit-text-fill-color: #FFFFFF !important;
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -2108,6 +2111,7 @@ with tab_dom:
         st.info("현재 활성 화면은 해외 탭입니다. 전환 버튼을 눌러 활성화하세요.")
     else:
         render_domestic()
+
 
 
 
