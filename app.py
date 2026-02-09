@@ -331,6 +331,27 @@ div[data-testid="stVerticalBlockBorderWrapper"]{
 div[data-testid="stVerticalBlockBorderWrapper"] > div{
   padding: 0 !important;
 }
+
+/* =========================================
+   FILE UPLOADER : Browse files 버튼
+========================================= */
+[data-testid="stFileUploaderDropzone"] button{
+  background: var(--primary) !important;   /* 파란색 */
+  color: #FFFFFF !important;               /* 글자 흰색 */
+  border: 0 !important;
+  border-radius: 10px !important;
+  font-weight: 800 !important;
+}
+
+/* 버튼 안 텍스트/아이콘까지 흰색 강제 */
+[data-testid="stFileUploaderDropzone"] button *,
+[data-testid="stFileUploaderDropzone"] button span,
+[data-testid="stFileUploaderDropzone"] button svg,
+[data-testid="stFileUploaderDropzone"] button path{
+  color: #FFFFFF !important;
+  fill: #FFFFFF !important;
+  -webkit-text-fill-color: #FFFFFF !important;
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -2087,6 +2108,7 @@ with tab_dom:
         st.info("현재 활성 화면은 해외 탭입니다. 전환 버튼을 눌러 활성화하세요.")
     else:
         render_domestic()
+
 
 
 
