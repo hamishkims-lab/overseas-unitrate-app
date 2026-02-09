@@ -486,6 +486,153 @@ div[data-baseweb="menu"] [aria-selected="true"],
 div[data-baseweb="popover"] [aria-selected="true"]{
   background: rgba(37, 99, 235, 0.12) !important;
 }
+/* =====================================================
+   FORCE LIGHT THEME (Global Fix Pack)
+   - 검정 배경/검정 글자 잔재 제거용
+===================================================== */
+
+/* ---------- A) Portal/Popover/Menu (Select Dropdown) ---------- */
+/* 드롭다운이 body 아래 portal로 렌더링되는 케이스까지 커버 */
+body > div[data-baseweb="popover"],
+body > div[data-baseweb="portal"]{
+  background: transparent !important;
+}
+
+/* 팝오버 카드/패널 계층(버전 차이 커버) */
+body > div[data-baseweb="popover"] > div,
+body > div[data-baseweb="popover"] > div > div,
+body > div[data-baseweb="portal"] > div,
+body > div[data-baseweb="portal"] > div > div{
+  background: #FFFFFF !important;
+}
+
+/* 실제 메뉴 컨테이너 */
+body > div[data-baseweb="popover"] [data-baseweb="menu"],
+body > div[data-baseweb="portal"] [data-baseweb="menu"],
+body > div[data-baseweb="popover"] [role="listbox"],
+body > div[data-baseweb="portal"] [role="listbox"]{
+  background: #FFFFFF !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 12px !important;
+  box-shadow: var(--shadow-sm) !important;
+}
+
+/* 메뉴 텍스트/아이콘 전부 다크 */
+body > div[data-baseweb="popover"] [data-baseweb="menu"] *,
+body > div[data-baseweb="portal"] [data-baseweb="menu"] *,
+body > div[data-baseweb="popover"] [role="listbox"] *,
+body > div[data-baseweb="portal"] [role="listbox"] *{
+  color: var(--text) !important;
+  -webkit-text-fill-color: var(--text) !important;
+  fill: var(--muted) !important;
+}
+
+/* hover/selected */
+body > div[data-baseweb="popover"] [role="option"]:hover,
+body > div[data-baseweb="portal"] [role="option"]:hover{
+  background-color: rgba(37, 99, 235, 0.08) !important;
+}
+body > div[data-baseweb="popover"] [aria-selected="true"],
+body > div[data-baseweb="portal"] [aria-selected="true"]{
+  background-color: rgba(37, 99, 235, 0.12) !important;
+}
+
+/* 드롭다운 내부 검색 input */
+body > div[data-baseweb="popover"] input,
+body > div[data-baseweb="portal"] input{
+  background: #FFFFFF !important;
+  color: var(--text) !important;
+  -webkit-text-fill-color: var(--text) !important;
+  caret-color: var(--text) !important;
+}
+body > div[data-baseweb="popover"] input::placeholder,
+body > div[data-baseweb="portal"] input::placeholder{
+  color: var(--muted) !important;
+  -webkit-text-fill-color: var(--muted) !important;
+  opacity: 1 !important;
+}
+
+
+/* ---------- B) DataFrame / DataEditor (AG-Grid) ---------- */
+/* st.dataframe/st.data_editor가 검정으로 뜨는 핵심: ag-theme / ag-root 계열 */
+[data-testid="stDataFrame"],
+[data-testid="stDataEditor"]{
+  background: #FFFFFF !important;
+  color: var(--text) !important;
+  border-radius: 16px !important;
+}
+
+/* 그리드 전체 배경 */
+[data-testid="stDataFrame"] .ag-root-wrapper,
+[data-testid="stDataEditor"] .ag-root-wrapper,
+[data-testid="stDataFrame"] .ag-root,
+[data-testid="stDataEditor"] .ag-root,
+[data-testid="stDataFrame"] .ag-body-viewport,
+[data-testid="stDataEditor"] .ag-body-viewport{
+  background: #FFFFFF !important;
+  color: var(--text) !important;
+}
+
+/* 헤더 배경/글자 */
+[data-testid="stDataFrame"] .ag-header,
+[data-testid="stDataEditor"] .ag-header,
+[data-testid="stDataFrame"] .ag-header-row,
+[data-testid="stDataEditor"] .ag-header-row{
+  background: #F3F6FB !important;
+  color: #334155 !important;
+}
+[data-testid="stDataFrame"] .ag-header-cell,
+[data-testid="stDataEditor"] .ag-header-cell,
+[data-testid="stDataFrame"] .ag-header-cell-text,
+[data-testid="stDataEditor"] .ag-header-cell-text{
+  color: #334155 !important;
+  font-weight: 900 !important;
+}
+
+/* 셀 배경/글자 */
+[data-testid="stDataFrame"] .ag-cell,
+[data-testid="stDataEditor"] .ag-cell{
+  background: #FFFFFF !important;
+  color: var(--text) !important;
+  border-color: rgba(15, 23, 42, 0.08) !important;
+}
+
+/* 행 hover */
+[data-testid="stDataFrame"] .ag-row-hover .ag-cell,
+[data-testid="stDataEditor"] .ag-row-hover .ag-cell{
+  background: rgba(37, 99, 235, 0.06) !important;
+}
+
+/* 선택 영역(드래그/선택) */
+[data-testid="stDataFrame"] .ag-row-selected .ag-cell,
+[data-testid="stDataEditor"] .ag-row-selected .ag-cell{
+  background: rgba(37, 99, 235, 0.10) !important;
+}
+
+/* 그리드 내부 텍스트 전체 다크 강제 */
+[data-testid="stDataFrame"] .ag-root-wrapper * ,
+[data-testid="stDataEditor"] .ag-root-wrapper *{
+  color: var(--text) !important;
+  -webkit-text-fill-color: var(--text) !important;
+}
+
+/* ---------- C) Tabs / Misc (가끔 다크 먹는 부분) ---------- */
+.stTabs [data-baseweb="tab-list"]{
+  background: transparent !important;
+}
+.stTabs [data-baseweb="tab"]{
+  color: var(--text) !important;
+}
+.stTabs [aria-selected="true"]{
+  color: var(--text) !important;
+}
+
+/* 툴팁/팝업류(드물지만 검정 남는 경우) */
+[data-baseweb="tooltip"]{
+  background: #FFFFFF !important;
+  color: var(--text) !important;
+  border: 1px solid var(--border) !important;
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -2246,6 +2393,7 @@ with tab_dom:
         st.info("현재 활성 화면은 해외 탭입니다. 전환 버튼을 눌러 활성화하세요.")
     else:
         render_domestic()
+
 
 
 
