@@ -379,6 +379,44 @@ div[data-testid="stVerticalBlockBorderWrapper"] > div{
   -webkit-text-fill-color: var(--muted) !important;
 }
 
+/* =====================================================
+   TEXT INPUT (예: DCM... 입력 박스) — 배경 흰색/글자 검정
+===================================================== */
+[data-testid="stTextInput"] input{
+  background: #FFFFFF !important;
+  color: var(--text) !important;
+  -webkit-text-fill-color: var(--text) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 12px !important;
+}
+[data-testid="stTextInput"] input::placeholder{
+  color: var(--muted) !important;
+  -webkit-text-fill-color: var(--muted) !important;
+  opacity: 1 !important;
+}
+
+/* =====================================================
+   MULTISELECT/SELECT 드롭다운(클릭 후 나오는 목록/검색) — 배경 흰색
+===================================================== */
+div[data-baseweb="popover"]{
+  background: #FFFFFF !important;
+}
+div[data-baseweb="menu"]{
+  background: #FFFFFF !important;
+}
+div[data-baseweb="menu"] ul{
+  background: #FFFFFF !important;
+}
+div[data-baseweb="menu"] li{
+  background: #FFFFFF !important;
+}
+
+/* 드롭다운 내부 검색 input도 흰색 강제 */
+div[data-baseweb="popover"] input{
+  background: #FFFFFF !important;
+  color: var(--text) !important;
+  -webkit-text-fill-color: var(--text) !important;
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -1477,14 +1515,17 @@ def render_overseas():
             key="boq_uploader_overseas",
         )
     # =========================
-    # (2) 메인: BOQ 업로드 아래 특성 선택 UI
-    # =========================
-    auto_sites = []
+# (2) 메인: BOQ 업로드 아래 특성 선택 UI
+# =========================
+auto_sites = []
 
-    if boq_file is not None:
-        card_begin()
+if boq_file is not None:
+    with st.container(border=True):
         card_title("🏷️ 프로젝트 특성 선택", "")
-        st.caption("프로젝트 특성을 선택하면 관련 현장이 자동으로 추천됩니다.")
+        st.markdown(
+            "<div class='dash-muted'>프로젝트 특성을 선택하면 관련 현장이 자동으로 추천됩니다.</div>",
+            unsafe_allow_html=True
+        )
 
         fm = feature_master.copy()
 
@@ -1513,7 +1554,8 @@ def render_overseas():
         keyword = st.text_input(
             "특성 목록 필터(키워드)",
             value="",
-            placeholder="예: DCM, Jet, 지반개량, 도심 ..."
+            placeholder="예: DCM, Jet, 지반개량, 도심 ...",
+            key="feature_keyword_overseas",
         )
 
         fm_view = fm
@@ -1537,6 +1579,7 @@ def render_overseas():
             "특성 선택(다중 선택 가능)",
             options=options,
             default=[lab for lab in current_labels if lab in options],
+            key="selected_features_labels_overseas",
         )
 
         new_ids = [label_to_id[lab] for lab in new_selected_labels]
@@ -1564,9 +1607,8 @@ def render_overseas():
         })
         st.session_state["auto_sites"] = new_auto_sites
 
-        card_end()
-    else:
-        st.info("BOQ 업로드 후 프로젝트 특성을 선택할 수 있습니다.")
+else:
+    st.info("BOQ 업로드 후 프로젝트 특성을 선택할 수 있습니다.")
 
     # =========================
     # (3) 사이드바: 실적 현장 선택
@@ -2135,6 +2177,7 @@ with tab_dom:
         st.info("현재 활성 화면은 해외 탭입니다. 전환 버튼을 눌러 활성화하세요.")
     else:
         render_domestic()
+
 
 
 
