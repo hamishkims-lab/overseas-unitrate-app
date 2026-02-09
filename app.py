@@ -768,6 +768,32 @@ li:hover *{
   color: var(--text) !important;
   -webkit-text-fill-color: var(--text) !important;
 }
+/* 1. 드롭다운 전체 메뉴 배경을 흰색으로 강제 */
+div[data-baseweb="popover"] ul {
+    background-color: #FFFFFF !important;
+}
+
+/* 2. 항목 위에 커서를 올렸을 때(Hover) 및 키보드 선택 시(Highlighted) */
+/* 검은색 배경을 없애고 연한 파란색 계열로 변경합니다. */
+div[data-baseweb="popover"] li[role="option"],
+div[data-baseweb="popover"] li[role="option"]:hover,
+div[data-baseweb="popover"] li[role="option"][data-highlighted="true"],
+div[data-baseweb="popover"] li[role="option"][aria-selected="true"] {
+    background-color: rgba(37, 99, 235, 0.1) !important; /* 연한 파란색 배경 */
+    color: #0F172A !important; /* 글자색을 다크하게 유지 */
+    transition: background-color 0.2s ease;
+}
+
+/* 3. 항목 내부의 텍스트와 보조 텍스트 색상 강제 */
+div[data-baseweb="popover"] li[role="option"] * {
+    color: #0F172A !important;
+    -webkit-text-fill-color: #0F172A !important;
+}
+
+/* 4. 선택된 상태에서 다시 마우스를 올렸을 때 검은색 방지 */
+div[data-baseweb="popover"] li[role="option"][aria-selected="true"]:hover {
+    background-color: rgba(37, 99, 235, 0.15) !important;
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -2528,6 +2554,7 @@ with tab_dom:
         st.info("현재 활성 화면은 해외 탭입니다. 전환 버튼을 눌러 활성화하세요.")
     else:
         render_domestic()
+
 
 
 
