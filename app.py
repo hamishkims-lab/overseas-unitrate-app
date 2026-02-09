@@ -920,6 +920,90 @@ label, p, span, small{
 [data-testid="stDataFrame"] .ag-icon{
   color: var(--muted) !important;
 }
+/* =====================================================
+   PATCH: st.dataframe / st.data_editor (Glide Data Grid)
+   - 표가 다크로 남는 문제 해결(캔버스 기반)
+===================================================== */
+
+/* 전체를 라이트 스킴으로 강제(다크 테마 잔재 방지) */
+html, body, [data-testid="stAppViewContainer"]{
+  color-scheme: light !important;
+}
+
+/* Glide Data Grid가 참조하는 CSS 변수들(버전별 차이 커버) */
+:root{
+  --gdg-bg-cell: #FFFFFF;
+  --gdg-bg-cell-medium: #FFFFFF;
+  --gdg-bg-header: #F3F6FB;
+  --gdg-bg-header-hovered: #EAF0FF;
+  --gdg-bg-header-selected: #EAF0FF;
+  --gdg-bg-search-result: #FFF7ED;
+
+  --gdg-text-dark: #0F172A;
+  --gdg-text-medium: #334155;
+  --gdg-text-light: #64748B;
+
+  --gdg-border-color: rgba(15, 23, 42, 0.10);
+  --gdg-accent-color: rgba(37, 99, 235, 0.20);
+}
+
+/* dataframe/editor 외곽/컨테이너 */
+div[data-testid="stDataFrame"],
+div[data-testid="stDataEditor"]{
+  background: #FFFFFF !important;
+  color: #0F172A !important;
+  border-radius: 16px !important;
+}
+
+/* 내부(Glide는 캔버스라서 배경이 따로 남는 경우가 있음) */
+div[data-testid="stDataFrame"] [role="grid"],
+div[data-testid="stDataEditor"] [role="grid"]{
+  background: #FFFFFF !important;
+  color: #0F172A !important;
+}
+
+/* 캔버스 배경 강제(다크 잔재 제거 핵심) */
+div[data-testid="stDataFrame"] canvas,
+div[data-testid="stDataEditor"] canvas{
+  background: #FFFFFF !important;
+}
+
+/* 혹시 텍스트가 별도 레이어로 남는 버전 커버 */
+div[data-testid="stDataFrame"] * ,
+div[data-testid="stDataEditor"] *{
+  color: #0F172A !important;
+  -webkit-text-fill-color: #0F172A !important;
+}
+
+/* 스크롤/표 영역 wrapper가 어둡게 칠해지는 케이스 커버 */
+div[data-testid="stDataFrame"] > div,
+div[data-testid="stDataEditor"] > div{
+  background: #FFFFFF !important;
+}
+
+/* =====================================================
+   PATCH: 숫자 입력(최소포함/최대포함) 같은 위젯이 다크인 경우 커버
+===================================================== */
+div[data-baseweb="input"] > div{
+  background: #FFFFFF !important;
+  color: #0F172A !important;
+}
+div[data-baseweb="input"] input{
+  color: #0F172A !important;
+  -webkit-text-fill-color: #0F172A !important;
+}
+/* =====================================================
+   PATCH: st.text_input 테두리 제거(특성 키워드 입력창 포함)
+===================================================== */
+div[data-testid="stTextInput"] div[data-baseweb="input"] > div{
+  border: 0 !important;
+  box-shadow: none !important;
+}
+div[data-testid="stTextInput"] div[data-baseweb="input"] > div:focus-within{
+  border: 0 !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -2680,6 +2764,7 @@ with tab_dom:
         st.info("현재 활성 화면은 해외 탭입니다. 전환 버튼을 눌러 활성화하세요.")
     else:
         render_domestic()
+
 
 
 
