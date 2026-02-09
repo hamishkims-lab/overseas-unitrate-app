@@ -180,25 +180,39 @@ div[data-testid="stDataEditor"]{
   border-radius: 16px !important;
 }
 /* =====================================================
-   TABS 글자 크기/두께 조정
+   TABS — 강제 폰트 크기(안쪽 텍스트까지)
 ===================================================== */
 
-/* 탭 버튼 전체 */
+/* 1) Streamlit Tabs 버튼(버전별 셀렉터 커버) */
+div[data-testid="stTabs"] button[role="tab"],
+.stTabs button[role="tab"],
 .stTabs [data-baseweb="tab"]{
-  font-size: 24px !important;      /* ← 글자 크기 (기본 13~14 → 16) */
-  font-weight: 800 !important;     /* 살짝 더 굵게 */
-  padding: 12px 16px !important;   /* 클릭 영역도 같이 키움 */
+  font-size: 24px !important;
+  font-weight: 800 !important;
+  padding: 12px 16px !important;
+  line-height: 1.2 !important;
 }
 
-/* 선택된 탭 */
+/* 2) 탭 안쪽 텍스트가 span/div에 따로 잡히는 케이스까지 커버 */
+div[data-testid="stTabs"] button[role="tab"] *,
+.stTabs button[role="tab"] *,
+.stTabs [data-baseweb="tab"] *{
+  font-size: 24px !important;
+}
+
+/* 3) 선택된 탭 */
+div[data-testid="stTabs"] button[role="tab"][aria-selected="true"],
+.stTabs button[role="tab"][aria-selected="true"],
 .stTabs [data-baseweb="tab"][aria-selected="true"]{
   font-weight: 900 !important;
 }
 
-/* 이모지(🌍 🇰🇷) 포함 텍스트 정렬 안정화 */
+/* 4) 이모지/텍스트 정렬 */
+div[data-testid="stTabs"] button[role="tab"] > div,
+.stTabs button[role="tab"] > div,
 .stTabs [data-baseweb="tab"] > div{
-  gap: 6px;
-}
+  gap: 6px !important;
+
 </style>
 """, unsafe_allow_html=True)
 
@@ -1959,6 +1973,7 @@ with tab_dom:
         st.info("현재 활성 화면은 해외 탭입니다. 전환 버튼을 눌러 활성화하세요.")
     else:
         render_domestic()
+
 
 
 
