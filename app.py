@@ -2,28 +2,6 @@ import re
 import io
 import json
 import hashlib
-# =========================
-# Altair: Force Light Theme
-# =========================
-def _altair_light_theme():
-    return {
-        "config": {
-            "background": "white",
-            "view": {"fill": "white", "stroke": "rgba(15,23,42,0.10)"},
-            "axis": {
-                "labelColor": "#0F172A",
-                "titleColor": "#0F172A",
-                "gridColor": "rgba(15,23,42,0.08)",
-                "domainColor": "rgba(15,23,42,0.18)",
-                "tickColor": "rgba(15,23,42,0.18)",
-            },
-            "legend": {
-                "labelColor": "#0F172A",
-                "titleColor": "#0F172A",
-            },
-            "title": {"color": "#0F172A"},
-        }
-    }
 
 alt.themes.register("light_force", _altair_light_theme)
 alt.themes.enable("light_force")
@@ -2705,6 +2683,7 @@ with tab_dom:
         st.info("현재 활성 화면은 해외 탭입니다. 전환 버튼을 눌러 활성화하세요.")
     else:
         render_domestic()
+
 
 
 
