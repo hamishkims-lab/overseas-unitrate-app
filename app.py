@@ -395,28 +395,9 @@ div[data-testid="stVerticalBlockBorderWrapper"] > div{
   opacity: 1 !important;
 }
 
-/* =====================================================
-   MULTISELECT/SELECT 드롭다운(클릭 후 나오는 목록/검색) — 배경 흰색
-===================================================== */
-div[data-baseweb="popover"]{
-  background: #FFFFFF !important;
-}
-div[data-baseweb="menu"]{
-  background: #FFFFFF !important;
-}
-div[data-baseweb="menu"] ul{
-  background: #FFFFFF !important;
-}
-div[data-baseweb="menu"] li{
-  background: #FFFFFF !important;
-}
 
-/* 드롭다운 내부 검색 input도 흰색 강제 */
-div[data-baseweb="popover"] input{
-  background: #FFFFFF !important;
-  color: var(--text) !important;
-  -webkit-text-fill-color: var(--text) !important;
-}
+
+
 /* =====================================================
    TEXT INPUT (st.text_input) — 멀티셀렉트와 동일한 외곽선/라운드/높이로 통일
 ===================================================== */
@@ -455,37 +436,7 @@ div[data-testid="stTextInput"] div[data-baseweb="input"] > div:focus-within{
   outline: none !important;
 }
 
-/* =====================================================
-   SELECT MENU (Choose options dropdown) — 검정 배경 제거하고 흰색으로 강제
-===================================================== */
 
-/* 드롭다운(메뉴) 배경/테두리 */
-div[data-baseweb="popover"] div[role="listbox"],
-div[data-baseweb="menu"]{
-  background: #FFFFFF !important;
-  border: 1px solid var(--border) !important;
-  border-radius: 12px !important;
-  box-shadow: var(--shadow-sm) !important;
-}
-
-/* 메뉴 안의 모든 텍스트를 검정으로 */
-div[data-baseweb="popover"] div[role="listbox"] *,
-div[data-baseweb="menu"] *{
-  color: var(--text) !important;
-  -webkit-text-fill-color: var(--text) !important;
-}
-
-/* 옵션 행(hover/active) 배경 */
-div[data-baseweb="menu"] [role="option"]:hover,
-div[data-baseweb="popover"] [role="option"]:hover{
-  background: rgba(37, 99, 235, 0.08) !important; /* 연한 primary 느낌 */
-}
-
-/* 선택된 옵션(강조) 배경 */
-div[data-baseweb="menu"] [aria-selected="true"],
-div[data-baseweb="popover"] [aria-selected="true"]{
-  background: rgba(37, 99, 235, 0.12) !important;
-}
 /* =====================================================
    FORCE LIGHT THEME (Global Fix Pack)
    - 검정 배경/검정 글자 잔재 제거용
@@ -632,6 +583,70 @@ body > div[data-baseweb="portal"] input::placeholder{
   background: #FFFFFF !important;
   color: var(--text) !important;
   border: 1px solid var(--border) !important;
+}
+/* =====================================================
+   FIX: Multiselect Dropdown menu still black
+   - Portal/Popover 내부 래퍼까지 싹 흰색으로 강제
+===================================================== */
+
+/* popover 자체 + 내부 1~3단 래퍼를 전부 흰색으로 */
+div[data-baseweb="popover"],
+div[data-baseweb="popover"] > div,
+div[data-baseweb="popover"] > div > div,
+div[data-baseweb="popover"] > div > div > div{
+  background: #FFFFFF !important;
+}
+
+/* menu/listbox 컨테이너 흰색 */
+div[data-baseweb="popover"] [data-baseweb="menu"],
+div[data-baseweb="popover"] [role="listbox"]{
+  background: #FFFFFF !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 12px !important;
+  box-shadow: var(--shadow-sm) !important;
+}
+
+/* 메뉴 내부 스크롤 영역/ul/래퍼 div까지 전부 흰색 */
+div[data-baseweb="popover"] [data-baseweb="menu"] > div,
+div[data-baseweb="popover"] [data-baseweb="menu"] ul,
+div[data-baseweb="popover"] [data-baseweb="menu"] li,
+div[data-baseweb="popover"] [data-baseweb="menu"] div{
+  background: #FFFFFF !important;
+}
+
+/* 옵션(각 row) 기본 배경 흰색 + 글자 검정 */
+div[data-baseweb="popover"] [role="option"]{
+  background: #FFFFFF !important;
+  color: var(--text) !important;
+  -webkit-text-fill-color: var(--text) !important;
+}
+
+/* hover/선택 상태 */
+div[data-baseweb="popover"] [role="option"]:hover{
+  background: rgba(37, 99, 235, 0.08) !important;
+}
+div[data-baseweb="popover"] [aria-selected="true"]{
+  background: rgba(37, 99, 235, 0.12) !important;
+}
+
+/* 메뉴 안 텍스트 전부 검정 */
+div[data-baseweb="popover"] [data-baseweb="menu"] *,
+div[data-baseweb="popover"] [role="listbox"] *{
+  color: var(--text) !important;
+  -webkit-text-fill-color: var(--text) !important;
+}
+
+/* 드롭다운 내부 검색 input도 흰색 */
+div[data-baseweb="popover"] input{
+  background: #FFFFFF !important;
+  color: var(--text) !important;
+  -webkit-text-fill-color: var(--text) !important;
+  caret-color: var(--text) !important;
+}
+div[data-baseweb="popover"] input::placeholder{
+  color: var(--muted) !important;
+  -webkit-text-fill-color: var(--muted) !important;
+  opacity: 1 !important;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -2393,6 +2408,7 @@ with tab_dom:
         st.info("현재 활성 화면은 해외 탭입니다. 전환 버튼을 눌러 활성화하세요.")
     else:
         render_domestic()
+
 
 
 
