@@ -568,6 +568,92 @@ section[data-testid="stSidebar"] span[data-baseweb="tag"]{
 .gs-card:has(:empty){
   display: none !important;
 }
+/* =====================================================
+   🚨 FORCE LIGHT MODE (MAIN AREA)
+   - remove dark baseweb styles completely
+===================================================== */
+
+/* 메인 영역 전체 배경 */
+.main,
+[data-testid="stAppViewContainer"]{
+  background: #F6F8FC !important;
+  color: #0F172A !important;
+}
+
+/* 모든 input / select / textarea */
+.main input,
+.main textarea{
+  background: #FFFFFF !important;
+  color: #0F172A !important;
+  -webkit-text-fill-color: #0F172A !important;
+  border: 1px solid rgba(15,23,42,0.12) !important;
+}
+
+/* BaseWeb Select / Multiselect */
+.main div[data-baseweb="select"] > div{
+  background: #FFFFFF !important;
+  border: 1px solid rgba(15,23,42,0.12) !important;
+  border-radius: 12px !important;
+  min-height: 42px !important;
+  box-shadow: none !important;
+}
+
+/* BaseWeb 내부 텍스트 (🔥 흰 글자 제거 핵심) */
+.main div[data-baseweb="select"] *,
+.main div[data-baseweb="menu"] *,
+.main div[data-baseweb="popover"] *{
+  color: #0F172A !important;
+  -webkit-text-fill-color: #0F172A !important;
+}
+
+/* placeholder */
+.main input::placeholder{
+  color: #64748B !important;
+  -webkit-text-fill-color: #64748B !important;
+}
+
+/* =====================================================
+   🟥 REMOVE RED TAGS (선택칩)
+===================================================== */
+.main div[data-baseweb="tag"],
+.main span[data-baseweb="tag"]{
+  background: #EEF2FF !important;
+  border: 1px solid #C7D2FE !important;
+  color: #1E3A8A !important;
+  border-radius: 999px !important;
+}
+
+/* tag 내부 텍스트/아이콘 */
+.main div[data-baseweb="tag"] span,
+.main div[data-baseweb="tag"] svg,
+.main div[data-baseweb="tag"] path{
+  color: #1E3A8A !important;
+  fill: #1E3A8A !important;
+}
+
+/* =====================================================
+   📤 FILE UPLOADER (검은 바 제거)
+===================================================== */
+.main [data-testid="stFileUploaderDropzone"]{
+  background: #FFFFFF !important;
+  border: 1px dashed rgba(15,23,42,0.18) !important;
+  border-radius: 16px !important;
+}
+
+/* 업로더 내부 텍스트 */
+.main [data-testid="stFileUploaderDropzone"] *{
+  color: #0F172A !important;
+  -webkit-text-fill-color: #0F172A !important;
+}
+
+/* Browse files 버튼 */
+.main [data-testid="stFileUploaderDropzone"] button{
+  background: #2563EB !important;
+  color: #FFFFFF !important;
+  border-radius: 12px !important;
+  font-weight: 800 !important;
+  border: none !important;
+}
 
 </style>
 """, unsafe_allow_html=True)
@@ -2294,6 +2380,7 @@ with tab_dom:
         st.info("현재 활성 화면은 해외 탭입니다. 전환 버튼을 눌러 활성화하세요.")
     else:
         render_domestic()
+
 
 
 
