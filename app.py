@@ -712,6 +712,62 @@ body div[data-baseweb="popover"] li:hover,
 body div[data-baseweb="portal"]  li:hover{
   background: rgba(37, 99, 235, 0.10) !important;
 }
+/* =====================================================
+   FINAL OVERRIDE: 드롭다운 옵션 hover/highlight 검정 배경 제거 (최종패치)
+   - role=option 자체뿐 아니라, option 안쪽 래퍼(div/span)까지 강제
+===================================================== */
+
+/* BaseWeb이 쓰는 highlighted/active 상태를 전부 커버 */
+[role="option"][data-highlighted="true"],
+[role="option"][data-active="true"],
+[role="option"]:hover,
+[role="option"]:focus,
+[role="option"]:active{
+  background-color: rgba(37, 99, 235, 0.10) !important;
+  color: var(--text) !important;
+}
+
+/* ✅ 핵심: 검정 배경이 option의 "자식 래퍼"에 붙는 케이스까지 */
+[role="option"][data-highlighted="true"] > div,
+[role="option"][data-active="true"] > div,
+[role="option"]:hover > div,
+[role="option"]:focus > div,
+[role="option"]:active > div{
+  background-color: rgba(37, 99, 235, 0.10) !important;
+}
+
+/* option 내부 모든 텍스트(span/div)도 다크로 고정 */
+[role="option"][data-highlighted="true"] *,
+[role="option"][data-active="true"] *,
+[role="option"]:hover *,
+[role="option"]:focus *,
+[role="option"]:active *{
+  color: var(--text) !important;
+  -webkit-text-fill-color: var(--text) !important;
+}
+
+/* 선택된 옵션은 조금 더 진하게 */
+[role="option"][aria-selected="true"],
+[role="option"][aria-selected="true"] > div{
+  background-color: rgba(37, 99, 235, 0.14) !important;
+}
+[role="option"][aria-selected="true"] *{
+  color: var(--text) !important;
+  -webkit-text-fill-color: var(--text) !important;
+}
+
+/* 혹시 "li"에 직접 하이라이트가 붙는 버전까지 */
+li[data-highlighted="true"],
+li[data-active="true"],
+li:hover{
+  background-color: rgba(37, 99, 235, 0.10) !important;
+}
+li[data-highlighted="true"] *,
+li[data-active="true"] *,
+li:hover *{
+  color: var(--text) !important;
+  -webkit-text-fill-color: var(--text) !important;
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -2472,6 +2528,7 @@ with tab_dom:
         st.info("현재 활성 화면은 해외 탭입니다. 전환 버튼을 눌러 활성화하세요.")
     else:
         render_domestic()
+
 
 
 
