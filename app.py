@@ -468,6 +468,107 @@ div[data-baseweb="tab-highlight"]{
 [data-testid="stDataEditor"] tbody tr{
   height: 36px !important;
 }
+/* =========================
+   🔥 White text bug fix (MAIN + SIDEBAR)
+   - BaseWeb select/multiselect text color reset
+========================= */
+
+/* 메인 영역(BaseWeb) */
+.main div[data-baseweb="select"] *{
+  color: #0F172A !important;
+  -webkit-text-fill-color: #0F172A !important;
+}
+
+/* 사이드바(BaseWeb) - 이미 일부 있으나, 내부 요소까지 강제 */
+section[data-testid="stSidebar"] div[data-baseweb="select"] *{
+  color: var(--sb-text) !important;
+  -webkit-text-fill-color: var(--sb-text) !important;
+}
+
+/* placeholder */
+.main div[data-baseweb="select"] input::placeholder,
+section[data-testid="stSidebar"] div[data-baseweb="select"] input::placeholder{
+  color: #64748B !important;
+  -webkit-text-fill-color: #64748B !important;
+  opacity: 1 !important;
+}
+
+/* input / textarea 전반(메인) */
+.main input, .main textarea{
+  color: #0F172A !important;
+  -webkit-text-fill-color: #0F172A !important;
+}
+
+/* multiselect tag(메인 + 사이드바) 텍스트 */
+.main div[data-baseweb="tag"] span,
+section[data-testid="stSidebar"] div[data-baseweb="tag"] span{
+  color: #1E3A8A !important;
+  -webkit-text-fill-color: #1E3A8A !important;
+}
+/* =========================
+   🎨 Tone down black/red
+   - chips / inputs / uploader
+========================= */
+
+/* (1) 선택 태그(칩) - 빨강 제거, 부드러운 인디고 */
+.main div[data-baseweb="tag"],
+.main span[data-baseweb="tag"],
+section[data-testid="stSidebar"] div[data-baseweb="tag"],
+section[data-testid="stSidebar"] span[data-baseweb="tag"]{
+  background: #EEF2FF !important;
+  border: 1px solid #C7D2FE !important;
+  color: #1E3A8A !important;
+  border-radius: 999px !important;
+}
+
+/* (2) X 아이콘/화살표 아이콘도 너무 진하면 같이 정리 */
+.main div[data-baseweb="tag"] svg,
+.main div[data-baseweb="tag"] path,
+.main div[data-baseweb="select"] svg,
+.main div[data-baseweb="select"] path{
+  fill: #64748B !important;
+}
+
+/* (3) 메인 입력창/셀렉트가 "검은색"으로 뜨는 경우 밝게 */
+.main div[data-baseweb="select"] > div{
+  background: #FFFFFF !important;
+  border: 1px solid rgba(15,23,42,0.10) !important;
+  border-radius: 12px !important;
+  box-shadow: none !important;
+  min-height: 42px !important;
+}
+
+/* (4) 파일 업로더(드래그 영역) 검은색 박스 제거 */
+.main [data-testid="stFileUploaderDropzone"]{
+  background: #FFFFFF !important;
+  border: 1px dashed rgba(15,23,42,0.18) !important;
+  border-radius: 16px !important;
+  padding: 16px !important;
+}
+
+/* 파일 업로더 내부 글자색 */
+.main [data-testid="stFileUploaderDropzone"] *{
+  color: #0F172A !important;
+  -webkit-text-fill-color: #0F172A !important;
+}
+
+/* 업로더 버튼(Browse files) */
+.main [data-testid="stFileUploaderDropzone"] button{
+  background: #2563EB !important;
+  color: #FFFFFF !important;
+  border-radius: 12px !important;
+  font-weight: 800 !important;
+  border: 0 !important;
+}
+/* =========================
+   🧽 Remove "empty white boxes"
+========================= */
+
+/* gs-card가 빈 상태로 렌더되면 숨김(지원 브라우저: 최신 Chrome/Edge) */
+.gs-card:has(:empty){
+  display: none !important;
+}
+
 </style>
 """, unsafe_allow_html=True)
 
@@ -2193,6 +2294,7 @@ with tab_dom:
         st.info("현재 활성 화면은 해외 탭입니다. 전환 버튼을 눌러 활성화하세요.")
     else:
         render_domestic()
+
 
 
 
