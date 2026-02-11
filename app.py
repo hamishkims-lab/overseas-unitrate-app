@@ -1354,13 +1354,20 @@ def load_excel_from_repo(filename: str) -> pd.DataFrame:
     return pd.read_excel(path, engine="openpyxl")
 
 
-cost_db = load_excel_from_repo("cost_db.xlsx")
-price_index = load_excel_from_repo("price_index.xlsx")
-exchange = load_excel_from_repo("exchange.xlsx")
-factor = load_excel_from_repo("Factor.xlsx")
-project_feature_long = load_excel_from_repo("project_feature_long.xlsx")
-feature_master = load_excel_from_repo("feature_master_FID.xlsx")
-cost_db_kr = load_excel_from_repo("cost_db (kr).xlsx")
+@st.cache_data(show_spinner=False)
+def load_overseas_data():
+    cost_db = load_excel_from_repo("cost_db.xlsx")
+    price_index = load_excel_from_repo("price_index.xlsx")
+    exchange = load_excel_from_repo("exchange.xlsx")
+    factor = load_excel_from_repo("Factor.xlsx")
+    project_feature_long = load_excel_from_repo("project_feature_long.xlsx")
+    feature_master = load_excel_from_repo("feature_master_FID.xlsx")
+    return cost_db, price_index, exchange, factor, project_feature_long, feature_master
+
+@st.cache_data(show_spinner=False)
+def load_domestic_data():
+    cost_db_kr = load_excel_from_repo("cost_db (kr).xlsx")
+    return cost_db_kr
 
 
 # =========================
@@ -2462,6 +2469,7 @@ with tab_dom:
         st.info("현재 활성 화면은 해외 탭입니다. 전환 버튼을 눌러 활성화하세요.")
     else:
         render_domestic()
+
 
 
 
