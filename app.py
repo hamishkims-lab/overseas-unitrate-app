@@ -1135,7 +1135,8 @@ exchange = load_excel_from_repo("exchange.xlsx")
 factor = load_excel_from_repo("Factor.xlsx")
 project_feature_long = load_excel_from_repo("project_feature_long.xlsx")
 feature_master = load_excel_from_repo("feature_master_FID.xlsx")
-
+domestic_cost_db_raw = load_excel_from_repo("cost_db (kr).xlsx")
+domestic_cost_db = prep_domestic_cost_db(domestic_cost_db_raw)
 
 # =========================
 # ✅ 컬럼명 표준화 + alias 매핑 (KeyError 방지)
@@ -1211,6 +1212,62 @@ feature_master = standardize_columns(feature_master)
 
 project_feature_long = apply_feature_column_alias(project_feature_long)
 feature_master = apply_feature_column_alias(feature_master)
+
+def prep_domestic_cost_db(df: pd.DataFrame) -> pd.DataFrame:
+    d = df.copy()
+    d.columns = [_std_colname(c) for c in d.columns]
+
+    must = [
+        "NO","사업분야","현장코드","현장명","실행명칭","규격","단위","수량","계약단가",
+        "업체코드","업체명","RGNM","계약월","기준지수","비교지수","적용율","보정단가",
+        "공종Code분류","세부분류","현장특성",
+    ]
+    for c in must:
+        if c not in d.columns:
+            d[c] = ""
+
+    d["내역"] = (d["실행명칭"].astype(str).fillna("").str.strip() + " " + d["규격"].astype(str).fillna("").str.strip()).str.strip()
+    d["Unit"] = d["단위"].astype(str).fillna("").str.strip()
+
+    # 세부분류 = 공종명
+    d["공종명"] = d["세부분류"].astype(str).fillna("").str.strip()
+
+    # 지역
+    d["지역"] = d["RGNM"].astype(str).fillna("").str.strip()
+
+    # 계약단가(참고용)
+    d["Unit Price"] = pd.to_numeric(d["계약단가"], errors="coerce")
+
+    # 보정단가 = 산출원천
+    d["보정단가_num"] = pd.to_numeric(d["보정단가"], errors="coerce")
+    d["__base_price"] = d["보정단가_num"]
+
+    d["계약년월"] = d["계약월"]
+
+    d["현장코드"] = d["현장코드"].apply(norm_site_code)
+    d["현장명"] = d["현장명"].astype(str).fillna("").str.strip()
+    d.loc[d["현장명"].isin(["", "nan", "None"]), "현장명"] = "(현장명없음)"
+
+    d["협력사코드"] = d["업체코드"].astype(str).fillna("").str.strip()
+    d["협력사명"] = d["업체명"].astype(str).fillna("").str.strip()
+
+    # 해외 keep_cols 호환용(없으면 빈값)
+    if "공종코드" not in d.columns:
+        d["공종코드"] = ""
+    if "통화" not in d.columns:
+        d["통화"] = "KRW"   # 국내는 일단 KRW로 고정(없으면)
+
+    for c in ["공종Code분류","세부분류","현장특성"]:
+        d[c] = d[c].astype(str).fillna("").str.strip()
+        d.loc[d[c].isin(["nan","None"]), c] = ""
+
+    # 최소 필터: 내역/Unit/보정단가
+    d = d[(d["내역"].astype(str).str.len() > 0) & (d["Unit"].astype(str).str.len() > 0)].copy()
+    d = d[pd.to_numeric(d["__base_price"], errors="coerce").fillna(0) > 0].copy()
+
+    return d
+
+
 
 
 # =========================
@@ -1297,6 +1354,9 @@ def render_domestic():
     st.sidebar.slider("상/하위 컷 비율 (%)", 0, 30, 20, 5, key="dom_cut_ratio")
 
     run_dom_btn = st.sidebar.button("🚀 산출 실행(국내)", key="dom_run_btn")
+
+
+    
 
     
     tab1, tab2, tab3 = st.tabs(["📄 BOQ 결과(국내)", "🧾 산출 로그(국내)", "📝 근거 보고서(국내)"])
@@ -2014,6 +2074,7 @@ with tab_dom:
         st.info("현재 활성 화면은 해외 탭입니다. 전환 버튼을 눌러 활성화하세요.")
     else:
         render_domestic()
+
 
 
 
