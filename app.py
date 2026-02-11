@@ -1138,7 +1138,6 @@ factor = load_excel_from_repo("Factor.xlsx")
 project_feature_long = load_excel_from_repo("project_feature_long.xlsx")
 feature_master = load_excel_from_repo("feature_master_FID.xlsx")
 domestic_cost_db_raw = load_excel_from_repo("cost_db (kr).xlsx")
-domestic_cost_db = prep_domestic_cost_db(domestic_cost_db_raw)
 
 # =========================
 # ✅ 컬럼명 표준화 + alias 매핑 (KeyError 방지)
@@ -2160,6 +2159,7 @@ with tab_dom:
         st.info("현재 활성 화면은 해외 탭입니다. 전환 버튼을 눌러 활성화하세요.")
     else:
         render_domestic()
+
 
 
 
