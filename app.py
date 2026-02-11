@@ -1369,28 +1369,6 @@ def load_domestic_data():
     cost_db_kr = load_excel_from_repo("cost_db (kr).xlsx")
     return cost_db_kr
 
-# ----------------------------
-# 실제 데이터 로드 및 전역 변수 할당 (여기에 삽입)
-# - load_overseas_data, load_domestic_data 정의 직후에 위치
-# ----------------------------
-# 해외 데이터 불러오기 (cached 함수 호출)
-cost_db, price_index, exchange, factor, project_feature_long, feature_master = load_overseas_data()
-
-# 국내 데이터 불러오기 (cached 함수 호출)
-cost_db_kr = load_domestic_data()
-
-# 컬럼 표준화 / alias 적용: 반드시 한 번만 수행
-project_feature_long = standardize_columns(project_feature_long)
-feature_master = standardize_columns(feature_master)
-
-project_feature_long = apply_feature_column_alias(project_feature_long)
-feature_master = apply_feature_column_alias(feature_master)
-
-# (권장) 원본 DB들도 표준화 해두면 이후 KeyError 방지에 도움됨
-cost_db = standardize_columns(cost_db)
-cost_db_kr = standardize_columns(cost_db_kr)
-
-
 # =========================
 # ✅ 컬럼명 표준화 + alias 매핑 (KeyError 방지)
 # =========================
@@ -1458,6 +1436,23 @@ def apply_feature_column_alias(df: pd.DataFrame) -> pd.DataFrame:
             df[c] = ""
 
     return df
+
+# =========================
+# ✅ 데이터 로드 + 표준화/alias 적용 (함수 정의 이후에 1회만)
+# =========================
+cost_db, price_index, exchange, factor, project_feature_long, feature_master = load_overseas_data()
+cost_db_kr = load_domestic_data()
+
+# (권장) DB도 표준화
+cost_db = standardize_columns(cost_db)
+cost_db_kr = standardize_columns(cost_db_kr)
+
+# feature 관련 표준화/alias
+project_feature_long = standardize_columns(project_feature_long)
+feature_master = standardize_columns(feature_master)
+
+project_feature_long = apply_feature_column_alias(project_feature_long)
+feature_master = apply_feature_column_alias(feature_master)
 
 
 # --- 변경 후 (수정할 코드) ---
@@ -2492,6 +2487,7 @@ with tab_dom:
         st.info("현재 활성 화면은 해외 탭입니다. 전환 버튼을 눌러 활성화하세요.")
     else:
         render_domestic()
+
 
 
 
