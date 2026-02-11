@@ -34,61 +34,44 @@ BG_LIGHT  = "#F6FAFC"
 st.markdown("""
 <style>
 /* =====================================================
-   DESIGN TOKENS (ONE SOURCE OF TRUTH)
+   TOKENS
 ===================================================== */
 :root{
-  /* App */
   --bg: #F6F8FC;
   --card: #FFFFFF;
   --text: #0F172A;
-  --sub: #334155;
   --muted: #64748B;
   --border: rgba(15, 23, 42, 0.10);
   --shadow-sm: 0 6px 14px rgba(15, 23, 42, 0.05);
-
-  /* Brand */
   --primary: #2563EB;
 
-  /* Sidebar */
   --sb-bg: #FFFFFF;
   --sb-border: #E6EAF2;
-  --sb-title: #0F172A;
-  --sb-text: #1F2937;
-  --sb-muted: #64748B;
 
-  /* Chip */
   --chip-bg: #EEF2FF;
   --chip-border: #C7D2FE;
   --chip-text: #1E3A8A;
 }
 
 /* =====================================================
-   APP BACKGROUND & TYPO
+   LAYOUT / TYPO
 ===================================================== */
-[data-testid="stAppViewContainer"]{
-  background: var(--bg) !important;
-}
-html, body{
-  font-size: 14px !important;
-  color: var(--text) !important;
-}
-.main{
-  color: var(--text) !important;
-}
+[data-testid="stAppViewContainer"]{ background: var(--bg) !important; }
+html, body{ font-size: 14px !important; color: var(--text) !important; }
+.main{ color: var(--text) !important; }
 .main > div{
   padding: 16px 24px 24px 24px !important;
   max-width: 1280px;
   margin: 0 auto;
 }
 
-/* Headings */
-.main h1{ font-size: 26px !important; font-weight: 900 !important; letter-spacing: -0.5px !important; color: var(--text) !important; }
-.main h2{ font-size: 20px !important; font-weight: 850 !important; letter-spacing: -0.3px !important; color: var(--text) !important; }
-.main h3{ font-size: 16px !important; font-weight: 850 !important; color: var(--text) !important; }
+.main h1{ font-size: 26px !important; font-weight: 900 !important; letter-spacing: -0.5px !important; }
+.main h2{ font-size: 20px !important; font-weight: 850 !important; letter-spacing: -0.3px !important; }
+.main h3{ font-size: 16px !important; font-weight: 850 !important; }
 .main .stCaption, .main small{ color: var(--muted) !important; font-size: 12.5px !important; }
 
 /* =====================================================
-   CARD
+   CARDS
 ===================================================== */
 .gs-card{
   background: var(--card) !important;
@@ -98,226 +81,18 @@ html, body{
   margin: 14px 0 18px 0 !important;
   box-shadow: var(--shadow-sm) !important;
 }
-
-/* (옵션) 빈 카드가 생기면 숨김: :has() 미지원 환경이면 이 줄은 지워도 됨 */
-.gs-card:has(:empty){ display:none !important; }
-
-/* =====================================================
-   HEADER (Top title)
-===================================================== */
 .gs-header{
   font-size: 18px !important;
   font-weight: 900 !important;
-  color: var(--text) !important;
   letter-spacing: -0.3px !important;
   margin: 6px 0 14px 0 !important;
 }
 
-/* =====================================================
-   CARD TITLE (Main area)
-===================================================== */
-.dash-row{
-  display:flex;
-  align-items:baseline;
-  justify-content:space-between;
-  gap: 10px;
-  margin: 0 0 10px 0;
-}
-.dash-title{
-  font-size: 14px !important;
-  font-weight: 850 !important;
-  color: var(--text) !important;
-  letter-spacing: -0.2px !important;
-}
-.dash-muted{
-  font-size: 12px !important;
-  color: var(--muted) !important;
-  white-space: nowrap !important;
-}
+.dash-row{ display:flex; align-items:baseline; justify-content:space-between; gap:10px; margin:0 0 10px 0; }
+.dash-title{ font-size: 14px !important; font-weight: 850 !important; letter-spacing: -0.2px !important; }
+.dash-muted{ font-size: 12px !important; color: var(--muted) !important; white-space: nowrap !important; }
 
-/* =====================================================
-   SB-ROW (Sidebar + Main 공통)
-===================================================== */
-.sb-row{
-  display:flex;
-  align-items:baseline;
-  justify-content:space-between;
-  gap: 10px;
-  margin: 2px 0 6px 0;
-}
-.sb-title{
-  font-size: 14px !important;
-  font-weight: 800 !important;
-  color: var(--sb-title) !important;
-  letter-spacing: -0.2px !important;
-}
-.sb-muted{
-  font-size: 12px !important;
-  color: var(--sb-muted) !important;
-  white-space: nowrap !important;
-}
-.sb-hr{
-  border: none !important;
-  border-top: 1px solid var(--sb-border) !important;
-  margin: 10px 0 !important;
-}
-.sb-major{
-  font-size: 16px !important;
-  font-weight: 900 !important;
-  color: var(--sb-title) !important;
-  margin: 6px 0 10px 0 !important;
-  letter-spacing: -0.2px !important;
-}
-
-/* =====================================================
-   SIDEBAR
-===================================================== */
-section[data-testid="stSidebar"]{
-  background: var(--sb-bg) !important;
-  border-right: 1px solid var(--sb-border) !important;
-}
-section[data-testid="stSidebar"] > div{
-  padding-top: 14px !important;
-}
-section[data-testid="stSidebar"] label{
-  margin-bottom: 6px !important;
-  font-size: 12.5px !important;
-  color: var(--sb-text) !important;
-}
-section[data-testid="stSidebar"] .stCaption,
-section[data-testid="stSidebar"] small{
-  color: var(--sb-muted) !important;
-}
-section[data-testid="stSidebar"] hr{
-  border: none !important;
-  border-top: 1px solid var(--sb-border) !important;
-  margin: 10px 0 !important;
-}
-
-/* =====================================================
-   BASEWEB (Select / Multiselect) — MAIN + SIDEBAR
-   - 흰 글자/검은 바탕 문제의 핵심 해결
-===================================================== */
-
-/* 공통: 컨트롤 외곽 */
-div[data-baseweb="select"] > div{
-  background: #FFFFFF !important;
-  border: 1px solid var(--border) !important;
-  border-radius: 12px !important;
-  min-height: 42px !important;
-  box-shadow: none !important;
-}
-
-/* 공통: 내부 텍스트를 강제로 Dark */
-div[data-baseweb="select"] *,
-div[data-baseweb="menu"] *,
-div[data-baseweb="popover"] *{
-  color: var(--text) !important;
-  -webkit-text-fill-color: var(--text) !important;
-}
-
-/* input/placeholder */
-div[data-baseweb="select"] input{
-  color: var(--text) !important;
-  -webkit-text-fill-color: var(--text) !important;
-  caret-color: var(--text) !important;
-  font-size: 13px !important;
-}
-div[data-baseweb="select"] input::placeholder{
-  color: var(--muted) !important;
-  -webkit-text-fill-color: var(--muted) !important;
-  opacity: 1 !important;
-}
-
-/* chevron icon */
-div[data-baseweb="select"] svg,
-div[data-baseweb="select"] svg path{
-  fill: var(--muted) !important;
-}
-
-/* =====================================================
-   CHIPS (Tag) — 빨간칩 제거
-===================================================== */
-div[data-baseweb="tag"],
-span[data-baseweb="tag"]{
-  background: var(--chip-bg) !important;
-  border: 1px solid var(--chip-border) !important;
-  color: var(--chip-text) !important;
-  border-radius: 999px !important;
-}
-div[data-baseweb="tag"] span,
-div[data-baseweb="tag"] svg,
-div[data-baseweb="tag"] path{
-  color: var(--chip-text) !important;
-  -webkit-text-fill-color: var(--chip-text) !important;
-  fill: var(--chip-text) !important;
-}
-
-/* =====================================================
-   SLIDER & BUTTONS (Sidebar 중심)
-===================================================== */
-section[data-testid="stSidebar"] [role="slider"]{
-  accent-color: var(--primary) !important;
-}
-section[data-testid="stSidebar"] button{
-  border-radius: 10px !important;
-  font-weight: 700 !important;
-}
-section[data-testid="stSidebar"] button[kind="secondary"],
-section[data-testid="stSidebar"] button[kind="primary"]{
-  background: var(--primary) !important;
-  color: #FFFFFF !important;
-  border: 0 !important;
-  box-shadow: none !important;
-}
-section[data-testid="stSidebar"] button[kind="secondary"] * ,
-section[data-testid="stSidebar"] button[kind="primary"] *{
-  color: #FFFFFF !important;
-}
-
-/* =====================================================
-   FILE UPLOADER — 검은 드롭존 제거 + 텍스트 색 강제
-===================================================== */
-[data-testid="stFileUploaderDropzone"]{
-  background: #FFFFFF !important;
-  border: 1px dashed rgba(15,23,42,0.18) !important;
-  border-radius: 16px !important;
-  padding: 16px !important;
-}
-[data-testid="stFileUploaderDropzone"] *{
-  color: var(--text) !important;
-  -webkit-text-fill-color: var(--text) !important;
-}
-[data-testid="stFileUploaderDropzone"] button{
-  background: var(--primary) !important;
-  color: #FFFFFF !important;
-  border-radius: 12px !important;
-  font-weight: 800 !important;
-  border: 0 !important;
-}
-
-/* =====================================================
-   TABLE
-===================================================== */
-[data-testid="stDataFrame"],
-[data-testid="stDataEditor"]{
-  font-size: 12.8px !important;
-  color: var(--text) !important;
-}
-[data-testid="stDataFrame"] thead th,
-[data-testid="stDataEditor"] thead th{
-  background: #F3F6FB !important;
-  color: #334155 !important;
-  font-weight: 900 !important;
-}
-[data-testid="stDataFrame"] tbody tr,
-[data-testid="stDataEditor"] tbody tr{
-  height: 36px !important;
-}
-/* =====================================================
-   STREAMLIT BORDER CONTAINER -> CARD LOOK
-   (st.container(border=True) 카드화)
-===================================================== */
+/* st.container(border=True) 카드화 */
 div[data-testid="stVerticalBlockBorderWrapper"]{
   background: var(--card) !important;
   border: 1px solid var(--border) !important;
@@ -326,327 +101,158 @@ div[data-testid="stVerticalBlockBorderWrapper"]{
   margin: 14px 0 18px 0 !important;
   box-shadow: var(--shadow-sm) !important;
 }
-
-/* border wrapper 안쪽 기본 padding 정리 */
-div[data-testid="stVerticalBlockBorderWrapper"] > div{
-  padding: 0 !important;
-}
-
-/* =========================================
-   FILE UPLOADER : Browse files 버튼
-========================================= */
-[data-testid="stFileUploaderDropzone"] button{
-  background: var(--primary) !important;   /* 파란색 */
-  color: #FFFFFF !important;               /* 글자 흰색 */
-  border: 0 !important;
-  border-radius: 10px !important;
-  font-weight: 800 !important;
-}
-
-/* 버튼 안 텍스트/아이콘까지 흰색 강제 */
-[data-testid="stFileUploaderDropzone"] button *,
-[data-testid="stFileUploaderDropzone"] button span,
-[data-testid="stFileUploaderDropzone"] button svg,
-[data-testid="stFileUploaderDropzone"] button path{
-  color: #FFFFFF !important;
-  fill: #FFFFFF !important;
-  -webkit-text-fill-color: #FFFFFF !important;
-}
-[data-testid="stFileUploaderDropzone"] button{
-  -webkit-text-fill-color: #FFFFFF !important;
-}
-/* =========================================
-   FILE UPLOADER : 업로드된 파일명(boq.xlsx 14KB) 텍스트 색
-========================================= */
-
-/* 업로드된 파일 카드 전체 텍스트를 다크로 */
-[data-testid="stFileUploaderFile"] *{
-  color: var(--text) !important;
-  -webkit-text-fill-color: var(--text) !important;
-}
-
-/* 파일명(첫 줄)만 조금 더 진하게 */
-[data-testid="stFileUploaderFileName"]{
-  color: var(--text) !important;
-  -webkit-text-fill-color: var(--text) !important;
-  font-weight: 800 !important;
-}
-
-/* 파일 크기/부가정보(14.0KB 등) */
-[data-testid="stFileUploaderFile"] small,
-[data-testid="stFileUploaderFile"] [data-testid="stCaptionContainer"]{
-  color: var(--muted) !important;
-  -webkit-text-fill-color: var(--muted) !important;
-}
+div[data-testid="stVerticalBlockBorderWrapper"] > div{ padding: 0 !important; }
 
 /* =====================================================
-   TEXT INPUT (예: DCM... 입력 박스) — 배경 흰색/글자 검정
+   SIDEBAR
 ===================================================== */
-[data-testid="stTextInput"] input{
+section[data-testid="stSidebar"]{
+  background: var(--sb-bg) !important;
+  border-right: 1px solid var(--sb-border) !important;
+}
+section[data-testid="stSidebar"] > div{ padding-top: 14px !important; }
+section[data-testid="stSidebar"] hr{
+  border: none !important;
+  border-top: 1px solid var(--sb-border) !important;
+  margin: 10px 0 !important;
+}
+
+.sb-row{ display:flex; align-items:baseline; justify-content:space-between; gap:10px; margin:2px 0 6px 0; }
+.sb-title{ font-size: 14px !important; font-weight: 800 !important; letter-spacing: -0.2px !important; color: var(--text) !important; }
+.sb-muted{ font-size: 12px !important; color: var(--muted) !important; white-space: nowrap !important; }
+.sb-major{ font-size: 16px !important; font-weight: 900 !important; margin: 6px 0 10px 0 !important; letter-spacing: -0.2px !important; color: var(--text) !important; }
+
+/* =====================================================
+   WIDGETS (최소만)
+===================================================== */
+
+/* Select / Multiselect 컨트롤 */
+div[data-baseweb="select"] > div{
   background: #FFFFFF !important;
-  color: var(--text) !important;
-  -webkit-text-fill-color: var(--text) !important;
   border: 1px solid var(--border) !important;
   border-radius: 12px !important;
-}
-[data-testid="stTextInput"] input::placeholder{
-  color: var(--muted) !important;
-  -webkit-text-fill-color: var(--muted) !important;
-  opacity: 1 !important;
-}
-
-
-
-
-/* =====================================================
-   TEXT INPUT (st.text_input) — 멀티셀렉트와 동일한 외곽선/라운드/높이로 통일
-===================================================== */
-
-/* text_input(검색창) 바깥 컨테이너 */
-div[data-testid="stTextInput"] > div{
-  border-radius: 12px !important;   /* 멀티셀렉트와 동일 */
-}
-
-/* 실제 input 박스 (BaseWeb input) */
-div[data-testid="stTextInput"] div[data-baseweb="input"] > div{
-  background: #FFFFFF !important;
-  border: 1px solid var(--border) !important;  /* 두께 통일(1px) */
-  border-radius: 12px !important;
-  min-height: 42px !important;                 /* 멀티셀렉트 높이와 통일 */
+  min-height: 42px !important;
   box-shadow: none !important;
 }
-
-/* input 텍스트/placeholder 색 */
-div[data-testid="stTextInput"] input{
+div[data-baseweb="select"] input{
   color: var(--text) !important;
   -webkit-text-fill-color: var(--text) !important;
   caret-color: var(--text) !important;
   font-size: 13px !important;
 }
-div[data-testid="stTextInput"] input::placeholder{
-  color: var(--muted) !important;
-  -webkit-text-fill-color: var(--muted) !important;
-  opacity: 1 !important;
+
+/* Chip(Tag) */
+div[data-baseweb="tag"], span[data-baseweb="tag"]{
+  background: var(--chip-bg) !important;
+  border: 1px solid var(--chip-border) !important;
+  color: var(--chip-text) !important;
+  border-radius: 999px !important;
 }
 
-/* 포커스(클릭) 시 파란/두꺼운 테두리로 바뀌는 것 방지 → 동일 톤 유지 */
-div[data-testid="stTextInput"] div[data-baseweb="input"] > div:focus-within{
-  border: 1px solid var(--border) !important;
-  box-shadow: none !important;
-  outline: none !important;
-}
-
-
-/* =====================================================
-   FORCE LIGHT THEME (Global Fix Pack)
-   - 검정 배경/검정 글자 잔재 제거용
-===================================================== */
-
-/* ---------- A) Portal/Popover/Menu (Select Dropdown) ---------- */
-/* 드롭다운이 body 아래 portal로 렌더링되는 케이스까지 커버 */
-body > div[data-baseweb="popover"],
-body > div[data-baseweb="portal"]{
-  background: transparent !important;
-}
-
-/* 팝오버 카드/패널 계층(버전 차이 커버) */
-body > div[data-baseweb="popover"] > div,
-body > div[data-baseweb="popover"] > div > div,
-body > div[data-baseweb="portal"] > div,
-body > div[data-baseweb="portal"] > div > div{
-  background: #FFFFFF !important;
-}
-
-/* 실제 메뉴 컨테이너 */
-body > div[data-baseweb="popover"] [data-baseweb="menu"],
-body > div[data-baseweb="portal"] [data-baseweb="menu"],
-body > div[data-baseweb="popover"] [role="listbox"],
-body > div[data-baseweb="portal"] [role="listbox"]{
+/* Text input */
+div[data-testid="stTextInput"] div[data-baseweb="input"] > div{
   background: #FFFFFF !important;
   border: 1px solid var(--border) !important;
   border-radius: 12px !important;
-  box-shadow: var(--shadow-sm) !important;
+  min-height: 42px !important;
+  box-shadow: none !important;
 }
 
-/* 메뉴 텍스트/아이콘 전부 다크 */
-body > div[data-baseweb="popover"] [data-baseweb="menu"] *,
-body > div[data-baseweb="portal"] [data-baseweb="menu"] *,
-body > div[data-baseweb="popover"] [role="listbox"] *,
-body > div[data-baseweb="portal"] [role="listbox"] *{
-  color: var(--text) !important;
-  -webkit-text-fill-color: var(--text) !important;
-  fill: var(--muted) !important;
-}
-
-/* hover/selected */
-body > div[data-baseweb="popover"] [role="option"]:hover,
-body > div[data-baseweb="portal"] [role="option"]:hover{
-  background-color: rgba(37, 99, 235, 0.08) !important;
-}
-body > div[data-baseweb="popover"] [aria-selected="true"],
-body > div[data-baseweb="portal"] [aria-selected="true"]{
-  background-color: rgba(37, 99, 235, 0.12) !important;
-}
-
-/* 드롭다운 내부 검색 input */
-body > div[data-baseweb="popover"] input,
-body > div[data-baseweb="portal"] input{
+/* File uploader */
+[data-testid="stFileUploaderDropzone"]{
   background: #FFFFFF !important;
-  color: var(--text) !important;
-  -webkit-text-fill-color: var(--text) !important;
-  caret-color: var(--text) !important;
+  border: 1px dashed rgba(15,23,42,0.18) !important;
+  border-radius: 16px !important;
+  padding: 16px !important;
 }
-body > div[data-baseweb="popover"] input::placeholder,
-body > div[data-baseweb="portal"] input::placeholder{
-  color: var(--muted) !important;
-  -webkit-text-fill-color: var(--muted) !important;
-  opacity: 1 !important;
+[data-testid="stFileUploaderDropzone"] button{
+  background: var(--primary) !important;
+  color: #FFFFFF !important;
+  border: 0 !important;
+  border-radius: 12px !important;
+  font-weight: 800 !important;
 }
 
-
-/* ---------- B) DataFrame / DataEditor (AG-Grid) ---------- */
-/* st.dataframe/st.data_editor가 검정으로 뜨는 핵심: ag-theme / ag-root 계열 */
-[data-testid="stDataFrame"],
-[data-testid="stDataEditor"]{
+/* DataFrame/DataEditor: 컨테이너만 라이트 */
+div[data-testid="stDataFrame"],
+div[data-testid="stDataEditor"]{
   background: #FFFFFF !important;
-  color: var(--text) !important;
   border-radius: 16px !important;
 }
+/* =====================================================
+   TABS — 강제 폰트 크기(안쪽 텍스트까지)
+===================================================== */
 
-/* 그리드 전체 배경 */
-[data-testid="stDataFrame"] .ag-root-wrapper,
-[data-testid="stDataEditor"] .ag-root-wrapper,
-[data-testid="stDataFrame"] .ag-root,
-[data-testid="stDataEditor"] .ag-root,
-[data-testid="stDataFrame"] .ag-body-viewport,
-[data-testid="stDataEditor"] .ag-body-viewport{
-  background: #FFFFFF !important;
-  color: var(--text) !important;
+/* 1) Streamlit Tabs 버튼(버전별 셀렉터 커버) */
+div[data-testid="stTabs"] button[role="tab"],
+.stTabs button[role="tab"],
+.stTabs [data-baseweb="tab"]{
+  font-size: 24px !important;
+  font-weight: 800 !important;
+  padding: 12px 16px !important;
+  line-height: 1.2 !important;
 }
 
-/* 헤더 배경/글자 */
-[data-testid="stDataFrame"] .ag-header,
-[data-testid="stDataEditor"] .ag-header,
-[data-testid="stDataFrame"] .ag-header-row,
-[data-testid="stDataEditor"] .ag-header-row{
-  background: #F3F6FB !important;
-  color: #334155 !important;
+/* 2) 탭 안쪽 텍스트가 span/div에 따로 잡히는 케이스까지 커버 */
+div[data-testid="stTabs"] button[role="tab"] *,
+.stTabs button[role="tab"] *,
+.stTabs [data-baseweb="tab"] *{
+  font-size: 24px !important;
 }
-[data-testid="stDataFrame"] .ag-header-cell,
-[data-testid="stDataEditor"] .ag-header-cell,
-[data-testid="stDataFrame"] .ag-header-cell-text,
-[data-testid="stDataEditor"] .ag-header-cell-text{
-  color: #334155 !important;
+
+/* 3) 선택된 탭 */
+div[data-testid="stTabs"] button[role="tab"][aria-selected="true"],
+.stTabs button[role="tab"][aria-selected="true"],
+.stTabs [data-baseweb="tab"][aria-selected="true"]{
   font-weight: 900 !important;
 }
 
-/* 셀 배경/글자 */
-[data-testid="stDataFrame"] .ag-cell,
-[data-testid="stDataEditor"] .ag-cell{
-  background: #FFFFFF !important;
-  color: var(--text) !important;
-  border-color: rgba(15, 23, 42, 0.08) !important;
-}
-
-/* 행 hover */
-[data-testid="stDataFrame"] .ag-row-hover .ag-cell,
-[data-testid="stDataEditor"] .ag-row-hover .ag-cell{
-  background: rgba(37, 99, 235, 0.06) !important;
-}
-
-/* 선택 영역(드래그/선택) */
-[data-testid="stDataFrame"] .ag-row-selected .ag-cell,
-[data-testid="stDataEditor"] .ag-row-selected .ag-cell{
-  background: rgba(37, 99, 235, 0.10) !important;
-}
-
-/* 그리드 내부 텍스트 전체 다크 강제 */
-[data-testid="stDataFrame"] .ag-root-wrapper * ,
-[data-testid="stDataEditor"] .ag-root-wrapper *{
-  color: var(--text) !important;
-  -webkit-text-fill-color: var(--text) !important;
-}
-
-/* ---------- C) Tabs / Misc (가끔 다크 먹는 부분) ---------- */
-.stTabs [data-baseweb="tab-list"]{
-  background: transparent !important;
-}
-.stTabs [data-baseweb="tab"]{
-  color: var(--text) !important;
-}
-.stTabs [aria-selected="true"]{
-  color: var(--text) !important;
-}
-
-/* 툴팁/팝업류(드물지만 검정 남는 경우) */
-[data-baseweb="tooltip"]{
-  background: #FFFFFF !important;
-  color: var(--text) !important;
-  border: 1px solid var(--border) !important;
-}
+/* 4) 이모지/텍스트 정렬 */
+div[data-testid="stTabs"] button[role="tab"] > div,
+.stTabs button[role="tab"] > div,
+.stTabs [data-baseweb="tab"] > div{
+  gap: 6px !important;
 /* =====================================================
-   FIX: Multiselect Dropdown menu still black
-   - Portal/Popover 내부 래퍼까지 싹 흰색으로 강제
+   TABS — 선택됨/미선택 크기 분리
 ===================================================== */
 
-/* popover 자체 + 내부 1~3단 래퍼를 전부 흰색으로 */
-div[data-baseweb="popover"],
-div[data-baseweb="popover"] > div,
-div[data-baseweb="popover"] > div > div,
-div[data-baseweb="popover"] > div > div > div{
-  background: #FFFFFF !important;
+/* ✅ 미선택(기본) 탭: 더 작게 */
+div[data-testid="stTabs"] button[role="tab"],
+.stTabs button[role="tab"],
+.stTabs [data-baseweb="tab"]{
+  font-size: 18px !important;      /* ← 미선택 크기 */
+  font-weight: 700 !important;
+  padding: 10px 14px !important;
+  line-height: 1.2 !important;
 }
 
-/* menu/listbox 컨테이너 흰색 */
-div[data-baseweb="popover"] [data-baseweb="menu"],
-div[data-baseweb="popover"] [role="listbox"]{
-  background: #FFFFFF !important;
-  border: 1px solid var(--border) !important;
-  border-radius: 12px !important;
-  box-shadow: var(--shadow-sm) !important;
+/* 미선택 탭 내부 텍스트도 같이 */
+div[data-testid="stTabs"] button[role="tab"] *,
+.stTabs button[role="tab"] *,
+.stTabs [data-baseweb="tab"] *{
+  font-size: 18px !important;      /* ← 미선택 내부 텍스트 */
 }
 
-/* 메뉴 내부 스크롤 영역/ul/래퍼 div까지 전부 흰색 */
-div[data-baseweb="popover"] [data-baseweb="menu"] > div,
-div[data-baseweb="popover"] [data-baseweb="menu"] ul,
-div[data-baseweb="popover"] [data-baseweb="menu"] li,
-div[data-baseweb="popover"] [data-baseweb="menu"] div{
-  background: #FFFFFF !important;
+/* ✅ 선택된 탭: 현재 크기(유지) */
+div[data-testid="stTabs"] button[role="tab"][aria-selected="true"],
+.stTabs button[role="tab"][aria-selected="true"],
+.stTabs [data-baseweb="tab"][aria-selected="true"]{
+  font-size: 24px !important;      /* ← 선택된 크기(현재처럼) */
+  font-weight: 900 !important;
 }
 
-/* 옵션(각 row) 기본 배경 흰색 + 글자 검정 */
-div[data-baseweb="popover"] [role="option"]{
-  background: #FFFFFF !important;
-  color: var(--text) !important;
-  -webkit-text-fill-color: var(--text) !important;
+/* 선택된 탭 내부 텍스트도 같이 */
+div[data-testid="stTabs"] button[role="tab"][aria-selected="true"] *,
+.stTabs button[role="tab"][aria-selected="true"] *,
+.stTabs [data-baseweb="tab"][aria-selected="true"] *{
+  font-size: 24px !important;
 }
 
-/* hover/선택 상태 */
-div[data-baseweb="popover"] [role="option"]:hover{
-  background: rgba(37, 99, 235, 0.08) !important;
-}
-div[data-baseweb="popover"] [aria-selected="true"]{
-  background: rgba(37, 99, 235, 0.12) !important;
-}
-
-/* 메뉴 안 텍스트 전부 검정 */
-div[data-baseweb="popover"] [data-baseweb="menu"] *,
-div[data-baseweb="popover"] [role="listbox"] *{
-  color: var(--text) !important;
-  -webkit-text-fill-color: var(--text) !important;
-}
-
-/* 드롭다운 내부 검색 input도 흰색 */
-div[data-baseweb="popover"] input{
-  background: #FFFFFF !important;
-  color: var(--text) !important;
-  -webkit-text-fill-color: var(--text) !important;
-  caret-color: var(--text) !important;
-}
-div[data-baseweb="popover"] input::placeholder{
-  color: var(--muted) !important;
-  -webkit-text-fill-color: var(--muted) !important;
-  opacity: 1 !important;
+/* 이모지/텍스트 정렬 */
+div[data-testid="stTabs"] button[role="tab"] > div,
+.stTabs button[role="tab"] > div,
+.stTabs [data-baseweb="tab"] > div{
+  gap: 6px !important;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -755,6 +361,33 @@ def norm_site_code(x) -> str:
         s = s.zfill(6)
     return s
 
+def norm_unit_kr(x) -> str:
+    if x is None:
+        return ""
+    s = str(x).strip().lower()
+    s = s.replace(" ", "")
+    # 필요 시 여기서 단위 alias를 더 추가하세요
+    alias = {
+        "m2": "m2",
+        "m3": "m3",
+        "ea": "ea",
+        "㎥": "m3",
+        "㎡": "m2",
+        "개": "ea",
+    }
+    return alias.get(s, s)
+
+def norm_kr_boq_text(name, spec) -> str:
+    # BOQ: 명칭 + 규격을 합쳐서 매칭 텍스트로 사용
+    a = "" if pd.isna(name) else str(name)
+    b = "" if pd.isna(spec) else str(spec)
+    return norm_text(f"{a} {b}")
+
+def norm_kr_db_text(exec_name, spec) -> str:
+    # 국내 DB: 실행명칭 + 규격을 합쳐서 매칭 텍스트로 사용
+    a = "" if pd.isna(exec_name) else str(exec_name)
+    b = "" if pd.isna(spec) else str(spec)
+    return norm_text(f"{a} {b}")
 
 # =========================
 # 보정 로직
@@ -1084,6 +717,204 @@ def fast_recompute_from_pool(
             "근거공종(최빈)": top_work,
         })
 
+def build_candidate_pool_domestic(
+    cost_db_kr: pd.DataFrame,
+    boq_kr: pd.DataFrame,
+    sim_w_str: float,
+    sim_w_sem: float,
+    top_k_sem: int,
+    pool_per_boq: int = 400,
+    progress=None,
+    prog_text=None,
+) -> pd.DataFrame:
+    """
+    국내 1단계(무거움): BOQ별 후보풀 생성
+    - BOQ(명칭/규격/단위) vs DB(실행명칭/규격/단위)
+    - 보정단가를 최종 단가 후보로 사용(이미 지수 반영되어 있다고 가정)
+    """
+    work = cost_db_kr.copy()
+
+    # 필수 컬럼 보강(없으면 빈값 생성)
+    need = ["현장코드","현장명","실행명칭","규격","단위","수량","계약단가","보정단가","업체코드","업체명","계약월","공종Code분류","세부분류","현장특성"]
+    for c in need:
+        if c not in work.columns:
+            work[c] = ""
+
+    work["__db_text_norm"] = work.apply(lambda r: norm_kr_db_text(r.get("실행명칭",""), r.get("규격","")), axis=1)
+    work["__Unit_norm"] = work["단위"].apply(norm_unit_kr)
+
+    # 후보 단가: 보정단가 우선 사용
+    work["__price_raw"] = pd.to_numeric(work["보정단가"], errors="coerce")
+    # 보정단가가 없으면 계약단가 fallback
+    mask_na = work["__price_raw"].isna()
+    work.loc[mask_na, "__price_raw"] = pd.to_numeric(work.loc[mask_na, "계약단가"], errors="coerce")
+    work = work[work["__price_raw"].notna() & (work["__price_raw"] > 0)].copy()
+
+    # 임베딩 캐시 태그(국내 DB용)
+    fp = file_fingerprint(work, ["__db_text_norm", "__Unit_norm", "__price_raw"])
+    embs = compute_or_load_embeddings(work["__db_text_norm"], tag=f"costdbKR_{fp}")
+    index = build_faiss_index(embs) if FAISS_OK else None
+
+    pool_rows = []
+    total = len(boq_kr) if len(boq_kr) else 1
+
+    for i, (_, b) in enumerate(boq_kr.iterrows(), start=1):
+        if prog_text is not None:
+            prog_text.text(f"[국내] 후보 풀 생성: {i}/{total} 처리 중…")
+        if progress is not None:
+            progress.progress(i / total)
+
+        boq_name = b.get("명칭", "")
+        boq_spec = b.get("규격", "")
+        boq_unit = norm_unit_kr(b.get("단위", ""))
+
+        boq_text_norm = norm_kr_boq_text(boq_name, boq_spec)
+
+        q = model.encode([boq_text_norm], batch_size=1, convert_to_tensor=False)
+        q = np.asarray(q, dtype="float32")
+        q = q / (np.linalg.norm(q, axis=1, keepdims=True) + 1e-12)
+
+        if FAISS_OK:
+            D, I = search_faiss(index, q, top_k=top_k_sem)
+            cand_idx = I[0]
+            sem_scores = D[0]
+        else:
+            all_sem = np.dot(embs, q[0])
+            cand_idx = np.argsort(-all_sem)[:top_k_sem]
+            sem_scores = all_sem[cand_idx]
+
+        cand_df = work.iloc[cand_idx].copy()
+        cand_df["__sem"] = sem_scores
+
+        # 단위 일치 후보만
+        unit_df = cand_df[cand_df["__Unit_norm"] == boq_unit].reset_index(drop=True)
+        if unit_df.empty:
+            continue
+
+        # hybrid score
+        hyb = hybrid_scores(
+            boq_text_norm,
+            unit_df["__db_text_norm"],
+            unit_df["__sem"].to_numpy(),
+            sim_w_str,
+            sim_w_sem
+        )
+        unit_df["__hyb"] = hyb
+
+        unit_df = unit_df.sort_values("__hyb", ascending=False).head(pool_per_boq).copy()
+
+        # BOQ 메타
+        unit_df["BOQ_ID"] = int(i)
+        unit_df["BOQ_명칭"] = boq_name
+        unit_df["BOQ_규격"] = boq_spec
+        unit_df["BOQ_단위"] = boq_unit
+        unit_df["BOQ_수량"] = b.get("수량", "")
+        unit_df["BOQ_단가"] = b.get("단가", "")
+
+        pool_rows.append(unit_df)
+
+    if not pool_rows:
+        return pd.DataFrame()
+
+    pool = pd.concat(pool_rows, ignore_index=True)
+
+    keep_cols = [
+        "BOQ_ID","BOQ_명칭","BOQ_규격","BOQ_단위","BOQ_수량","BOQ_단가",
+        "현장코드","현장명","현장특성",
+        "실행명칭","규격","단위","수량",
+        "계약단가","보정단가","계약월",
+        "업체코드","업체명",
+        "공종Code분류","세부분류",
+        "__price_raw","__hyb",
+    ]
+    for c in keep_cols:
+        if c not in pool.columns:
+            pool[c] = None
+    return pool[keep_cols].copy()
+
+def fast_recompute_from_pool_domestic(
+    pool: pd.DataFrame,
+    sim_threshold: float,
+    cut_ratio: float,
+) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """
+    국내 2단계(가벼움)
+    - threshold 적용
+    - 컷 적용 후 Include/DefaultInclude 설정
+    - 산출단가 = __price_raw(보정단가/계약단가)
+    """
+    if pool is None or pool.empty:
+        return pd.DataFrame(), pd.DataFrame()
+
+    df = pool.copy()
+    df["__hyb"] = pd.to_numeric(df["__hyb"], errors="coerce").fillna(0.0)
+    df = df[df["__hyb"] >= float(sim_threshold)].copy()
+    if df.empty:
+        return pd.DataFrame(), pd.DataFrame()
+
+    df["__adj_price"] = pd.to_numeric(df["__price_raw"], errors="coerce").fillna(0.0)
+
+    df["Include"] = False
+    df["DefaultInclude"] = False
+
+    for boq_id, gidx in df.groupby("BOQ_ID").groups.items():
+        sub = df.loc[gidx].sort_values("__adj_price").copy()
+        n = len(sub)
+        cut = max(0, int(n * cut_ratio)) if n > 5 else 0
+
+        if cut > 0:
+            keep_mask = np.zeros(n, dtype=bool)
+            keep_mask[cut:n - cut] = True
+        else:
+            keep_mask = np.ones(n, dtype=bool)
+
+        kept_index = sub.index[keep_mask]
+        df.loc[kept_index, "DefaultInclude"] = True
+        df.loc[kept_index, "Include"] = True
+
+    # BOQ 결과
+    results = []
+    for boq_id, sub in df.groupby("BOQ_ID"):
+        inc = sub[sub["Include"] == True]
+        one = sub.iloc[0]
+
+        if inc.empty:
+            final_price = None
+            reason_text = "매칭 후보 없음(또는 전부 제외)"
+        else:
+            final_price = float(pd.to_numeric(inc["__adj_price"], errors="coerce").mean())
+            reason_text = f"{len(inc)}개 내역 평균(국내DB)"
+
+        results.append({
+            "BOQ_ID": int(boq_id),
+            "명칭": one.get("BOQ_명칭", ""),
+            "규격": one.get("BOQ_규격", ""),
+            "단위": one.get("BOQ_단위", ""),
+            "수량": one.get("BOQ_수량", ""),
+            "Final Price": f"{final_price:,.2f}" if final_price is not None else None,
+            "산출근거": reason_text,
+        })
+
+    result_df = pd.DataFrame(results).sort_values("BOQ_ID").reset_index(drop=True)
+
+    log_cols = [
+        "BOQ_ID","BOQ_명칭","BOQ_규격","BOQ_단위","BOQ_수량","BOQ_단가",
+        "Include","DefaultInclude",
+        "현장코드","현장명","현장특성",
+        "실행명칭","규격","단위","수량",
+        "계약단가","보정단가","계약월",
+        "업체코드","업체명",
+        "공종Code분류","세부분류",
+        "__adj_price","__hyb",
+    ]
+    for c in log_cols:
+        if c not in df.columns:
+            df[c] = None
+    log_df = df[log_cols].copy()
+
+    return result_df, log_df
+
+    
     result_df = pd.DataFrame(results).sort_values("BOQ_ID").reset_index(drop=True)
 
     # 6) 산출 로그(log_df) 반환(Include 편집 가능하도록 필요한 컬럼 포함)
@@ -1523,12 +1354,20 @@ def load_excel_from_repo(filename: str) -> pd.DataFrame:
     return pd.read_excel(path, engine="openpyxl")
 
 
-cost_db = load_excel_from_repo("cost_db.xlsx")
-price_index = load_excel_from_repo("price_index.xlsx")
-exchange = load_excel_from_repo("exchange.xlsx")
-factor = load_excel_from_repo("Factor.xlsx")
-project_feature_long = load_excel_from_repo("project_feature_long.xlsx")
-feature_master = load_excel_from_repo("feature_master_FID.xlsx")
+@st.cache_data(show_spinner=False)
+def load_overseas_data():
+    cost_db = load_excel_from_repo("cost_db.xlsx")
+    price_index = load_excel_from_repo("price_index.xlsx")
+    exchange = load_excel_from_repo("exchange.xlsx")
+    factor = load_excel_from_repo("Factor.xlsx")
+    project_feature_long = load_excel_from_repo("project_feature_long.xlsx")
+    feature_master = load_excel_from_repo("feature_master_FID.xlsx")
+    return cost_db, price_index, exchange, factor, project_feature_long, feature_master
+
+@st.cache_data(show_spinner=False)
+def load_domestic_data():
+    cost_db_kr = load_excel_from_repo("cost_db (kr).xlsx")
+    return cost_db_kr
 
 
 # =========================
@@ -1626,89 +1465,311 @@ if "active_db" not in st.session_state:
 def render_domestic():
     gs_header("📦 국내 실적단가 DB")
 
-    # 국내용 사이드바
+    # -------------------------
+    # Sidebar: 설정(국내)
+    # -------------------------
     st.sidebar.markdown("<div class='sb-major'>⚙️ 설정(국내)</div>", unsafe_allow_html=True)
     st.sidebar.markdown("<hr class='sb-hr'/>", unsafe_allow_html=True)
 
+    # 1) BOQ 업로드
     with st.container(border=True):
-        card_title("📤 BOQ 파일 업로드")
-    
+        card_title("📤 BOQ 파일 업로드(국내)")
         dom_boq_file = st.file_uploader(
             label="",
             type=["xlsx"],
             key="dom_boq_uploader",
             label_visibility="collapsed",
         )
-    
-        card_end()
 
-    _dom_sel_cnt = len(set(
-        st.session_state.get("dom_selected_auto_codes", [])
-        + st.session_state.get("dom_selected_extra_codes", [])
-    ))
-    
+    # 2) 국내 필터(현장특성/현장)
+    # - "해외 특성 선택"은 그대로 두고, 국내는 "현장특성" 기준으로 필터 UI 제공
+    kr = cost_db_kr.copy()
+
+    # 현장특성
+    feat_col = "현장특성"
+    if feat_col not in kr.columns:
+        kr[feat_col] = ""
+
+    feat_options = sorted([x for x in kr[feat_col].astype(str).fillna("").unique().tolist() if x.strip() and x != "nan"])
+    sel_feat = st.sidebar.multiselect(
+        "🏷️ 현장특성(국내)",
+        options=feat_options,
+        default=st.session_state.get("dom_sel_feat", []),
+        key="dom_sel_feat",
+    )
+
+    if sel_feat:
+        kr_view = kr[kr[feat_col].astype(str).isin(sel_feat)].copy()
+    else:
+        kr_view = kr
+
+    # 현장 선택(국내)
+    if "현장코드" not in kr_view.columns:
+        kr_view["현장코드"] = ""
+    if "현장명" not in kr_view.columns:
+        kr_view["현장명"] = ""
+
+    site_df = kr_view[["현장코드", "현장명"]].copy()
+    site_df = site_df.dropna(subset=["현장코드"])
+    site_df["현장코드"] = site_df["현장코드"].apply(norm_site_code)
+    site_df["현장명"] = site_df["현장명"].astype(str).fillna("").str.strip()
+    site_df.loc[site_df["현장명"].isin(["", "nan", "None"]), "현장명"] = "(현장명없음)"
+    site_df = site_df.drop_duplicates(subset=["현장코드"]).reset_index(drop=True)
+
+    all_codes = site_df["현장코드"].tolist()
+    code_to_name = dict(zip(site_df["현장코드"], site_df["현장명"]))
+
+    def fmt_site(code: str) -> str:
+        name = code_to_name.get(code, "").strip()
+        return (name[:25] + "…") if len(name) > 25 else name
+
     st.sidebar.markdown(
         f"""
         <div class="sb-row">
-          <div class="sb-title">🏗️ 실적 현장 선택</div>
-          <div class="sb-muted">선택 현장: {_dom_sel_cnt}개</div>
+          <div class="sb-title">🏗️ 실적 현장 선택(국내)</div>
+          <div class="sb-muted">가능 현장: {len(all_codes)}개</div>
         </div>
         """,
         unsafe_allow_html=True
     )
     st.sidebar.markdown("<hr class='sb-hr'/>", unsafe_allow_html=True)
 
-    # TODO: domestic_cost_db 연결 시 교체
-    try:
-        site_df = cost_db[["현장코드", "현장명"]].copy().dropna(subset=["현장코드"])
-        site_df["현장코드"] = site_df["현장코드"].apply(norm_site_code)
-        site_df["현장명"] = site_df["현장명"].astype(str).fillna("").str.strip()
-        site_df.loc[site_df["현장명"].isin(["", "nan", "None"]), "현장명"] = "(현장명없음)"
-        site_df = site_df.drop_duplicates(subset=["현장코드"]).reset_index(drop=True)
+    dom_selected_sites = st.sidebar.multiselect(
+        "국내 실적현장",
+        options=all_codes,
+        default=st.session_state.get("dom_selected_site_codes", []),
+        key="dom_selected_site_codes",
+        format_func=fmt_site,
+    )
 
-        all_codes = site_df["현장코드"].tolist()
-        code_to_name = dict(zip(site_df["현장코드"], site_df["현장명"]))
-
-        def fmt_site_name(code: str) -> str:
-            name = code_to_name.get(code, "")
-            name = name.strip()
-            return (name[:25] + "…") if len(name) > 25 else name
-
-        st.sidebar.multiselect(
-            "국내 실적현장",
-            options=all_codes,
-            default=[],
-            key="dom_selected_site_codes",
-            format_func=fmt_site_name,
-        )
-    except Exception:
-        st.sidebar.info("국내 현장 목록 로드 불가(국내 DB 연결 전).")
-
-    st.sidebar.markdown("<div class='sb-title'>🧩 설정값</div>", unsafe_allow_html=True)
+    # 3) 설정값
+    st.sidebar.markdown("<div class='sb-title'>🧩 설정값(국내)</div>", unsafe_allow_html=True)
     st.sidebar.markdown("<hr class='sb-hr'/>", unsafe_allow_html=True)
 
-    st.sidebar.slider("매칭 유사도 기준값(%)", 0, 100, 60, 5, key="dom_sim_threshold")
-    st.sidebar.slider("상/하위 컷 비율 (%)", 0, 30, 20, 5, key="dom_cut_ratio")
+    # 해외랑 비슷하게 유지
+    DEFAULT_W_STR = 0.35
+    w_str = DEFAULT_W_STR
+    w_sem = 1.0 - w_str
+    top_k_sem = 200
+
+    dom_sim_threshold = st.sidebar.slider("매칭 유사도 기준값(%)", 0, 100, 65, 5, key="dom_sim_threshold")
+    dom_cut_ratio = st.sidebar.slider("상/하위 컷 비율 (%)", 0, 30, 20, 5, key="dom_cut_ratio") / 100.0
+
+    sidebar_hr(thick=True, mt=10, mb=8)
+
+    # -------------------------
+    # Run / Auto Recompute(국내)
+    # -------------------------
+    def dom_boq_file_signature(uploaded_file) -> str:
+        if uploaded_file is None:
+            return "no_boq"
+        try:
+            b = uploaded_file.getvalue()
+            if len(b) > 2_000_000:
+                b = b[:1_000_000] + b[-1_000_000:]
+            return hashlib.md5(b).hexdigest()
+        except Exception:
+            return f"{getattr(uploaded_file, 'name', 'boq')}_{getattr(uploaded_file, 'size', '')}"
+
+    def make_dom_params_signature() -> str:
+        payload = {
+            "boq": dom_boq_file_signature(dom_boq_file),
+            "sel_feat": sorted([str(x) for x in (sel_feat or [])]),
+            "sel_sites": sorted([norm_site_code(x) for x in (dom_selected_sites or [])]),
+            "sim_threshold": float(dom_sim_threshold),
+            "cut_ratio": float(dom_cut_ratio),
+            "w_str": float(w_str),
+            "w_sem": float(w_sem),
+            "top_k_sem": int(top_k_sem),
+        }
+        s = json.dumps(payload, ensure_ascii=False, sort_keys=True)
+        return hashlib.md5(s.encode("utf-8")).hexdigest()
+
+    def run_domestic_and_store(run_sig: str):
+        status_box = st.empty()
+
+        if dom_boq_file is None:
+            status_box.empty()
+            st.warning("국내 BOQ 파일을 업로드해 주세요.")
+            return
+
+        progress = st.progress(0.0)
+        prog_text = st.empty()
+
+        status_box.markdown("### ⏳ [국내] 산출중... (BOQ 로드)")
+        boq_kr = pd.read_excel(dom_boq_file, engine="openpyxl")
+
+        # 국내 BOQ 컬럼 보강(첫 열: 명칭 규격 단위 수량 단가)
+        need_boq_cols = ["명칭","규격","단위","수량","단가"]
+        for c in need_boq_cols:
+            if c not in boq_kr.columns:
+                boq_kr[c] = ""
+
+        # 국내 DB 필터 적용(현장특성/현장)
+        db_run = cost_db_kr.copy()
+        if sel_feat:
+            db_run = db_run[db_run["현장특성"].astype(str).isin([str(x) for x in sel_feat])].copy()
+        if dom_selected_sites:
+            db_run = db_run[db_run["현장코드"].apply(norm_site_code).isin([norm_site_code(x) for x in dom_selected_sites])].copy()
+
+        st.sidebar.caption(f"[국내] 전체 {len(cost_db_kr):,}개 중 {len(db_run):,}개로 산출")
+
+        pool_sig_payload = {
+            "boq": dom_boq_file_signature(dom_boq_file),
+            "sel_feat": sorted([str(x) for x in (sel_feat or [])]),
+            "sel_sites": sorted([norm_site_code(x) for x in (dom_selected_sites or [])]),
+            "top_k_sem": int(top_k_sem),
+            "w_str": float(w_str),
+            "w_sem": float(w_sem),
+            "db_rows": int(len(db_run)),
+        }
+        pool_sig = hashlib.md5(json.dumps(pool_sig_payload, sort_keys=True).encode("utf-8")).hexdigest()
+
+        need_new_pool = (st.session_state.get("dom_candidate_pool_sig") != pool_sig) or ("dom_candidate_pool" not in st.session_state)
+
+        if need_new_pool:
+            status_box.markdown("### ⏳ [국내] 산출중... (후보 풀 생성)")
+            with st.spinner("[국내] 후보 풀 생성 중..."):
+                pool = build_candidate_pool_domestic(
+                    cost_db_kr=db_run,
+                    boq_kr=boq_kr,
+                    sim_w_str=w_str,
+                    sim_w_sem=w_sem,
+                    top_k_sem=top_k_sem,
+                    pool_per_boq=400,
+                    progress=progress,
+                    prog_text=prog_text,
+                )
+            st.session_state["dom_candidate_pool"] = pool
+            st.session_state["dom_candidate_pool_sig"] = pool_sig
+        else:
+            pool = st.session_state["dom_candidate_pool"]
+
+        status_box.markdown("### ⏳ [국내] 산출중... (Threshold/컷 반영)")
+        with st.spinner("[국내] 빠른 재계산 중..."):
+            result_df, log_df = fast_recompute_from_pool_domestic(
+                pool=pool,
+                sim_threshold=dom_sim_threshold,
+                cut_ratio=dom_cut_ratio,
+            )
+
+        st.session_state["dom_boq_df"] = boq_kr
+        st.session_state["dom_result_df_base"] = result_df.copy()
+        st.session_state["dom_log_df_base"] = log_df.copy()
+        st.session_state["dom_log_df_edited"] = log_df.copy()
+        st.session_state["dom_has_results"] = True
+        st.session_state["dom_last_run_sig"] = run_sig
 
     run_dom_btn = st.sidebar.button("🚀 산출 실행(국내)", key="dom_run_btn")
 
-    
-    tab1, tab2, tab3 = st.tabs(["📄 BOQ 결과(국내)", "🧾 산출 로그(국내)", "📝 근거 보고서(국내)"])
+    cur_sig = make_dom_params_signature()
+    last_sig = st.session_state.get("dom_last_run_sig", None)
+    needs_rerun = (last_sig is not None and cur_sig != last_sig)
+
+    # 자동재산출은 국내도 ON(원하면 False로 바꾸면 됩니다)
+    auto_recompute = True
+    auto_run = st.session_state.get("dom_has_results", False) and needs_rerun and auto_recompute
+
+    if run_dom_btn or auto_run:
+        run_domestic_and_store(cur_sig)
+
+    # -------------------------
+    # Tabs(국내)
+    # -------------------------
+    tab1, tab2, tab3 = st.tabs(["📄 BOQ 결과(국내)", "🧾 산출 로그(국내)", "⬇️ 다운로드(국내)"])
 
     with tab1:
-        if dom_boq_file is None:
-            st.info("BOQ 업로드 후 국내 산출을 실행할 수 있습니다.")
+        if not st.session_state.get("dom_has_results", False):
+            st.info("국내 BOQ 업로드 후 '산출 실행(국내)'을 눌러주세요.")
         else:
-            st.success("국내 BOQ 업로드 완료(산출 로직은 추후 연결).")
+            show_df = st.session_state.get("dom_result_df_base", pd.DataFrame()).copy()
+            st.dataframe(show_df, use_container_width=True)
 
     with tab2:
-        st.info("국내 산출 로그 UI/편집 기능은 추후 연결.")
+        if not st.session_state.get("dom_has_results", False):
+            st.info("산출 실행 후 로그가 표시됩니다.")
+        else:
+            log_df = st.session_state.get("dom_log_df_edited", st.session_state.get("dom_log_df_base", pd.DataFrame())).copy()
+
+            # 편집: Include만 허용(해외와 동일 UX)
+            display_cols = [
+                "Include","DefaultInclude",
+                "실행명칭","규격","단위","수량",
+                "보정단가","계약단가","계약월",
+                "__adj_price","__hyb",
+                "현장코드","현장명","현장특성",
+                "업체코드","업체명",
+                "공종Code분류","세부분류",
+            ]
+            for c in display_cols:
+                if c not in log_df.columns:
+                    log_df[c] = None
+
+            edited = st.data_editor(
+                log_df[display_cols].copy(),
+                use_container_width=True,
+                hide_index=True,
+                column_config={
+                    "Include": st.column_config.CheckboxColumn("포함"),
+                    "DefaultInclude": st.column_config.CheckboxColumn("기본포함"),
+                    "__adj_price": st.column_config.NumberColumn("산출단가", format="%.2f"),
+                    "__hyb": st.column_config.NumberColumn("유사도", format="%.2f"),
+                    "보정단가": st.column_config.NumberColumn("보정단가", format="%.2f"),
+                    "계약단가": st.column_config.NumberColumn("계약단가", format="%.2f"),
+                },
+                disabled=[c for c in display_cols if c != "Include"],
+                key="dom_log_editor",
+            )
+
+            # Include 반영
+            st.session_state["dom_log_df_edited"] = log_df.copy()
+            st.session_state["dom_log_df_edited"].loc[edited.index, "Include"] = edited["Include"].values
+
+            # 결과 재계산(Include 기반)
+            # - 해외처럼 별도 함수로 만들 수도 있지만, 국내는 단순 평균이라 여기서 처리
+            base = st.session_state.get("dom_result_df_base", pd.DataFrame()).copy()
+            cur_log = st.session_state["dom_log_df_edited"]
+
+            upd_rows = []
+            for boq_id, g in cur_log.groupby("BOQ_ID"):
+                g2 = g[g["Include"] == True]
+                if g2.empty:
+                    price = None
+                    reason = "매칭 후보 없음(또는 전부 제외)"
+                else:
+                    price = float(pd.to_numeric(g2["__adj_price"], errors="coerce").mean())
+                    reason = f"{len(g2)}개 내역 평균(국내DB)"
+                one = g.iloc[0]
+                upd_rows.append({
+                    "BOQ_ID": int(boq_id),
+                    "Final Price": f"{price:,.2f}" if price is not None else None,
+                    "산출근거": reason,
+                    "명칭": one.get("BOQ_명칭",""),
+                    "규격": one.get("BOQ_규격",""),
+                    "단위": one.get("BOQ_단위",""),
+                    "수량": one.get("BOQ_수량",""),
+                })
+            st.session_state["dom_result_df_adjusted"] = pd.DataFrame(upd_rows).sort_values("BOQ_ID").reset_index(drop=True)
 
     with tab3:
-        st.info("국내 근거 보고서 UI는 추후 연결.")
+        if not st.session_state.get("dom_has_results", False):
+            st.info("산출 실행 후 다운로드가 가능합니다.")
+        else:
+            out_result = st.session_state.get("dom_result_df_adjusted", st.session_state.get("dom_result_df_base", pd.DataFrame())).copy()
+            out_log = st.session_state.get("dom_log_df_edited", st.session_state.get("dom_log_df_base", pd.DataFrame())).copy()
 
-    if run_dom_btn:
-        st.warning("국내 산출 로직은 아직 미연결 상태입니다. (UI만 생성됨)")
+            bio = io.BytesIO()
+            with pd.ExcelWriter(bio, engine="openpyxl") as writer:
+                out_result.to_excel(writer, index=False, sheet_name="boq_with_price_kr")
+                out_log.to_excel(writer, index=False, sheet_name="calculation_log_kr")
+            bio.seek(0)
+
+            st.download_button(
+                "⬇️ Excel 다운로드(국내)",
+                data=bio.read(),
+                file_name="result_unitrate_kr.xlsx",
+                key="dom_download_btn",
+            )
 
 
 # ============================================================
@@ -2408,27 +2469,6 @@ with tab_dom:
         st.info("현재 활성 화면은 해외 탭입니다. 전환 버튼을 눌러 활성화하세요.")
     else:
         render_domestic()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
