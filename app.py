@@ -1439,11 +1439,13 @@ def apply_feature_column_alias(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
+# --- 변경 후 (수정할 코드) ---
+# 데이터 파일(data/*.xlsx)에서 실제로 읽어와 변수에 할당
+cost_db, price_index, exchange, factor, project_feature_long, feature_master = load_overseas_data()
+
+# 이제 표준화 적용
 project_feature_long = standardize_columns(project_feature_long)
 feature_master = standardize_columns(feature_master)
-
-project_feature_long = apply_feature_column_alias(project_feature_long)
-feature_master = apply_feature_column_alias(feature_master)
 
 
 # =========================
@@ -2469,6 +2471,7 @@ with tab_dom:
         st.info("현재 활성 화면은 해외 탭입니다. 전환 버튼을 눌러 활성화하세요.")
     else:
         render_domestic()
+
 
 
 
