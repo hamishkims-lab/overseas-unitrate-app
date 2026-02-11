@@ -1362,36 +1362,6 @@ project_feature_long = load_excel_from_repo("project_feature_long.xlsx")
 feature_master = load_excel_from_repo("feature_master_FID.xlsx")
 cost_db_kr = load_excel_from_repo("cost_db (kr).xlsx")
 
-# --- 강력한 방어: cost_db 계열 컬럼 표준화 및 필수 컬럼 보강 --- #
-# standardize_columns() 함수는 위에서 이미 정의됨(컬럼명 공백 제거 등)
-
-# 보강 유틸
-def ensure_cols(df: pd.DataFrame, cols: list) -> pd.DataFrame:
-    df = df.copy()
-    for c in cols:
-        if c not in df.columns:
-            df[c] = ""
-    return df
-
-# 1) 표준화 적용 (모든 DB에 대해)
-cost_db = standardize_columns(cost_db)
-cost_db_kr = standardize_columns(cost_db_kr)
-price_index = standardize_columns(price_index)
-exchange = standardize_columns(exchange)
-factor = standardize_columns(factor)
-
-# 2) cost_db / cost_db_kr 에 대해 최소 컬럼 보강(이름 불일치로 KeyError 방지)
-min_cols_costdb = [
-    "현장코드", "현장명", "내역", "Unit", "Unit Price", "계약년월",
-    "공종코드", "공종명", "협력사코드", "협력사명"
-]
-cost_db = ensure_cols(cost_db, min_cols_costdb)
-
-min_cols_costdb_kr = [
-    "현장코드","현장명","실행명칭","규격","단위","수량","계약단가","보정단가","업체코드","업체명","계약월","공종Code분류","세부분류","현장특성"
-]
-cost_db_kr = ensure_cols(cost_db_kr, min_cols_costdb_kr)
-
 
 # =========================
 # ✅ 컬럼명 표준화 + alias 매핑 (KeyError 방지)
@@ -2492,8 +2462,6 @@ with tab_dom:
         st.info("현재 활성 화면은 해외 탭입니다. 전환 버튼을 눌러 활성화하세요.")
     else:
         render_domestic()
-
-
 
 
 
