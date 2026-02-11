@@ -739,6 +739,150 @@ def fast_recompute_from_pool(
 
     return result_df, log_df
 
+def build_candidate_pool_domestic(
+    cost_db_kr: pd.DataFrame,
+    boq_kr: pd.DataFrame,
+    sim_w_str: float,
+    sim_w_sem: float,
+    top_k_sem: int,
+    pool_per_boq: int = 400,
+    progress=None,
+    prog_text=None,
+) -> pd.DataFrame:
+    """
+    국내 1단계(무거움): BOQ별 후보 풀 생성
+    - 문자열+임베딩 하이브리드로 후보 생성
+    - 단위 일치 필수
+    - 보정단가(있으면) 우선, 없으면 계약단가를 __price_raw로 사용
+    - fast_recompute_from_pool_domestic에서 threshold/cut/include 처리
+    """
+
+    if cost_db_kr is None or cost_db_kr.empty or boq_kr is None or boq_kr.empty:
+        return pd.DataFrame()
+
+    # 0) BOQ 표준 컬럼 보강
+    b = boq_kr.copy()
+    need_boq_cols = ["명칭", "규격", "단위", "수량", "단가"]
+    for c in need_boq_cols:
+        if c not in b.columns:
+            b[c] = ""
+
+    # 1) DB 표준 컬럼 보강
+    db = cost_db_kr.copy()
+
+    # 국내 DB에서 사용할 컬럼들(없으면 빈값 생성)
+    # 실행명칭/규격/단위/수량/계약단가/보정단가/계약월은 이후 산출/로그에 필요
+    must = [
+        "현장코드","현장명","현장특성",
+        "실행명칭","규격","단위","수량",
+        "계약단가","보정단가","계약월",
+        "업체코드","업체명",
+        "공종Code분류","세부분류",
+    ]
+    for c in must:
+        if c not in db.columns:
+            db[c] = ""
+
+    # 2) 매칭용 텍스트/단위 정규화
+    db["__db_text_norm"] = db.apply(lambda r: norm_kr_db_text(r.get("실행명칭",""), r.get("규격","")), axis=1)
+    db["__unit_norm"] = db["단위"].apply(norm_unit_kr)
+
+    # 가격 원천: 보정단가 우선, 없으면 계약단가
+    price_adj = pd.to_numeric(db["보정단가"], errors="coerce")
+    price_ctr = pd.to_numeric(db["계약단가"], errors="coerce")
+    db["__price_raw"] = price_adj.where(price_adj.notna() & (price_adj > 0), price_ctr)
+    db = db[pd.to_numeric(db["__price_raw"], errors="coerce").fillna(0) > 0].copy()
+
+    if db.empty:
+        return pd.DataFrame()
+
+    # 3) 임베딩(국내 DB)
+    fp = file_fingerprint(db, ["__db_text_norm", "__unit_norm", "__price_raw"])
+    embs = compute_or_load_embeddings(db["__db_text_norm"], tag=f"costdb_kr_{fp}")
+
+    index = build_faiss_index(embs) if FAISS_OK else None
+
+    pool_rows = []
+    total = len(b) if len(b) else 1
+
+    for i, (_, r) in enumerate(b.iterrows(), start=1):
+        if prog_text is not None:
+            prog_text.text(f"[국내] 후보 풀 생성: {i}/{total} 처리 중…")
+        if progress is not None:
+            progress.progress(i / total)
+
+        boq_name = str(r.get("명칭", ""))
+        boq_spec = str(r.get("규격", ""))
+        boq_unit = norm_unit_kr(r.get("단위", ""))
+
+        boq_text_norm = norm_kr_boq_text(boq_name, boq_spec)
+
+        # Query embedding
+        q = model.encode([boq_text_norm], batch_size=1, convert_to_tensor=False)
+        q = np.asarray(q, dtype="float32")
+        q = q / (np.linalg.norm(q, axis=1, keepdims=True) + 1e-12)
+
+        # semantic topK
+        if FAISS_OK:
+            D, I = search_faiss(index, q, top_k=top_k_sem)
+            cand_idx = I[0]
+            sem_scores = D[0]
+        else:
+            all_sem = np.dot(embs, q[0])
+            cand_idx = np.argsort(-all_sem)[:top_k_sem]
+            sem_scores = all_sem[cand_idx]
+
+        cand = db.iloc[cand_idx].copy()
+        cand["__sem"] = sem_scores
+
+        # 단위 일치 필수
+        cand = cand[cand["__unit_norm"] == boq_unit].reset_index(drop=True)
+        if cand.empty:
+            continue
+
+        # hybrid score
+        hyb = hybrid_scores(
+            boq_text_norm,
+            cand["__db_text_norm"],
+            cand["__sem"].to_numpy(),
+            sim_w_str,
+            sim_w_sem,
+        )
+        cand["__hyb"] = hyb
+
+        cand = cand.sort_values("__hyb", ascending=False).head(pool_per_boq).copy()
+
+        # BOQ 메타
+        cand["BOQ_ID"] = int(i)
+        cand["BOQ_명칭"] = boq_name
+        cand["BOQ_규격"] = boq_spec
+        cand["BOQ_단위"] = boq_unit
+        cand["BOQ_수량"] = r.get("수량", "")
+        cand["BOQ_단가"] = r.get("단가", "")
+
+        pool_rows.append(cand)
+
+    if not pool_rows:
+        return pd.DataFrame()
+
+    pool = pd.concat(pool_rows, ignore_index=True)
+
+    # 로그/후속 처리에서 필요한 컬럼들 포함해서 반환
+    keep_cols = [
+        "BOQ_ID","BOQ_명칭","BOQ_규격","BOQ_단위","BOQ_수량","BOQ_단가",
+        "현장코드","현장명","현장특성",
+        "실행명칭","규격","단위","수량",
+        "계약단가","보정단가","계약월",
+        "업체코드","업체명",
+        "공종Code분류","세부분류",
+        "__price_raw","__hyb",
+    ]
+    for c in keep_cols:
+        if c not in pool.columns:
+            pool[c] = None
+
+    return pool[keep_cols].copy()
+
 def fast_recompute_from_pool_domestic(
     pool: pd.DataFrame,
     sim_threshold: float,
@@ -813,30 +957,6 @@ def fast_recompute_from_pool_domestic(
         "업체코드","업체명",
         "공종Code분류","세부분류",
         "__adj_price","__hyb",
-    ]
-    for c in log_cols:
-        if c not in df.columns:
-            df[c] = None
-    log_df = df[log_cols].copy()
-
-    return result_df, log_df
-
-    
-    result_df = pd.DataFrame(results).sort_values("BOQ_ID").reset_index(drop=True)
-
-    # 6) 산출 로그(log_df) 반환(Include 편집 가능하도록 필요한 컬럼 포함)
-    log_cols = [
-        "BOQ_ID", "BOQ_내역", "BOQ_Unit",
-        "Include", "DefaultInclude",
-        "공종코드", "공종명",
-        "내역", "Unit",
-        "Unit Price", "통화", "계약년월",
-        "__adj_price", "산출통화",
-        "__cpi_ratio", "__latest_ym",
-        "__fx_ratio", "__fac_ratio",
-        "__hyb",
-        "현장코드", "현장명",
-        "협력사코드", "협력사명",
     ]
     for c in log_cols:
         if c not in df.columns:
@@ -1361,14 +1481,6 @@ feature_master = standardize_columns(feature_master)
 project_feature_long = apply_feature_column_alias(project_feature_long)
 feature_master = apply_feature_column_alias(feature_master)
 
-
-# --- 변경 후 (수정할 코드) ---
-# 데이터 파일(data/*.xlsx)에서 실제로 읽어와 변수에 할당
-cost_db, price_index, exchange, factor, project_feature_long, feature_master = load_overseas_data()
-
-# 이제 표준화 적용
-project_feature_long = standardize_columns(project_feature_long)
-feature_master = standardize_columns(feature_master)
 
 
 # =========================
@@ -2394,6 +2506,7 @@ with tab_dom:
         st.info("현재 활성 화면은 해외 탭입니다. 전환 버튼을 눌러 활성화하세요.")
     else:
         render_domestic()
+
 
 
 
