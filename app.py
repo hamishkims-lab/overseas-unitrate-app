@@ -1129,15 +1129,13 @@ def load_excel_from_repo(filename: str) -> pd.DataFrame:
     return pd.read_excel(path, engine="openpyxl")
 
 
-
-
 cost_db = load_excel_from_repo("cost_db.xlsx")
 price_index = load_excel_from_repo("price_index.xlsx")
 exchange = load_excel_from_repo("exchange.xlsx")
 factor = load_excel_from_repo("Factor.xlsx")
 project_feature_long = load_excel_from_repo("project_feature_long.xlsx")
 feature_master = load_excel_from_repo("feature_master_FID.xlsx")
-domestic_cost_db_raw = load_excel_from_repo("cost_db (kr).xlsx")
+
 
 # =========================
 # ✅ 컬럼명 표준화 + alias 매핑 (KeyError 방지)
@@ -1156,6 +1154,10 @@ def standardize_columns(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def apply_feature_column_alias(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    feature_master_FID / project_feature_long 컬럼이 조금 달라도
+    아래 '표준 컬럼명'으로 강제 맞춤
+    """
     df = df.copy()
     col_map = {}
 
@@ -1164,6 +1166,7 @@ def apply_feature_column_alias(df: pd.DataFrame) -> pd.DataFrame:
         "대공종": ["대공종", "대 공종", "Major", "Main"],
         "중공종": ["중공종", "중 공종", "Middle"],
         "소공종": ["소공종", "소 공종", "Minor", "Sub"],
+
         "Cost Driver Type": [
             "Cost Driver Type", "CostDriver Type", "Cost DriverType",
             "Cost Driver_Type", "CostDriver_Type", "Type", "Driver Type"
@@ -1176,11 +1179,13 @@ def apply_feature_column_alias(df: pd.DataFrame) -> pd.DataFrame:
             "Cost Driver Condition", "CostDriver Condition", "Cost DriverCondition",
             "Cost Driver_Condition", "CostDriver_Condition", "Condition"
         ],
+
         "현장코드": ["현장코드", "현장 코드", "Site Code", "SiteCode"],
         "현장명": ["현장명", "현장 명", "Site Name", "SiteName"],
     }
 
     cols = list(df.columns)
+
     for std_name, cand_list in aliases.items():
         for cand in cand_list:
             cand_std = _std_colname(cand)
@@ -1201,158 +1206,11 @@ def apply_feature_column_alias(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
-def prep_domestic_cost_db(df: pd.DataFrame) -> pd.DataFrame:
-    d = df.copy()
-    d.columns = [_std_colname(c) for c in d.columns]
-
-    must = [
-        "NO","사업분야","현장코드","현장명","실행명칭","규격","단위","수량","계약단가",
-        "업체코드","업체명","RGNM","계약월","기준지수","비교지수","적용율","보정단가",
-        "공종Code분류","세부분류","현장특성",
-    ]
-    for c in must:
-        if c not in d.columns:
-            d[c] = ""
-
-    d["내역"] = (d["실행명칭"].astype(str).fillna("").str.strip() + " " + d["규격"].astype(str).fillna("").str.strip()).str.strip()
-    d["Unit"] = d["단위"].astype(str).fillna("").str.strip()
-
-    # 세부분류 = 공종명
-    d["공종명"] = d["세부분류"].astype(str).fillna("").str.strip()
-
-    # 지역
-    d["지역"] = d["RGNM"].astype(str).fillna("").str.strip()
-
-    # 계약단가(참고용)
-    d["Unit Price"] = pd.to_numeric(d["계약단가"], errors="coerce")
-
-    # 보정단가 = 산출원천
-    d["보정단가_num"] = pd.to_numeric(d["보정단가"], errors="coerce")
-    d["__base_price"] = d["보정단가_num"]
-
-    # 해외 코드 호환용
-    d["계약년월"] = d["계약월"]
-
-    d["현장코드"] = d["현장코드"].apply(norm_site_code)
-    d["현장명"] = d["현장명"].astype(str).fillna("").str.strip()
-    d.loc[d["현장명"].isin(["", "nan", "None"]), "현장명"] = "(현장명없음)"
-
-    d["협력사코드"] = d["업체코드"].astype(str).fillna("").str.strip()
-    d["협력사명"] = d["업체명"].astype(str).fillna("").str.strip()
-
-    if "공종코드" not in d.columns:
-        d["공종코드"] = ""
-
-    if "통화" not in d.columns:
-        d["통화"] = "KRW"  # 국내는 KRW 고정
-
-    for c in ["공종Code분류","세부분류","현장특성"]:
-        d[c] = d[c].astype(str).fillna("").str.strip()
-        d.loc[d[c].isin(["nan","None"]), c] = ""
-
-    # 최소 필터
-    d = d[(d["내역"].astype(str).str.len() > 0) & (d["Unit"].astype(str).str.len() > 0)].copy()
-    d = d[pd.to_numeric(d["__base_price"], errors="coerce").fillna(0) > 0].copy()
-
-    return d
-
-
-def prep_domestic_boq(df_raw: pd.DataFrame) -> pd.DataFrame:
-    """
-    국내 BOQ 업로드 표준화
-    입력: 명칭/규격/단위/수량/단가
-    출력: 내역/Unit (+비교용 단가)
-    """
-    b = df_raw.copy()
-    b = standardize_columns(b)
-
-    for c in ["명칭", "규격", "단위", "수량", "단가"]:
-        if c not in b.columns:
-            b[c] = ""
-
-    b["내역"] = (b["명칭"].astype(str).fillna("").str.strip() + " " + b["규격"].astype(str).fillna("").str.strip()).str.strip()
-    b["Unit"] = b["단위"].astype(str).fillna("").str.strip()
-    b["수량_num"] = pd.to_numeric(b["수량"], errors="coerce")
-    b["단가_num"] = pd.to_numeric(b["단가"], errors="coerce")
-
-    return b
-
-
-# =========================
-# 데이터 로드 (⚠️ 반드시 함수들 정의 후!)
-# =========================
-cost_db = load_excel_from_repo("cost_db.xlsx")
-price_index = load_excel_from_repo("price_index.xlsx")
-exchange = load_excel_from_repo("exchange.xlsx")
-factor = load_excel_from_repo("Factor.xlsx")
-project_feature_long = load_excel_from_repo("project_feature_long.xlsx")
-feature_master = load_excel_from_repo("feature_master_FID.xlsx")
-domestic_cost_db_raw = load_excel_from_repo("cost_db (kr).xlsx")
-
-# 표준화/alias
 project_feature_long = standardize_columns(project_feature_long)
 feature_master = standardize_columns(feature_master)
+
 project_feature_long = apply_feature_column_alias(project_feature_long)
 feature_master = apply_feature_column_alias(feature_master)
-
-# 국내 DB 전처리
-domestic_cost_db = prep_domestic_cost_db(domestic_cost_db_raw)
-
-def prep_domestic_cost_db(df: pd.DataFrame) -> pd.DataFrame:
-    d = df.copy()
-    d.columns = [_std_colname(c) for c in d.columns]
-
-    must = [
-        "NO","사업분야","현장코드","현장명","실행명칭","규격","단위","수량","계약단가",
-        "업체코드","업체명","RGNM","계약월","기준지수","비교지수","적용율","보정단가",
-        "공종Code분류","세부분류","현장특성",
-    ]
-    for c in must:
-        if c not in d.columns:
-            d[c] = ""
-
-    d["내역"] = (d["실행명칭"].astype(str).fillna("").str.strip() + " " + d["규격"].astype(str).fillna("").str.strip()).str.strip()
-    d["Unit"] = d["단위"].astype(str).fillna("").str.strip()
-
-    # 세부분류 = 공종명
-    d["공종명"] = d["세부분류"].astype(str).fillna("").str.strip()
-
-    # 지역
-    d["지역"] = d["RGNM"].astype(str).fillna("").str.strip()
-
-    # 계약단가(참고용)
-    d["Unit Price"] = pd.to_numeric(d["계약단가"], errors="coerce")
-
-    # 보정단가 = 산출원천
-    d["보정단가_num"] = pd.to_numeric(d["보정단가"], errors="coerce")
-    d["__base_price"] = d["보정단가_num"]
-
-    d["계약년월"] = d["계약월"]
-
-    d["현장코드"] = d["현장코드"].apply(norm_site_code)
-    d["현장명"] = d["현장명"].astype(str).fillna("").str.strip()
-    d.loc[d["현장명"].isin(["", "nan", "None"]), "현장명"] = "(현장명없음)"
-
-    d["협력사코드"] = d["업체코드"].astype(str).fillna("").str.strip()
-    d["협력사명"] = d["업체명"].astype(str).fillna("").str.strip()
-
-    # 해외 keep_cols 호환용(없으면 빈값)
-    if "공종코드" not in d.columns:
-        d["공종코드"] = ""
-    if "통화" not in d.columns:
-        d["통화"] = "KRW"   # 국내는 일단 KRW로 고정(없으면)
-
-    for c in ["공종Code분류","세부분류","현장특성"]:
-        d[c] = d[c].astype(str).fillna("").str.strip()
-        d.loc[d[c].isin(["nan","None"]), c] = ""
-
-    # 최소 필터: 내역/Unit/보정단가
-    d = d[(d["내역"].astype(str).str.len() > 0) & (d["Unit"].astype(str).str.len() > 0)].copy()
-    d = d[pd.to_numeric(d["__base_price"], errors="coerce").fillna(0) > 0].copy()
-
-    return d
-
-
 
 
 # =========================
@@ -1439,9 +1297,6 @@ def render_domestic():
     st.sidebar.slider("상/하위 컷 비율 (%)", 0, 30, 20, 5, key="dom_cut_ratio")
 
     run_dom_btn = st.sidebar.button("🚀 산출 실행(국내)", key="dom_run_btn")
-
-
-    
 
     
     tab1, tab2, tab3 = st.tabs(["📄 BOQ 결과(국내)", "🧾 산출 로그(국내)", "📝 근거 보고서(국내)"])
@@ -2159,46 +2014,6 @@ with tab_dom:
         st.info("현재 활성 화면은 해외 탭입니다. 전환 버튼을 눌러 활성화하세요.")
     else:
         render_domestic()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
