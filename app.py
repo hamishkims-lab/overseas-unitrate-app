@@ -646,20 +646,18 @@ def fast_recompute_from_pool(
     df = pool.copy()
 
     # 1) Threshold 적용
-    df = df[pd.to_numeric(df["__hyb"], errors="coerce").fillna(0) >= float(sim_threshold)].copy()
+    df["__hyb"] = pd.to_numeric(df["__hyb"], errors="coerce").fillna(0.0)
+    df = df[df["__hyb"] >= float(sim_threshold)].copy()
     if df.empty:
         return pd.DataFrame(), pd.DataFrame()
 
-    # 2) FX/Factor 맵(통화별) 만들어 vectorized 계산
-    currencies = df["통화"].astype(str).str.upper().unique().tolist()
+    # 2) FX/Factor 맵(통화별)
+    df["통화_std"] = df["통화"].astype(str).str.upper().str.strip()
+    currencies = df["통화_std"].dropna().unique().tolist()
 
-    fx_map = {}
-    fac_map = {}
-    for c in currencies:
-        fx_map[c] = get_exchange_rate(exchange, c, target_currency)
-        fac_map[c] = get_factor_ratio(factor, c, target_currency)
+    fx_map = {c: get_exchange_rate(exchange, c, target_currency) for c in currencies}
+    fac_map = {c: get_factor_ratio(factor, c, target_currency) for c in currencies}
 
-    df["통화_std"] = df["통화"].astype(str).str.upper()
     df["__fx_ratio"] = df["통화_std"].map(fx_map).fillna(1.0)
     df["__fac_ratio"] = df["통화_std"].map(fac_map).fillna(1.0)
     df["산출통화"] = target_currency
@@ -688,16 +686,17 @@ def fast_recompute_from_pool(
         df.loc[kept_index, "DefaultInclude"] = True
         df.loc[kept_index, "Include"] = True
 
-    # 5) BOQ 결과(result_df) 생성
+    # 5) BOQ 결과(result_df)
     results = []
     for boq_id, sub in df.groupby("BOQ_ID"):
         inc = sub[sub["Include"] == True]
+
         if inc.empty:
             final_price = None
             reason_text = "매칭 후보 없음(또는 전부 제외)"
             top_work = ""
         else:
-            final_price = float(inc["__adj_price"].mean())
+            final_price = float(pd.to_numeric(inc["__adj_price"], errors="coerce").mean())
             currencies2 = sorted(inc["통화_std"].unique().tolist())
             reason_text = f"{len(currencies2)}개국({', '.join(currencies2)}) {len(inc)}개 내역 근거"
 
@@ -717,120 +716,28 @@ def fast_recompute_from_pool(
             "근거공종(최빈)": top_work,
         })
 
-def build_candidate_pool_domestic(
-    cost_db_kr: pd.DataFrame,
-    boq_kr: pd.DataFrame,
-    sim_w_str: float,
-    sim_w_sem: float,
-    top_k_sem: int,
-    pool_per_boq: int = 400,
-    progress=None,
-    prog_text=None,
-) -> pd.DataFrame:
-    """
-    국내 1단계(무거움): BOQ별 후보풀 생성
-    - BOQ(명칭/규격/단위) vs DB(실행명칭/규격/단위)
-    - 보정단가를 최종 단가 후보로 사용(이미 지수 반영되어 있다고 가정)
-    """
-    work = cost_db_kr.copy()
+    result_df = pd.DataFrame(results).sort_values("BOQ_ID").reset_index(drop=True)
 
-    # 필수 컬럼 보강(없으면 빈값 생성)
-    need = ["현장코드","현장명","실행명칭","규격","단위","수량","계약단가","보정단가","업체코드","업체명","계약월","공종Code분류","세부분류","현장특성"]
-    for c in need:
-        if c not in work.columns:
-            work[c] = ""
-
-    work["__db_text_norm"] = work.apply(lambda r: norm_kr_db_text(r.get("실행명칭",""), r.get("규격","")), axis=1)
-    work["__Unit_norm"] = work["단위"].apply(norm_unit_kr)
-
-    # 후보 단가: 보정단가 우선 사용
-    work["__price_raw"] = pd.to_numeric(work["보정단가"], errors="coerce")
-    # 보정단가가 없으면 계약단가 fallback
-    mask_na = work["__price_raw"].isna()
-    work.loc[mask_na, "__price_raw"] = pd.to_numeric(work.loc[mask_na, "계약단가"], errors="coerce")
-    work = work[work["__price_raw"].notna() & (work["__price_raw"] > 0)].copy()
-
-    # 임베딩 캐시 태그(국내 DB용)
-    fp = file_fingerprint(work, ["__db_text_norm", "__Unit_norm", "__price_raw"])
-    embs = compute_or_load_embeddings(work["__db_text_norm"], tag=f"costdbKR_{fp}")
-    index = build_faiss_index(embs) if FAISS_OK else None
-
-    pool_rows = []
-    total = len(boq_kr) if len(boq_kr) else 1
-
-    for i, (_, b) in enumerate(boq_kr.iterrows(), start=1):
-        if prog_text is not None:
-            prog_text.text(f"[국내] 후보 풀 생성: {i}/{total} 처리 중…")
-        if progress is not None:
-            progress.progress(i / total)
-
-        boq_name = b.get("명칭", "")
-        boq_spec = b.get("규격", "")
-        boq_unit = norm_unit_kr(b.get("단위", ""))
-
-        boq_text_norm = norm_kr_boq_text(boq_name, boq_spec)
-
-        q = model.encode([boq_text_norm], batch_size=1, convert_to_tensor=False)
-        q = np.asarray(q, dtype="float32")
-        q = q / (np.linalg.norm(q, axis=1, keepdims=True) + 1e-12)
-
-        if FAISS_OK:
-            D, I = search_faiss(index, q, top_k=top_k_sem)
-            cand_idx = I[0]
-            sem_scores = D[0]
-        else:
-            all_sem = np.dot(embs, q[0])
-            cand_idx = np.argsort(-all_sem)[:top_k_sem]
-            sem_scores = all_sem[cand_idx]
-
-        cand_df = work.iloc[cand_idx].copy()
-        cand_df["__sem"] = sem_scores
-
-        # 단위 일치 후보만
-        unit_df = cand_df[cand_df["__Unit_norm"] == boq_unit].reset_index(drop=True)
-        if unit_df.empty:
-            continue
-
-        # hybrid score
-        hyb = hybrid_scores(
-            boq_text_norm,
-            unit_df["__db_text_norm"],
-            unit_df["__sem"].to_numpy(),
-            sim_w_str,
-            sim_w_sem
-        )
-        unit_df["__hyb"] = hyb
-
-        unit_df = unit_df.sort_values("__hyb", ascending=False).head(pool_per_boq).copy()
-
-        # BOQ 메타
-        unit_df["BOQ_ID"] = int(i)
-        unit_df["BOQ_명칭"] = boq_name
-        unit_df["BOQ_규격"] = boq_spec
-        unit_df["BOQ_단위"] = boq_unit
-        unit_df["BOQ_수량"] = b.get("수량", "")
-        unit_df["BOQ_단가"] = b.get("단가", "")
-
-        pool_rows.append(unit_df)
-
-    if not pool_rows:
-        return pd.DataFrame()
-
-    pool = pd.concat(pool_rows, ignore_index=True)
-
-    keep_cols = [
-        "BOQ_ID","BOQ_명칭","BOQ_규격","BOQ_단위","BOQ_수량","BOQ_단가",
-        "현장코드","현장명","현장특성",
-        "실행명칭","규격","단위","수량",
-        "계약단가","보정단가","계약월",
-        "업체코드","업체명",
-        "공종Code분류","세부분류",
-        "__price_raw","__hyb",
+    # 6) 산출 로그(log_df)
+    log_cols = [
+        "BOQ_ID", "BOQ_내역", "BOQ_Unit",
+        "Include", "DefaultInclude",
+        "공종코드", "공종명",
+        "내역", "Unit",
+        "Unit Price", "통화", "계약년월",
+        "__adj_price", "산출통화",
+        "__cpi_ratio", "__latest_ym",
+        "__fx_ratio", "__fac_ratio",
+        "__hyb",
+        "현장코드", "현장명",
+        "협력사코드", "협력사명",
     ]
-    for c in keep_cols:
-        if c not in pool.columns:
-            pool[c] = None
-    return pool[keep_cols].copy()
+    for c in log_cols:
+        if c not in df.columns:
+            df[c] = None
+    log_df = df[log_cols].copy()
+
+    return result_df, log_df
 
 def fast_recompute_from_pool_domestic(
     pool: pd.DataFrame,
@@ -2487,6 +2394,7 @@ with tab_dom:
         st.info("현재 활성 화면은 해외 탭입니다. 전환 버튼을 눌러 활성화하세요.")
     else:
         render_domestic()
+
 
 
 
