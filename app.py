@@ -180,68 +180,35 @@ div[data-testid="stDataEditor"]{
   border-radius: 16px !important;
 }
 /* =====================================================
-   TABS — 강제 폰트 크기(안쪽 텍스트까지)
+   TABS — 선택됨/미선택 크기 분리 (단일 정의로 정리)
 ===================================================== */
 
-/* 1) Streamlit Tabs 버튼(버전별 셀렉터 커버) */
+/* 기본(미선택) 탭 */
 div[data-testid="stTabs"] button[role="tab"],
 .stTabs button[role="tab"],
 .stTabs [data-baseweb="tab"]{
-  font-size: 24px !important;
-  font-weight: 800 !important;
-  padding: 12px 16px !important;
-  line-height: 1.2 !important;
-}
-
-/* 2) 탭 안쪽 텍스트가 span/div에 따로 잡히는 케이스까지 커버 */
-div[data-testid="stTabs"] button[role="tab"] *,
-.stTabs button[role="tab"] *,
-.stTabs [data-baseweb="tab"] *{
-  font-size: 24px !important;
-}
-
-/* 3) 선택된 탭 */
-div[data-testid="stTabs"] button[role="tab"][aria-selected="true"],
-.stTabs button[role="tab"][aria-selected="true"],
-.stTabs [data-baseweb="tab"][aria-selected="true"]{
-  font-weight: 900 !important;
-}
-
-/* 4) 이모지/텍스트 정렬 */
-div[data-testid="stTabs"] button[role="tab"] > div,
-.stTabs button[role="tab"] > div,
-.stTabs [data-baseweb="tab"] > div{
-  gap: 6px !important;
-/* =====================================================
-   TABS — 선택됨/미선택 크기 분리
-===================================================== */
-
-/* ✅ 미선택(기본) 탭: 더 작게 */
-div[data-testid="stTabs"] button[role="tab"],
-.stTabs button[role="tab"],
-.stTabs [data-baseweb="tab"]{
-  font-size: 18px !important;      /* ← 미선택 크기 */
+  font-size: 18px !important;
   font-weight: 700 !important;
   padding: 10px 14px !important;
   line-height: 1.2 !important;
 }
 
-/* 미선택 탭 내부 텍스트도 같이 */
+/* 미선택 탭 내부 텍스트 */
 div[data-testid="stTabs"] button[role="tab"] *,
 .stTabs button[role="tab"] *,
 .stTabs [data-baseweb="tab"] *{
-  font-size: 18px !important;      /* ← 미선택 내부 텍스트 */
+  font-size: 18px !important;
 }
 
-/* ✅ 선택된 탭: 현재 크기(유지) */
+/* 선택된 탭 */
 div[data-testid="stTabs"] button[role="tab"][aria-selected="true"],
 .stTabs button[role="tab"][aria-selected="true"],
 .stTabs [data-baseweb="tab"][aria-selected="true"]{
-  font-size: 24px !important;      /* ← 선택된 크기(현재처럼) */
+  font-size: 24px !important;
   font-weight: 900 !important;
 }
 
-/* 선택된 탭 내부 텍스트도 같이 */
+/* 선택된 탭 내부 텍스트 */
 div[data-testid="stTabs"] button[role="tab"][aria-selected="true"] *,
 .stTabs button[role="tab"][aria-selected="true"] *,
 .stTabs [data-baseweb="tab"][aria-selected="true"] *{
@@ -254,6 +221,7 @@ div[data-testid="stTabs"] button[role="tab"] > div,
 .stTabs [data-baseweb="tab"] > div{
   gap: 6px !important;
 }
+
 </style>
 """, unsafe_allow_html=True)
 
@@ -2506,6 +2474,7 @@ with tab_dom:
         st.info("현재 활성 화면은 해외 탭입니다. 전환 버튼을 눌러 활성화하세요.")
     else:
         render_domestic()
+
 
 
 
