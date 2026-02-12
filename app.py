@@ -1694,67 +1694,339 @@ def render_domestic():
         if not st.session_state.get("dom_has_results", False):
             st.info("산출 실행 후 로그가 표시됩니다.")
         else:
-            log_df = st.session_state.get("dom_log_df_edited", st.session_state.get("dom_log_df_base", pd.DataFrame())).copy()
-
-            # 편집: Include만 허용(해외와 동일 UX)
-            display_cols = [
-                "Include","DefaultInclude",
-                "실행명칭","규격","단위","수량",
-                "보정단가","계약단가","계약월",
-                "__adj_price","__hyb",
-                "현장코드","현장명","현장특성",
-                "업체코드","업체명",
-                "공종Code분류","세부분류",
-            ]
-            for c in display_cols:
-                if c not in log_df.columns:
-                    log_df[c] = None
-
-            edited = st.data_editor(
-                log_df[display_cols].copy(),
-                use_container_width=True,
-                hide_index=True,
-                column_config={
-                    "Include": st.column_config.CheckboxColumn("포함"),
-                    "DefaultInclude": st.column_config.CheckboxColumn("기본포함"),
-                    "__adj_price": st.column_config.NumberColumn("산출단가", format="%.2f"),
-                    "__hyb": st.column_config.NumberColumn("유사도", format="%.2f"),
-                    "보정단가": st.column_config.NumberColumn("보정단가", format="%.2f"),
-                    "계약단가": st.column_config.NumberColumn("계약단가", format="%.2f"),
-                },
-                disabled=[c for c in display_cols if c != "Include"],
-                key="dom_log_editor",
-            )
-
-            # Include 반영
-            st.session_state["dom_log_df_edited"] = log_df.copy()
-            st.session_state["dom_log_df_edited"].loc[edited.index, "Include"] = edited["Include"].values
-
-            # 결과 재계산(Include 기반)
-            # - 해외처럼 별도 함수로 만들 수도 있지만, 국내는 단순 평균이라 여기서 처리
-            base = st.session_state.get("dom_result_df_base", pd.DataFrame()).copy()
-            cur_log = st.session_state["dom_log_df_edited"]
-
-            upd_rows = []
-            for boq_id, g in cur_log.groupby("BOQ_ID"):
-                g2 = g[g["Include"] == True]
-                if g2.empty:
-                    price = None
-                    reason = "매칭 후보 없음(또는 전부 제외)"
+            st.caption("✅ BOQ를 선택한 뒤, Include 체크로 포함/제외를 편집할 수 있습니다. (해외 탭과 동일 UX)")
+    
+            # 현재 편집 대상: 전체 로그(edited)
+            if "dom_log_df_edited" not in st.session_state:
+                st.session_state["dom_log_df_edited"] = st.session_state.get("dom_log_df_base", pd.DataFrame()).copy()
+    
+            log_all = st.session_state["dom_log_df_edited"]
+            if log_all is None or log_all.empty:
+                st.warning("로그 데이터가 없습니다.")
+            else:
+                # --- BOQ 선택 ---
+                boq_ids = sorted(log_all["BOQ_ID"].dropna().astype(int).unique().tolist())
+    
+                # 라벨(BOQ_ID | 명칭/규격) 만들기
+                id_to_text = (
+                    log_all.dropna(subset=["BOQ_ID"])
+                    .assign(BOQ_ID=lambda d: d["BOQ_ID"].astype(int))
+                    .groupby("BOQ_ID")
+                    .apply(lambda g: f'{str(g["BOQ_명칭"].iloc[0])} / {str(g["BOQ_규격"].iloc[0])}')
+                    .to_dict()
+                )
+    
+                def fmt_boq_id(x: int) -> str:
+                    t = id_to_text.get(int(x), "")
+                    t = (t[:60] + "…") if len(t) > 60 else t
+                    return f"{int(x)} | {t}"
+    
+                sel_id = st.selectbox(
+                    "편집할 BOQ 선택(국내)",
+                    options=boq_ids,
+                    format_func=fmt_boq_id,
+                    key="dom_sel_boq_id",
+                )
+    
+                # 현재 BOQ 후보만 보기
+                log_view_full = log_all[log_all["BOQ_ID"].astype(int) == int(sel_id)].copy()
+                if log_view_full.empty:
+                    st.info("해당 BOQ 후보가 없습니다.")
                 else:
-                    price = float(pd.to_numeric(g2["__adj_price"], errors="coerce").mean())
-                    reason = f"{len(g2)}개 내역 평균(국내DB)"
-                one = g.iloc[0]
-                upd_rows.append({
-                    "BOQ_ID": int(boq_id),
-                    "Final Price": f"{price:,.2f}" if price is not None else None,
-                    "산출근거": reason,
-                    "명칭": one.get("BOQ_명칭",""),
-                    "규격": one.get("BOQ_규격",""),
-                    "단위": one.get("BOQ_단위",""),
-                    "수량": one.get("BOQ_수량",""),
-                })
-            st.session_state["dom_result_df_adjusted"] = pd.DataFrame(upd_rows).sort_values("BOQ_ID").reset_index(drop=True)
+                    # --- 백업(되돌리기) 저장소 ---
+                    if "dom_include_backup" not in st.session_state:
+                        st.session_state["dom_include_backup"] = {}
+                    if "dom_include_backup_all" not in st.session_state:
+                        st.session_state["dom_include_backup_all"] = None
+    
+                    # --- AI 파라미터(UI) ---
+                    cA, cB, cC, cD = st.columns([1.2, 1.0, 1.0, 1.8])
+                    with cA:
+                        agent_mode = st.selectbox("AI 추천 모드(국내)", ["보수적", "균형", "공격적"], index=1, key="dom_agent_mode")
+                    with cB:
+                        min_keep = st.number_input("최소 포함", min_value=1, max_value=20, value=3, step=1, key="dom_agent_min_keep")
+                    with cC:
+                        max_keep = st.number_input("최대 포함", min_value=3, max_value=200, value=50, step=1, key="dom_agent_max_keep")
+                    with cD:
+                        st.caption("※ 적용 후 화면이 자동 갱신됩니다.")
+    
+                    # --- 버튼(해외와 동일) ---
+                    b1, b2, b3, b4 = st.columns([1.2, 1.2, 1.2, 2.4])
+                    with b1:
+                        btn_ai_one = st.button("🤖 AI 적용(현재 BOQ)", key="dom_btn_ai_one")
+                    with b2:
+                        btn_undo_one = st.button("↩️ 되돌리기(현재 BOQ)", key="dom_btn_undo_one")
+                    with b3:
+                        btn_ai_all = st.button("🤖 AI 적용(전체 BOQ)", key="dom_btn_ai_all")
+                    with b4:
+                        btn_undo_all = st.button("↩️ 되돌리기(전체 BOQ)", key="dom_btn_undo_all")
+    
+                    # --- 결과 재계산(Include 기반) 함수 ---
+                    def recompute_dom_result_from_log(cur_log: pd.DataFrame) -> pd.DataFrame:
+                        rows = []
+                        for boq_id, g in cur_log.groupby("BOQ_ID"):
+                            g2 = g[g["Include"] == True]
+                            one = g.iloc[0]
+                            if g2.empty:
+                                price = None
+                                reason = "매칭 후보 없음(또는 전부 제외)"
+                            else:
+                                price = float(pd.to_numeric(g2["__adj_price"], errors="coerce").mean())
+                                reason = f"{len(g2)}개 내역 평균(국내DB)"
+                            rows.append({
+                                "BOQ_ID": int(boq_id),
+                                "명칭": one.get("BOQ_명칭", ""),
+                                "규격": one.get("BOQ_규격", ""),
+                                "단위": one.get("BOQ_단위", ""),
+                                "수량": one.get("BOQ_수량", ""),
+                                "Final Price": f"{price:,.2f}" if price is not None else None,
+                                "산출근거": reason,
+                            })
+                        return pd.DataFrame(rows).sort_values("BOQ_ID").reset_index(drop=True)
+    
+                    # --- 되돌리기(현재 BOQ) ---
+                    if btn_undo_one:
+                        backup = st.session_state["dom_include_backup"].get(int(sel_id))
+                        if backup is not None and len(backup) == len(log_view_full.index):
+                            st.session_state["dom_log_df_edited"].loc[log_view_full.index, "Include"] = backup.values
+                            st.session_state["dom_result_df_adjusted"] = recompute_dom_result_from_log(st.session_state["dom_log_df_edited"])
+                            st.success("되돌리기 완료(현재 BOQ)")
+                            st.rerun()
+                        else:
+                            st.warning("되돌릴 백업이 없습니다(또는 후보행이 변경됨).")
+    
+                    # --- AI 적용(현재 BOQ) ---
+                    if btn_ai_one:
+                        # 현재 BOQ Include 백업
+                        st.session_state["dom_include_backup"][int(sel_id)] = st.session_state["dom_log_df_edited"].loc[log_view_full.index, "Include"].copy()
+    
+                        updated, summary = apply_agent_to_log(
+                            log_all=st.session_state["dom_log_df_edited"].copy(),
+                            boq_id=int(sel_id),
+                            mode=agent_mode,
+                            min_keep=int(min_keep),
+                            max_keep=int(max_keep),
+                        )
+                        st.session_state["dom_log_df_edited"] = updated
+                        st.session_state["dom_result_df_adjusted"] = recompute_dom_result_from_log(st.session_state["dom_log_df_edited"])
+                        if summary:
+                            st.success(f"AI 적용 완료(현재 BOQ): {summary['kept']}/{summary['total']} 포함, 모드={summary['mode']}")
+                        st.rerun()
+    
+                    # --- AI 적용(전체 BOQ) ---
+                    if btn_ai_all:
+                        st.session_state["dom_include_backup_all"] = st.session_state["dom_log_df_edited"][["BOQ_ID", "Include"]].copy()
+    
+                        updated, sum_df = apply_agent_to_all_boqs(
+                            log_all=st.session_state["dom_log_df_edited"].copy(),
+                            mode=agent_mode,
+                            min_keep=int(min_keep),
+                            max_keep=int(max_keep),
+                        )
+                        st.session_state["dom_log_df_edited"] = updated
+                        st.session_state["dom_result_df_adjusted"] = recompute_dom_result_from_log(st.session_state["dom_log_df_edited"])
+                        st.success("AI 적용 완료(전체 BOQ)")
+                        if sum_df is not None and not sum_df.empty:
+                            st.dataframe(sum_df, use_container_width=True)
+                        st.rerun()
+    
+                    # --- 되돌리기(전체 BOQ) ---
+                    if btn_undo_all:
+                        backup_all = st.session_state.get("dom_include_backup_all")
+                        if backup_all is None or backup_all.empty:
+                            st.warning("되돌릴 전체 백업이 없습니다.")
+                        else:
+                            cur = st.session_state["dom_log_df_edited"].copy()
+                            b = backup_all.copy()
+                            b["BOQ_ID"] = b["BOQ_ID"].astype(int)
+                            cur["BOQ_ID"] = cur["BOQ_ID"].astype(int)
+    
+                            cur = cur.drop(columns=["Include"], errors="ignore").merge(b, on="BOQ_ID", how="left")
+                            cur["Include"] = cur["Include"].fillna(False).astype(bool)
+    
+                            st.session_state["dom_log_df_edited"] = cur
+                            st.session_state["dom_result_df_adjusted"] = recompute_dom_result_from_log(st.session_state["dom_log_df_edited"])
+                            st.success("되돌리기 완료(전체 BOQ)")
+                            st.rerun()
+
+                    # =========================
+                    # (국내) 필터/컷 조정 UI (현재 BOQ)
+                    # =========================
+                    # 필터 대상 컬럼 보강
+                    for c in ["현장명", "세부분류", "__hyb", "__adj_price"]:
+                        if c not in log_view_full.columns:
+                            log_view_full[c] = None
+                    
+                    # 숫자형 정리
+                    log_view_full["__hyb_num"] = pd.to_numeric(log_view_full["__hyb"], errors="coerce").fillna(0.0)
+                    log_view_full["__price_num"] = pd.to_numeric(log_view_full["__adj_price"], errors="coerce").fillna(np.nan)
+                    
+                    with st.expander("🔎 필터(현장명/세부분류/유사도) + 컷 비율 조정", expanded=True):
+                        # 1) 현장명 필터
+                        site_opts = sorted([
+                            x for x in log_view_full["현장명"].astype(str).fillna("").unique().tolist()
+                            if x.strip() and x not in ["nan", "None"]
+                        ])
+                        sel_sites_nm = st.multiselect(
+                            "현장명 필터(선택 시 해당 현장만 표시/적용)",
+                            options=site_opts,
+                            default=st.session_state.get("dom_f_site_nm", []),
+                            key="dom_f_site_nm",
+                        )
+                    
+                        # 2) 세부분류 필터
+                        sub_opts = sorted([
+                            x for x in log_view_full["세부분류"].astype(str).fillna("").unique().tolist()
+                            if x.strip() and x not in ["nan", "None"]
+                        ])
+                        sel_sub = st.multiselect(
+                            "세부분류 필터(선택 시 해당 분류만 표시/적용)",
+                            options=sub_opts,
+                            default=st.session_state.get("dom_f_sub", []),
+                            key="dom_f_sub",
+                        )
+                    
+                        # 3) 유사도 필터(범위)
+                        hyb_min_default = float(st.session_state.get("dom_f_hyb_min", 0.0))
+                        hyb_max_default = float(st.session_state.get("dom_f_hyb_max", 100.0))
+                        hyb_min, hyb_max = st.slider(
+                            "유사도(__hyb) 범위",
+                            min_value=0.0,
+                            max_value=100.0,
+                            value=(hyb_min_default, hyb_max_default),
+                            step=1.0,
+                            key="dom_f_hyb_range",
+                        )
+                        st.session_state["dom_f_hyb_min"] = hyb_min
+                        st.session_state["dom_f_hyb_max"] = hyb_max
+                    
+                        # 4) 상/하위 컷 비율(현재 BOQ 전용)
+                        cut_pct = st.slider(
+                            "상/하위 컷 비율(현재 BOQ, %)",
+                            min_value=0,
+                            max_value=30,
+                            value=int(st.session_state.get("dom_cut_pct_tab2", 20)),
+                            step=5,
+                            key="dom_cut_pct_tab2",
+                        )
+                        cut_ratio_local = float(cut_pct) / 100.0
+                    
+                        cbtn1, cbtn2, cbtn3 = st.columns([1.4, 1.2, 1.4])
+                        with cbtn1:
+                            btn_apply_filter_cut = st.button("✂️ 필터+컷 적용(Include 자동 재설정)", key="dom_btn_apply_filter_cut")
+                        with cbtn2:
+                            btn_reset_to_default = st.button("↩️ DefaultInclude로 초기화(현재 BOQ)", key="dom_btn_reset_default")
+                        with cbtn3:
+                            st.caption("※ ‘필터+컷 적용’은 현재 BOQ의 Include를 필터 결과 기준으로 다시 세팅합니다.")
+                    
+                    # --- 필터 마스크 생성(표시 + 컷 적용에 공통 사용) ---
+                    mask = pd.Series(True, index=log_view_full.index)
+                    
+                    if sel_sites_nm:
+                        mask &= log_view_full["현장명"].astype(str).isin([str(x) for x in sel_sites_nm])
+                    
+                    if sel_sub:
+                        mask &= log_view_full["세부분류"].astype(str).isin([str(x) for x in sel_sub])
+                    
+                    mask &= log_view_full["__hyb_num"].between(float(hyb_min), float(hyb_max))
+                    
+                    # 표시용(필터 적용된 후보만 보여줌)
+                    log_view_full_filtered = log_view_full.loc[mask].copy()
+                    
+                    # --- DefaultInclude 초기화(현재 BOQ) ---
+                    if btn_reset_to_default:
+                        # 백업 저장(현재 BOQ)
+                        st.session_state["dom_include_backup"][int(sel_id)] = st.session_state["dom_log_df_edited"].loc[log_view_full.index, "Include"].copy()
+                    
+                        # DefaultInclude 기준으로 Include 복원
+                        base_inc = st.session_state["dom_log_df_edited"].loc[log_view_full.index, "DefaultInclude"].fillna(False).astype(bool)
+                        st.session_state["dom_log_df_edited"].loc[log_view_full.index, "Include"] = base_inc.values
+                    
+                        st.session_state["dom_result_df_adjusted"] = recompute_dom_result_from_log(st.session_state["dom_log_df_edited"])
+                        st.success("현재 BOQ를 DefaultInclude 기준으로 초기화했습니다.")
+                        st.rerun()
+                    
+                    # --- 필터+컷 적용(현재 BOQ) ---
+                    if btn_apply_filter_cut:
+                        # 백업 저장(현재 BOQ)
+                        st.session_state["dom_include_backup"][int(sel_id)] = st.session_state["dom_log_df_edited"].loc[log_view_full.index, "Include"].copy()
+                    
+                        # 1) 현재 BOQ 전체 Include를 우선 False로
+                        st.session_state["dom_log_df_edited"].loc[log_view_full.index, "Include"] = False
+                    
+                        # 2) 필터 통과 후보만 가지고 컷 적용
+                        sub = log_view_full.loc[mask].copy()
+                        sub["__price_num"] = pd.to_numeric(sub["__adj_price"], errors="coerce")
+                    
+                        sub = sub.dropna(subset=["__price_num"]).sort_values("__price_num").copy()
+                        n = len(sub)
+                        cut = max(0, int(n * cut_ratio_local)) if n > 5 else 0
+                    
+                        if n == 0:
+                            st.warning("필터 조건을 만족하는 후보가 없습니다.")
+                        else:
+                            if cut > 0:
+                                keep_mask = np.zeros(n, dtype=bool)
+                                keep_mask[cut:n - cut] = True
+                            else:
+                                keep_mask = np.ones(n, dtype=bool)
+                    
+                            kept_index = sub.index[keep_mask]
+                            st.session_state["dom_log_df_edited"].loc[kept_index, "Include"] = True
+                    
+                            # DefaultInclude도 같이 갱신(원하면 제거 가능)
+                            st.session_state["dom_log_df_edited"].loc[log_view_full.index, "DefaultInclude"] = False
+                            st.session_state["dom_log_df_edited"].loc[kept_index, "DefaultInclude"] = True
+                    
+                            st.session_state["dom_result_df_adjusted"] = recompute_dom_result_from_log(st.session_state["dom_log_df_edited"])
+                            st.success(f"필터+컷 적용 완료: {len(kept_index)}/{n} 포함")
+                        st.rerun()
+                        
+                    # 이후 편집 화면은 '필터된 후보'를 보여주도록 교체
+                    log_view_full = log_view_full_filtered
+                    
+    
+                    # --- 화면에 보여줄 컬럼(국내) ---
+                    display_cols = [
+                        "Include", "DefaultInclude",
+                        "실행명칭", "규격", "단위", "수량",
+                        "보정단가", "계약단가", "계약월",
+                        "__adj_price", "__hyb",
+                        "현장코드", "현장명", "현장특성",
+                        "업체코드", "업체명",
+                        "공종Code분류", "세부분류",
+                    ]
+                    for c in display_cols:
+                        if c not in log_view_full.columns:
+                            log_view_full[c] = None
+    
+                    log_view = log_view_full[display_cols].copy()
+    
+                    edited_view = st.data_editor(
+                        log_view,
+                        use_container_width=True,
+                        hide_index=True,
+                        column_config={
+                            "Include": st.column_config.CheckboxColumn("포함", help="평균단가 산출 포함/제외"),
+                            "DefaultInclude": st.column_config.CheckboxColumn("기본포함", help="초기 자동 포함 여부(컷 로직)"),
+                            "__adj_price": st.column_config.NumberColumn("산출단가", format="%.2f"),
+                            "__hyb": st.column_config.NumberColumn("유사도", format="%.2f"),
+                            "보정단가": st.column_config.NumberColumn("보정단가", format="%.2f"),
+                            "계약단가": st.column_config.NumberColumn("계약단가", format="%.2f"),
+                        },
+                        disabled=[c for c in log_view.columns if c not in ["Include"]],
+                        key="dom_log_editor_oneboq",
+                    )
+    
+                    # --- 편집 반영(현재 BOQ rows만) ---
+                    st.session_state["dom_log_df_edited"].loc[log_view_full.index, "Include"] = edited_view["Include"].values
+    
+                    # --- 결과 재계산(Include 반영) ---
+                    st.session_state["dom_result_df_adjusted"] = recompute_dom_result_from_log(st.session_state["dom_log_df_edited"])
+    
+                    # 참고용: 현재 BOQ 포함 후보 수
+                    inc_n = int(pd.Series(edited_view["Include"]).sum())
+                    st.caption(f"현재 BOQ 포함 후보: {inc_n}개")
 
     with tab3:
         if not st.session_state.get("dom_has_results", False):
@@ -2474,6 +2746,7 @@ with tab_dom:
         st.info("현재 활성 화면은 해외 탭입니다. 전환 버튼을 눌러 활성화하세요.")
     else:
         render_domestic()
+
 
 
 
