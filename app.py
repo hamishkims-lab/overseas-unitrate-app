@@ -1531,7 +1531,7 @@ def render_domestic():
     st.sidebar.markdown(
         f"""
         <div class="sb-row">
-          <div class="sb-title">🏗️ 실적 현장 선택(국내)</div>
+          <div class="sb-title">🏗️ 실적 현장 선택</div>
           <div class="sb-muted">가능 현장: {len(all_codes)}개</div>
         </div>
         """,
@@ -2774,6 +2774,7 @@ with tab_dom:
         st.info("현재 활성 화면은 해외 탭입니다. 전환 버튼을 눌러 활성화하세요.")
     else:
         render_domestic()
+
 
 
 
