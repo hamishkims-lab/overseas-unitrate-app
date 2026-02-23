@@ -1833,19 +1833,19 @@ def render_domestic():
                 sim_threshold=dom_sim_threshold,
                 cut_ratio=dom_cut_ratio,
             )
-                # ✅ 산출 완료 후 진행 텍스트 제거
-                try:
-                    status_box.empty()
-                except Exception:
-                    pass
-                try:
-                    progress.empty()
-                except Exception:
-                    pass
-                try:
-                    prog_text.empty()
-                except Exception:
-                    pass
+        # ✅ 산출 완료 후 진행 텍스트 제거
+        try:
+            status_box.empty()
+        except Exception:
+            pass
+        try:
+            progress.empty()
+        except Exception:
+            pass
+        try:
+            prog_text.empty()
+        except Exception:
+            pass
 
         st.session_state["dom_boq_df"] = boq_kr
         st.session_state["dom_result_df_base"] = result_df.copy()
@@ -3098,6 +3098,7 @@ with tab_dom:
         st.info("현재 활성 화면은 해외 탭입니다. 전환 버튼을 눌러 활성화하세요.")
     else:
         render_domestic()
+
 
 
 
