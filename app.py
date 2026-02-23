@@ -2027,7 +2027,20 @@ def render_domestic():
         if not st.session_state.get("dom_has_results", False):
             st.info("국내 BOQ 업로드 후 '산출 실행(국내)'을 눌러주세요.")
         else:
-            show_df = st.session_state.get("dom_result_df_base", pd.DataFrame()).copy()
+            # ✅ 해외 TAB1과 동일 패턴: adjusted 우선, 없으면 base
+            show_df = st.session_state.get(
+                "dom_result_df_adjusted",
+                st.session_state.get("dom_result_df_base", pd.DataFrame())
+            ).copy()
+    
+            # (선택) 표시용 정리: BOQ_ID 기준 정렬/컬럼 순서 정리 등
+            if "BOQ_ID" in show_df.columns:
+                try:
+                    show_df["BOQ_ID"] = show_df["BOQ_ID"].astype(int)
+                    show_df = show_df.sort_values("BOQ_ID").reset_index(drop=True)
+                except Exception:
+                    pass
+    
             st.dataframe(show_df, use_container_width=True)
 
     
@@ -2761,6 +2774,7 @@ with tab_dom:
         st.info("현재 활성 화면은 해외 탭입니다. 전환 버튼을 눌러 활성화하세요.")
     else:
         render_domestic()
+
 
 
 
