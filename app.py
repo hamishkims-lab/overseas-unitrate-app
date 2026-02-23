@@ -2679,7 +2679,7 @@ def render_overseas():
             st.markdown("### 3) 단가 추출 근거(조건)")
             c1, c2, c3 = st.columns(3)
             with c1:
-                st.metric("매칭 유사도, %)", f"{float(sim_threshold):.0f}")
+                st.metric("매칭 유사도, (%)", f"{float(sim_threshold):.0f}")
             with c2:
                 st.metric("상/하위 컷 비율(%)", f"{float(cut_ratio) * 100:.0f}")
             with c3:
@@ -2758,6 +2758,7 @@ with tab_dom:
         st.info("현재 활성 화면은 해외 탭입니다. 전환 버튼을 눌러 활성화하세요.")
     else:
         render_domestic()
+
 
 
 
