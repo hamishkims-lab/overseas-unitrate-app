@@ -1883,7 +1883,7 @@ def render_domestic():
                         hyb_min_default = float(st.session_state.get("dom_f_hyb_min", 0.0))
                         hyb_max_default = float(st.session_state.get("dom_f_hyb_max", 100.0))
                         hyb_min, hyb_max = st.slider(
-                            "유사도(__hyb) 범위",
+                            "매칭 유사도 (%)",
                             min_value=0.0,
                             max_value=100.0,
                             value=(hyb_min_default, hyb_max_default),
@@ -2774,6 +2774,7 @@ with tab_dom:
         st.info("현재 활성 화면은 해외 탭입니다. 전환 버튼을 눌러 활성화하세요.")
     else:
         render_domestic()
+
 
 
 
