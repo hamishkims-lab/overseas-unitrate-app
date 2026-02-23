@@ -1650,7 +1650,7 @@ def render_domestic():
         else:
             pool = st.session_state["dom_candidate_pool"]
 
-        status_box.markdown("### ⏳ [국내] 산출중... (Threshold/컷 반영)")
+        status_box.markdown("### ⏳ [국내] 산출중...")
         with st.spinner("[국내] 빠른 재계산 중..."):
             result_df, log_df = fast_recompute_from_pool_domestic(
                 pool=pool,
@@ -2366,8 +2366,8 @@ def render_overseas():
         else:
             pool = st.session_state["candidate_pool"]
 
-        status_box.markdown("### ⏳ 산출중... (Threshold/컷/산출통화 반영)")
-        with st.spinner("빠른 재계산(Threshold/컷/산출통화 반영 중)..."):
+        status_box.markdown("### ⏳ 산출중...")
+        with st.spinner("빠른 재계산 중)..."):
             result_df, log_df = fast_recompute_from_pool(
                 pool=pool,
                 exchange=exchange,
@@ -2759,6 +2759,7 @@ with tab_dom:
         st.info("현재 활성 화면은 해외 탭입니다. 전환 버튼을 눌러 활성화하세요.")
     else:
         render_domestic()
+
 
 
 
