@@ -1143,6 +1143,108 @@ def build_report_tables(log_df: pd.DataFrame, result_df: pd.DataFrame):
 
     return summary_df, detail_df
 
+def build_report_tables_domestic(log_df: pd.DataFrame, result_df: pd.DataFrame):
+    """
+    국내 근거 보고서 테이블 생성(요약/상세)
+    - 해외 TAB3 형식과 동일한 섹션 구성을 만들기 위한 summary/detail 2개 테이블 반환
+    """
+    if log_df is None or log_df.empty:
+        return pd.DataFrame(), pd.DataFrame()
+
+    df = log_df.copy()
+    df["BOQ_ID"] = df["BOQ_ID"].astype(int)
+
+    # Include=True 상세 후보
+    inc = df[df["Include"] == True].copy()
+
+    # -------------------------
+    # (1) 상세(detail)
+    # -------------------------
+    detail_cols = [
+        "BOQ_ID", "BOQ_명칭", "BOQ_규격", "BOQ_단위",
+        "실행명칭", "규격", "단위",
+        "__adj_price", "__hyb",
+        "계약월", "보정단가", "계약단가",
+        "현장코드", "현장명", "현장특성",
+        "업체코드", "업체명",
+        "공종Code분류", "세부분류",
+        "AI_모드", "AI_추천사유",
+    ]
+    for c in detail_cols:
+        if c not in inc.columns:
+            inc[c] = None
+    detail_df = inc[detail_cols].copy()
+
+    # -------------------------
+    # (2) 요약(summary)
+    # -------------------------
+    rows = []
+    for boq_id, g in df.groupby("BOQ_ID"):
+        g_inc = g[g["Include"] == True].copy()
+        total_n = len(g)
+        inc_n = len(g_inc)
+
+        adj = pd.to_numeric(g_inc.get("__adj_price", np.nan), errors="coerce")
+        mean = float(adj.mean()) if inc_n else np.nan
+        std = float(adj.std(ddof=0)) if inc_n else np.nan
+        vmin = float(adj.min()) if inc_n else np.nan
+        vmax = float(adj.max()) if inc_n else np.nan
+
+        sites = g_inc["현장코드"].astype(str).nunique() if inc_n and "현장코드" in g_inc.columns else 0
+        vendors = g_inc["업체코드"].astype(str).nunique() if inc_n and "업체코드" in g_inc.columns else 0
+
+        top_site = ""
+        top_vendor = ""
+        if inc_n and "현장코드" in g_inc.columns:
+            vc = g_inc["현장코드"].astype(str).value_counts()
+            top_site = f"{vc.index[0]} ({int(vc.iloc[0])}/{inc_n})" if len(vc) else ""
+        if inc_n and "업체코드" in g_inc.columns:
+            vc2 = g_inc["업체코드"].astype(str).value_counts()
+            top_vendor = f"{vc2.index[0]} ({int(vc2.iloc[0])}/{inc_n})" if len(vc2) else ""
+
+        risk = []
+        if inc_n == 0:
+            risk.append("포함후보없음")
+        if inc_n and pd.notna(vmax) and pd.notna(vmin) and vmin > 0 and (vmax / vmin > 3):
+            risk.append("단가편차큼(>3배)")
+        if inc_n and pd.notna(std) and pd.notna(mean) and mean != 0 and (std / mean > 0.5):
+            risk.append("변동성큼(CV>0.5)")
+        if inc_n and sites == 1 and inc_n >= 3:
+            risk.append("현장편향(1개현장)")
+        if inc_n and vendors == 1 and inc_n >= 3:
+            risk.append("업체편향(1개업체)")
+
+        one = g.iloc[0]
+        rows.append({
+            "BOQ_ID": int(boq_id),
+            "BOQ_명칭": one.get("BOQ_명칭", ""),
+            "BOQ_규격": one.get("BOQ_규격", ""),
+            "BOQ_단위": one.get("BOQ_단위", ""),
+            "후보수": int(total_n),
+            "포함수": int(inc_n),
+            "포함현장수": int(sites),
+            "포함업체수": int(vendors),
+            "산출단가평균": mean,
+            "산출단가표준편차": std,
+            "산출단가최저": vmin,
+            "산출단가최고": vmax,
+            "최빈현장": top_site,
+            "최빈업체": top_vendor,
+            "리스크": ", ".join(risk),
+        })
+
+    summary_df = pd.DataFrame(rows).sort_values("BOQ_ID").reset_index(drop=True)
+
+    # 결과(result_df)의 Final Price/산출근거 병합(있으면)
+    if result_df is not None and not result_df.empty and "BOQ_ID" in result_df.columns:
+        tmp = result_df.copy()
+        tmp["BOQ_ID"] = tmp["BOQ_ID"].astype(int)
+        keep = [c for c in ["BOQ_ID", "Final Price", "산출근거"] if c in tmp.columns]
+        if keep:
+            summary_df = summary_df.merge(tmp[keep], on="BOQ_ID", how="left")
+
+    return summary_df, detail_df
+
 
 # =========================
 # 🤖 AI 최종 적용 기준 기록/표시용 (TAB3에서 사용)
@@ -1326,6 +1428,80 @@ def render_boq_scatter(log_df: pd.DataFrame, base_result: pd.DataFrame):
                 alt.Tooltip("__hyb:Q", title="유사도", format=".2f"),
                 alt.Tooltip("현장코드:N", title="현장코드"),
                 alt.Tooltip("협력사코드:N", title="협력사코드"),
+            ],
+        )
+        .properties(height=420)
+        .interactive()
+    )
+    st.altair_chart(chart, use_container_width=True)
+
+def render_boq_scatter_domestic(log_df: pd.DataFrame, base_result: pd.DataFrame):
+    if log_df is None or log_df.empty:
+        st.info("로그 데이터가 없어 그래프를 표시할 수 없습니다.")
+        return
+
+    # 해외 TAB3와 같은 UX: 키워드로 BOQ 후보를 줄일 수 있게
+    keyword = st.text_input("명칭 키워드(예: 철근)", value="", key="report_kw_kr")
+
+    cand = base_result.copy() if (base_result is not None and not base_result.empty) else None
+
+    # result_df에 "명칭" 컬럼이 있으므로 그걸로 필터
+    if cand is not None and "명칭" in cand.columns and "BOQ_ID" in cand.columns and keyword.strip():
+        kw = keyword.strip().lower()
+        cand = cand[cand["명칭"].astype(str).str.lower().str.contains(kw, na=False)].copy()
+
+    if cand is not None and not cand.empty:
+        boq_ids = sorted(cand["BOQ_ID"].dropna().astype(int).unique().tolist())
+        id_to_text = cand.set_index(cand["BOQ_ID"].astype(int))["명칭"].astype(str).to_dict()
+    else:
+        boq_ids = sorted(log_df["BOQ_ID"].dropna().astype(int).unique().tolist())
+        id_to_text = (
+            log_df.dropna(subset=["BOQ_ID"])
+            .assign(BOQ_ID=lambda d: d["BOQ_ID"].astype(int))
+            .groupby("BOQ_ID")
+            .apply(lambda g: f'{str(g["BOQ_명칭"].iloc[0])} / {str(g["BOQ_규격"].iloc[0])}')
+            .to_dict()
+        )
+
+    if not boq_ids:
+        st.info("표시할 BOQ_ID가 없습니다.")
+        return
+
+    def fmt(x: int) -> str:
+        t = id_to_text.get(int(x), "")
+        t = (t[:60] + "…") if len(t) > 60 else t
+        return f"{int(x)} | {t}"
+
+    sel = st.selectbox("그래프 볼 BOQ 선택(국내)", options=boq_ids, format_func=fmt, key="report_boq_pick_kr")
+
+    sub = log_df[log_df["BOQ_ID"].astype(int) == int(sel)].copy()
+    if sub.empty:
+        st.info("해당 BOQ 후보가 없습니다.")
+        return
+
+    # 계약월 파싱
+    sub["계약월_dt"] = pd.to_datetime(sub["계약월"], errors="coerce")
+    sub["산출단가"] = pd.to_numeric(sub["__adj_price"], errors="coerce")
+    sub["포함여부"] = sub["Include"].fillna(False).astype(bool)
+    sub["표시내역"] = sub["실행명칭"].astype(str)
+
+    chart = (
+        alt.Chart(sub.dropna(subset=["계약월_dt", "산출단가"]))
+        .mark_circle()
+        .encode(
+            x=alt.X("계약월_dt:T", title="계약월"),
+            y=alt.Y("산출단가:Q", title="산출단가(국내)"),
+            color=alt.Color("포함여부:N", title="포함"),
+            size=alt.Size("포함여부:N", title="포함(크기)", scale=alt.Scale(range=[40, 140])),
+            tooltip=[
+                alt.Tooltip("표시내역:N", title="실행명칭"),
+                alt.Tooltip("산출단가:Q", title="산출단가", format=",.4f"),
+                alt.Tooltip("__hyb:Q", title="유사도", format=".2f"),
+                alt.Tooltip("현장코드:N", title="현장코드"),
+                alt.Tooltip("현장명:N", title="현장명"),
+                alt.Tooltip("업체코드:N", title="업체코드"),
+                alt.Tooltip("업체명:N", title="업체명"),
+                alt.Tooltip("계약월:N", title="계약월"),
             ],
         )
         .properties(height=420)
@@ -1747,10 +1923,12 @@ def render_domestic():
                     b1, b2, b3, b4 = st.columns([1.2, 1.2, 1.2, 2.4])
                     with b1:
                         btn_ai_one = st.button("🤖 AI 적용(현재 BOQ)", key="dom_btn_ai_one")
+                        record_ai_last_applied("현재 BOQ", agent_mode, int(min_keep), int(max_keep), summary, boq_id=int(sel_id))
                     with b2:
                         btn_undo_one = st.button("↩️ 되돌리기(현재 BOQ)", key="dom_btn_undo_one")
                     with b3:
                         btn_ai_all = st.button("🤖 AI 적용(전체 BOQ)", key="dom_btn_ai_all")
+                        record_ai_last_applied("전체 BOQ", agent_mode, int(min_keep), int(max_keep), None)
                     with b4:
                         btn_undo_all = st.button("↩️ 되돌리기(전체 BOQ)", key="dom_btn_undo_all")
     
@@ -2046,24 +2224,107 @@ def render_domestic():
     
     with tab3:
         if not st.session_state.get("dom_has_results", False):
-            st.info("산출 실행 후 다운로드가 가능합니다.")
+            st.info("산출 실행 후 보고서/다운로드가 가능합니다.")
         else:
-            out_result = st.session_state.get("dom_result_df_adjusted", st.session_state.get("dom_result_df_base", pd.DataFrame())).copy()
-            out_log = st.session_state.get("dom_log_df_edited", st.session_state.get("dom_log_df_base", pd.DataFrame())).copy()
-
+            st.markdown("## 📝 근거 보고서(국내)")
+    
+            base_result = st.session_state.get(
+                "dom_result_df_adjusted",
+                st.session_state.get("dom_result_df_base", pd.DataFrame())
+            ).copy()
+    
+            log_for_report = st.session_state.get(
+                "dom_log_df_edited",
+                st.session_state.get("dom_log_df_base", pd.DataFrame())
+            ).copy()
+    
+            # 1) 공종 특성(국내에는 해외처럼 feature_master 연동이 없으므로, 동일 섹션은 "현장특성 선택값"으로 대체)
+            st.markdown("### 1) 공종 특성")
+            _sel_feat = st.session_state.get("dom_sel_feat", [])
+            if not _sel_feat:
+                st.info("선택된 현장특성이 없습니다.")
+            else:
+                st.dataframe(pd.DataFrame({"현장특성(선택)": list(_sel_feat)}), use_container_width=True)
+    
+            # 2) 실적 현장 리스트
+            st.markdown("### 2) 실적 현장 리스트")
+            _sel_sites = st.session_state.get("dom_selected_site_codes", [])
+            st_sites = build_site_context_table(cost_db_kr, _sel_sites)
+            if st_sites.empty:
+                st.info("선택된 현장이 없습니다.")
+            else:
+                st.dataframe(st_sites, use_container_width=True)
+    
+            # 3) 단가 추출 근거(조건)
+            st.markdown("### 3) 단가 추출 근거(조건)")
+            c1, c2, c3 = st.columns(3)
+            with c1:
+                st.metric("매칭 유사도, (%)", f"{float(st.session_state.get('dom_sim_threshold', 0.0)):.0f}")
+            with c2:
+                st.metric("상/하위 컷 비율(%)", f"{float(st.session_state.get('dom_cut_ratio', 0.0)) * 100:.0f}")
+            with c3:
+                st.metric("DB", "국내DB")
+    
+            # 4) AI 적용 시 최종 기준(해외와 동일 문구)
+            st.markdown("### 4) AI 적용 시 최종 기준")
+            st.write(get_ai_effective_rule_text())
+    
+            # 5) 실적 단가 BOQ(결과)
+            st.markdown("### 5) 실적 단가 BOQ(결과)")
+            if base_result is None or base_result.empty:
+                st.warning("결과 데이터가 없습니다. 먼저 산출 실행 후 다시 시도하세요.")
+            else:
+                st.dataframe(base_result, use_container_width=True)
+    
+            # 6~7 테이블 생성/갱신
+            if st.button("📝 보고서 생성/갱신(국내)", key="btn_build_report_kr"):
+                summary_df, detail_df = build_report_tables_domestic(log_for_report, base_result)
+                st.session_state["dom_report_summary_df"] = summary_df
+                st.session_state["dom_report_detail_df"] = detail_df
+    
+            summary_df = st.session_state.get("dom_report_summary_df", pd.DataFrame())
+            detail_df = st.session_state.get("dom_report_detail_df", pd.DataFrame())
+    
+            st.markdown("### 6) 각 내역별 단가 근거(평균)")
+            if summary_df is None or summary_df.empty:
+                st.info("보고서를 보려면 '보고서 생성/갱신(국내)'을 눌러주세요.")
+            else:
+                st.dataframe(summary_df, use_container_width=True)
+    
+            st.markdown("### 7) 각 내역별 단가 근거(선택된 내역)")
+            if detail_df is not None and not detail_df.empty:
+                st.dataframe(detail_df, use_container_width=True)
+            else:
+                st.info("Include=True 상세 후보가 없습니다(전부 제외되었거나 후보가 없음).")
+    
+            # 8) 분포 그래프
+            st.markdown("### 8) 내역별 단가 분포")
+            render_boq_scatter_domestic(log_for_report, base_result)
+    
+            # -------------------------
+            # Excel 다운로드(해외 형식과 동일: result + log + report 2시트)
+            # -------------------------
+            out_result = base_result.copy()
+            out_log = log_for_report.copy()
+            rep_sum = st.session_state.get("dom_report_summary_df", pd.DataFrame())
+            rep_det = st.session_state.get("dom_report_detail_df", pd.DataFrame())
+    
             bio = io.BytesIO()
             with pd.ExcelWriter(bio, engine="openpyxl") as writer:
                 out_result.to_excel(writer, index=False, sheet_name="boq_with_price_kr")
                 out_log.to_excel(writer, index=False, sheet_name="calculation_log_kr")
+                if rep_sum is not None and not rep_sum.empty:
+                    rep_sum.to_excel(writer, index=False, sheet_name="report_summary_kr")
+                if rep_det is not None and not rep_det.empty:
+                    rep_det.to_excel(writer, index=False, sheet_name="report_detail_kr")
             bio.seek(0)
-
+    
             st.download_button(
                 "⬇️ Excel 다운로드(국내)",
                 data=bio.read(),
                 file_name="result_unitrate_kr.xlsx",
                 key="dom_download_btn",
             )
-
 
 # ============================================================
 # ✅ 해외 탭 (기존 코드 전체를 함수로 감싼 버전)
@@ -2774,6 +3035,7 @@ with tab_dom:
         st.info("현재 활성 화면은 해외 탭입니다. 전환 버튼을 눌러 활성화하세요.")
     else:
         render_domestic()
+
 
 
 
