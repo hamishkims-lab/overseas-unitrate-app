@@ -1473,7 +1473,7 @@ def render_domestic():
     # -------------------------
     # Sidebar: 설정(국내)
     # -------------------------
-    st.sidebar.markdown("<div class='sb-major'>⚙️ 설정(국내)</div>", unsafe_allow_html=True)
+    st.sidebar.markdown("<div class='sb-major'>⚙️ 설정</div>", unsafe_allow_html=True)
     st.sidebar.markdown("<hr class='sb-hr'/>", unsafe_allow_html=True)
 
     # 1) BOQ 업로드
@@ -1497,7 +1497,7 @@ def render_domestic():
 
     feat_options = sorted([x for x in kr[feat_col].astype(str).fillna("").unique().tolist() if x.strip() and x != "nan"])
     sel_feat = st.sidebar.multiselect(
-        "🏷️ 현장특성(국내)",
+        "🏷️ 현장특성",
         options=feat_options,
         default=st.session_state.get("dom_sel_feat", []),
         key="dom_sel_feat",
@@ -1548,7 +1548,7 @@ def render_domestic():
     )
 
     # 3) 설정값
-    st.sidebar.markdown("<div class='sb-title'>🧩 설정값(국내)</div>", unsafe_allow_html=True)
+    st.sidebar.markdown("<div class='sb-title'>🧩 설정값</div>", unsafe_allow_html=True)
     st.sidebar.markdown("<hr class='sb-hr'/>", unsafe_allow_html=True)
 
     # 해외랑 비슷하게 유지
@@ -1665,7 +1665,7 @@ def render_domestic():
         st.session_state["dom_has_results"] = True
         st.session_state["dom_last_run_sig"] = run_sig
 
-    run_dom_btn = st.sidebar.button("🚀 산출 실행(국내)", key="dom_run_btn")
+    run_dom_btn = st.sidebar.button("🚀 산출 실행", key="dom_run_btn")
 
     cur_sig = make_dom_params_signature()
     last_sig = st.session_state.get("dom_last_run_sig", None)
@@ -1681,7 +1681,7 @@ def render_domestic():
     # -------------------------
     # Tabs(국내)
     # -------------------------
-    tab1, tab2, tab3 = st.tabs(["📄 BOQ 결과(국내)", "🧾 산출 로그(국내)", "⬇️ 다운로드(국내)"])
+    tab1, tab2, tab3 = st.tabs(["📄 BOQ 결과", "🧾 산출 근거(편집 가능)", "⬇️ 다운로드(국내)"])
 
     with tab2:
         if not st.session_state.get("dom_has_results", False):
@@ -2465,7 +2465,7 @@ def render_overseas():
             base = base.merge(upd, on="BOQ_ID", how="left")
             return base
 
-        tab1, tab2, tab3 = st.tabs(["📄 BOQ 결과", "🧾 산출 로그(편집 가능)", "📝 근거 보고서"])
+        tab1, tab2, tab3 = st.tabs(["📄 BOQ 결과", "🧾 산출 근거(편집 가능)", "📝 근거 보고서"])
 
         with tab2:
             st.caption("✅ 체크 해제하면 평균단가 산출에서 제외됩니다. 체크하면 포함됩니다.")
@@ -2755,7 +2755,7 @@ def render_overseas():
 # - Streamlit은 탭이 있어도 코드가 둘 다 실행되는 경우가 많아서,
 #   active_db 상태로 "한쪽만" 실제 렌더하도록 구성
 # ============================================================
-tab_over, tab_dom = st.tabs(["🌍 해외 실적단가 DB", "🇰🇷 국내 실적단가 DB"])
+tab_over, tab_dom = st.tabs(["🌍 해외 실적단가 DB", "🇰🇷 실적단가 DB"])
 
 with tab_over:
     if st.session_state["active_db"] != "overseas":
@@ -2774,6 +2774,7 @@ with tab_dom:
         st.info("현재 활성 화면은 해외 탭입니다. 전환 버튼을 눌러 활성화하세요.")
     else:
         render_domestic()
+
 
 
 
