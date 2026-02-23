@@ -2386,6 +2386,25 @@ def render_overseas():
             prog_text.empty()
         except Exception:
             pass
+         try:
+            progress.empty()
+        except Exception:
+            pass
+        try:
+            prog_text.empty()
+        except Exception:
+            pass
+
+        # =========================
+        # 산출 완료 후 결과를 세션에 저장 (필수)
+        # =========================
+        st.session_state["boq_df"] = boq.copy()
+        st.session_state["result_df_base"] = result_df.copy()
+        st.session_state["log_df_base"] = log_df.copy()
+        st.session_state["log_df_edited"] = log_df.copy()
+        st.session_state["result_df_adjusted"] = result_df.copy()
+        st.session_state["has_results"] = True
+        st.session_state["last_run_sig"] = run_sig
 
     run_btn = st.sidebar.button("🚀 산출 실행")
     current_sig = make_params_signature()
@@ -2748,6 +2767,7 @@ with tab_dom:
         st.info("현재 활성 화면은 해외 탭입니다. 전환 버튼을 눌러 활성화하세요.")
     else:
         render_domestic()
+
 
 
 
