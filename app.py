@@ -1923,14 +1923,64 @@ def render_domestic():
                     b1, b2, b3, b4 = st.columns([1.2, 1.2, 1.2, 2.4])
                     with b1:
                         btn_ai_one = st.button("🤖 AI 적용(현재 BOQ)", key="dom_btn_ai_one")
-                        record_ai_last_applied("현재 BOQ", agent_mode, int(min_keep), int(max_keep), summary, boq_id=int(sel_id))
                     with b2:
                         btn_undo_one = st.button("↩️ 되돌리기(현재 BOQ)", key="dom_btn_undo_one")
                     with b3:
                         btn_ai_all = st.button("🤖 AI 적용(전체 BOQ)", key="dom_btn_ai_all")
-                        record_ai_last_applied("전체 BOQ", agent_mode, int(min_keep), int(max_keep), None)
                     with b4:
                         btn_undo_all = st.button("↩️ 되돌리기(전체 BOQ)", key="dom_btn_undo_all")
+                    
+                    # --- 되돌리기(현재 BOQ) ---
+                    if btn_undo_one:
+                        backup = st.session_state["dom_include_backup"].get(int(sel_id))
+                        if backup is not None and len(backup) == len(log_view_full.index):
+                            st.session_state["dom_log_df_edited"].loc[log_view_full.index, "Include"] = backup.values
+                            st.session_state["dom_result_df_adjusted"] = recompute_dom_result_from_log(st.session_state["dom_log_df_edited"])
+                            st.success("되돌리기 완료(현재 BOQ)")
+                            st.rerun()
+                        else:
+                            st.warning("되돌릴 백업이 없습니다(또는 후보행이 변경됨).")
+                    
+                    # --- AI 적용(현재 BOQ) ---
+                    if btn_ai_one:
+                        # 현재 BOQ Include 백업
+                        st.session_state["dom_include_backup"][int(sel_id)] = st.session_state["dom_log_df_edited"].loc[log_view_full.index, "Include"].copy()
+                    
+                        updated, summary = apply_agent_to_log(
+                            log_all=st.session_state["dom_log_df_edited"].copy(),
+                            boq_id=int(sel_id),
+                            mode=agent_mode,
+                            min_keep=int(min_keep),
+                            max_keep=int(max_keep),
+                        )
+                        st.session_state["dom_log_df_edited"] = updated
+                        st.session_state["dom_result_df_adjusted"] = recompute_dom_result_from_log(st.session_state["dom_log_df_edited"])
+                        if summary:
+                            st.success(f"AI 적용 완료(현재 BOQ): {summary['kept']}/{summary['total']} 포함, 모드={summary['mode']}")
+                    
+                        # <-- 안전하게 summary 전달
+                        record_ai_last_applied("현재 BOQ", agent_mode, int(min_keep), int(max_keep), summary, boq_id=int(sel_id))
+                        st.rerun()
+                    
+                    # --- AI 적용(전체 BOQ) ---
+                    if btn_ai_all:
+                        st.session_state["dom_include_backup_all"] = st.session_state["dom_log_df_edited"][["BOQ_ID", "Include"]].copy()
+                    
+                        updated, sum_df = apply_agent_to_all_boqs(
+                            log_all=st.session_state["dom_log_df_edited"].copy(),
+                            mode=agent_mode,
+                            min_keep=int(min_keep),
+                            max_keep=int(max_keep),
+                        )
+                        st.session_state["dom_log_df_edited"] = updated
+                        st.session_state["dom_result_df_adjusted"] = recompute_dom_result_from_log(st.session_state["dom_log_df_edited"])
+                        st.success("AI 적용 완료(전체 BOQ)")
+                        if sum_df is not None and not sum_df.empty:
+                            st.dataframe(sum_df, use_container_width=True)
+                    
+                        # 전체 적용은 summary가 없으므로 None 전달
+                        record_ai_last_applied("전체 BOQ", agent_mode, int(min_keep), int(max_keep), None)
+                        st.rerun()
     
                     # --- 결과 재계산(Include 기반) 함수 ---
                     def recompute_dom_result_from_log(cur_log: pd.DataFrame) -> pd.DataFrame:
@@ -3035,6 +3085,7 @@ with tab_dom:
         st.info("현재 활성 화면은 해외 탭입니다. 전환 버튼을 눌러 활성화하세요.")
     else:
         render_domestic()
+
 
 
 
