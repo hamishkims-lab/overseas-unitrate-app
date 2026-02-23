@@ -3021,7 +3021,7 @@ def render_overseas():
             with c1:
                 st.metric("매칭 유사도, (%)", f"{float(sim_threshold):.0f}")
             with c2:
-                st.metric("상/하위 컷 비율(%)", f"{float(cut_ratio) * 100:.0f}")
+                st.metric("상/하위 컷 비율(%)", f"{float(cut_ratio):.0f}")
             with c3:
                 st.metric("산출통화", str(target_currency))
 
@@ -3098,6 +3098,7 @@ with tab_dom:
         st.info("현재 활성 화면은 해외 탭입니다. 전환 버튼을 눌러 활성화하세요.")
     else:
         render_domestic()
+
 
 
 
