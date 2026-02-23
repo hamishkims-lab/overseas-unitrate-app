@@ -2652,13 +2652,12 @@ def render_overseas():
             st.dataframe(show_df, use_container_width=True)
 
         with tab3:
-            st.markdown("## 📝 근거 보고서(자동 생성)")
-            st.caption("현재 Include(포함) 상태 + 조건/선택 현장/특성 + (AI 적용 시) 최종 기준을 포함합니다.")
+            st.markdown("## 📝 근거 보고서")
 
             base_result = st.session_state.get("result_df_adjusted", st.session_state.get("result_df_base", pd.DataFrame()))
             log_for_report = st.session_state.get("log_df_edited", st.session_state.get("log_df_base", pd.DataFrame()))
 
-            st.markdown("### 1) 찾아야 할 공종 특성(선택된 프로젝트 특성)")
+            st.markdown("### 1) 공종 특성")
             sel_features = st.session_state.get("selected_feature_ids", [])
             ft = build_feature_context_table(feature_master, sel_features)
             if ft.empty:
@@ -2666,7 +2665,7 @@ def render_overseas():
             else:
                 st.dataframe(ft, use_container_width=True)
 
-            st.markdown("### 2) 찾은 실적 현장 리스트(최종 선택 현장)")
+            st.markdown("### 2) 실적 현장 리스트")
             try:
                 _sel_sites = selected_site_codes if (selected_site_codes is not None) else []
             except Exception:
@@ -2680,7 +2679,7 @@ def render_overseas():
             st.markdown("### 3) 단가 추출 근거(조건)")
             c1, c2, c3 = st.columns(3)
             with c1:
-                st.metric("Threshold(컷 기준, %)", f"{float(sim_threshold):.0f}")
+                st.metric("매칭 유사도, %)", f"{float(sim_threshold):.0f}")
             with c2:
                 st.metric("상/하위 컷 비율(%)", f"{float(cut_ratio) * 100:.0f}")
             with c3:
@@ -2703,19 +2702,19 @@ def render_overseas():
             summary_df = st.session_state.get("report_summary_df", pd.DataFrame())
             detail_df = st.session_state.get("report_detail_df", pd.DataFrame())
 
-            st.markdown("### 6) 각 내역별 단가 근거(요약)")
+            st.markdown("### 6) 각 내역별 단가 근거(평균)")
             if summary_df is None or summary_df.empty:
                 st.info("보고서를 보려면 '보고서 생성/갱신'을 눌러주세요.")
             else:
                 st.dataframe(summary_df, use_container_width=True)
 
-            st.markdown("### 7) 각 내역별 단가 근거(상세: Include=True 후보)")
+            st.markdown("### 7) 각 내역별 단가 근거(선택된 내역)")
             if detail_df is not None and not detail_df.empty:
                 st.dataframe(detail_df, use_container_width=True)
             else:
                 st.info("Include=True 상세 후보가 없습니다(전부 제외되었거나 후보가 없음).")
 
-            st.markdown("### 8) 내역별 단가 점분포(계약년월 vs 단가) - 포함/미포함")
+            st.markdown("### 8) 내역별 단가 분포")
             render_boq_scatter(log_for_report, base_result)
 
             out_result = st.session_state.get("result_df_adjusted", result_df).copy()
@@ -2759,6 +2758,7 @@ with tab_dom:
         st.info("현재 활성 화면은 해외 탭입니다. 전환 버튼을 눌러 활성화하세요.")
     else:
         render_domestic()
+
 
 
 
