@@ -1833,6 +1833,19 @@ def render_domestic():
                 sim_threshold=dom_sim_threshold,
                 cut_ratio=dom_cut_ratio,
             )
+                # ✅ 산출 완료 후 진행 텍스트 제거
+                try:
+                    status_box.empty()
+                except Exception:
+                    pass
+                try:
+                    progress.empty()
+                except Exception:
+                    pass
+                try:
+                    prog_text.empty()
+                except Exception:
+                    pass
 
         st.session_state["dom_boq_df"] = boq_kr
         st.session_state["dom_result_df_base"] = result_df.copy()
@@ -1857,7 +1870,7 @@ def render_domestic():
     # -------------------------
     # Tabs(국내)
     # -------------------------
-    tab1, tab2, tab3 = st.tabs(["📄 BOQ 결과", "🧾 산출 근거(편집 가능)", "⬇️ 다운로드(국내)"])
+    tab1, tab2, tab3 = st.tabs(["📄 BOQ 결과", "🧾 산출 근거(편집 가능)", "📝 근거 보고서"])
 
     with tab2:
         if not st.session_state.get("dom_has_results", False):
@@ -3085,6 +3098,7 @@ with tab_dom:
         st.info("현재 활성 화면은 해외 탭입니다. 전환 버튼을 눌러 활성화하세요.")
     else:
         render_domestic()
+
 
 
 
