@@ -1687,7 +1687,7 @@ def render_domestic():
         if not st.session_state.get("dom_has_results", False):
             st.info("산출 실행 후 로그가 표시됩니다.")
         else:
-            st.caption("✅ BOQ를 선택한 뒤, Include 체크로 포함/제외를 편집할 수 있습니다. (해외 탭과 동일 UX)")
+            
     
             # 현재 편집 대상: 전체 로그(edited)
             if "dom_log_df_edited" not in st.session_state:
@@ -2774,6 +2774,7 @@ with tab_dom:
         st.info("현재 활성 화면은 해외 탭입니다. 전환 버튼을 눌러 활성화하세요.")
     else:
         render_domestic()
+
 
 
 
