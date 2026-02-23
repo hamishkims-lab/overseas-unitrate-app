@@ -2366,8 +2366,8 @@ def render_overseas():
         else:
             pool = st.session_state["candidate_pool"]
 
-        status_box.markdown("### ⏳ 산출중...")
-        with st.spinner("빠른 재계산 중..."):
+        status_box.markdown("### ⏳ 산출중... (Threshold/컷/산출통화 반영)")
+        with st.spinner("빠른 재계산(Threshold/컷/산출통화 반영 중)..."):
             result_df, log_df = fast_recompute_from_pool(
                 pool=pool,
                 exchange=exchange,
@@ -2376,33 +2376,12 @@ def render_overseas():
                 cut_ratio=cut_ratio,
                 target_currency=target_currency,
             )
-        
-        # ✅ 산출 완료 후 진행바/텍스트 제거 (남는 문구 방지)
-        try:
-            progress.empty()
-        except Exception:
-            pass
-        try:
-            prog_text.empty()
-        except Exception:
-            pass
-         try:
-            progress.empty()
-        except Exception:
-            pass
-        try:
-            prog_text.empty()
-        except Exception:
-            pass
 
-        # =========================
-        # 산출 완료 후 결과를 세션에 저장 (필수)
-        # =========================
-        st.session_state["boq_df"] = boq.copy()
+        st.session_state["boq_df"] = boq
         st.session_state["result_df_base"] = result_df.copy()
         st.session_state["log_df_base"] = log_df.copy()
         st.session_state["log_df_edited"] = log_df.copy()
-        st.session_state["result_df_adjusted"] = result_df.copy()
+        st.session_state.pop("result_df_adjusted", None)
         st.session_state["has_results"] = True
         st.session_state["last_run_sig"] = run_sig
 
@@ -2767,9 +2746,6 @@ with tab_dom:
         st.info("현재 활성 화면은 해외 탭입니다. 전환 버튼을 눌러 활성화하세요.")
     else:
         render_domestic()
-
-
-
 
 
 
