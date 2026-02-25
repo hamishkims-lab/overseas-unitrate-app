@@ -2562,29 +2562,46 @@ def render_domestic():
             st.markdown("### 8) 내역별 단가 분포")
             render_boq_scatter_domestic(log_for_report, base_result)
     
-            # -------------------------
-            # Excel 다운로드(해외 형식과 동일: result + log + report 2시트)
-            # -------------------------
-            out_result = base_result.copy()
-            out_log = log_for_report.copy()
-            rep_sum = st.session_state.get("dom_report_summary_df", pd.DataFrame())
-            rep_det = st.session_state.get("dom_report_detail_df", pd.DataFrame())
-    
+            # =========================
+            # (TAB3) ✅ Excel 다운로드(근거보고서 기준) - 국내
+            # =========================
+            st.markdown("---")
+            st.markdown("### ⬇️ Excel 다운로드(근거보고서 기준)")
+            
+            # 1) 보고서(표시용으로 이미 rename/정렬된 결과)를 그대로 사용
+            rep_sum = st.session_state.get("dom_report_summary_df", pd.DataFrame()).copy()
+            rep_det = st.session_state.get("dom_report_detail_df", pd.DataFrame()).copy()
+            
+            # 2) 아직 생성 전이면(안전장치) 즉시 생성
+            if rep_sum.empty or rep_det.empty:
+                base_result = st.session_state.get(
+                    "dom_result_df_adjusted",
+                    st.session_state.get("dom_result_df_base", pd.DataFrame())
+                )
+                log_for_report = st.session_state.get(
+                    "dom_log_df_edited",
+                    st.session_state.get("dom_log_df_base", pd.DataFrame())
+                )
+            
+                rep_sum, rep_det = build_report_tables_domestic(log_for_report, base_result)
+                st.session_state["dom_report_summary_df"] = rep_sum
+                st.session_state["dom_report_detail_df"] = rep_det
+            
             bio = io.BytesIO()
             with pd.ExcelWriter(bio, engine="openpyxl") as writer:
-                out_result.to_excel(writer, index=False, sheet_name="boq_with_price_kr")
-                out_log.to_excel(writer, index=False, sheet_name="calculation_log_kr")
-                if rep_sum is not None and not rep_sum.empty:
-                    rep_sum.to_excel(writer, index=False, sheet_name="report_summary_kr")
-                if rep_det is not None and not rep_det.empty:
-                    rep_det.to_excel(writer, index=False, sheet_name="report_detail_kr")
+                # ✅ 근거보고서 기준으로 저장 (열이름/순서 그대로)
+                if not rep_sum.empty:
+                    rep_sum.to_excel(writer, index=False, sheet_name="report_summary")
+                if not rep_det.empty:
+                    rep_det.to_excel(writer, index=False, sheet_name="report_detail")
+            
             bio.seek(0)
-    
+            
             st.download_button(
-                "⬇️ Excel 다운로드(국내)",
+                "⬇️ 리포트 다운로드(근거보고서 기준)",
                 data=bio.read(),
-                file_name="result_unitrate_kr.xlsx",
-                key="dom_download_btn",
+                file_name="report_domestic.xlsx",
+                key="download_report_domestic",
             )
 
 # ============================================================
@@ -3344,6 +3361,7 @@ with tab_dom:
         st.info("현재 활성 화면은 해외 탭입니다. 전환 버튼을 눌러 활성화하세요.")
     else:
         render_domestic()
+
 
 
 
