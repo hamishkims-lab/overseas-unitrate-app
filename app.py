@@ -1078,7 +1078,7 @@ def build_report_tables(log_df: pd.DataFrame, result_df: pd.DataFrame):
         "AI_모드", "AI_추천사유",
     ]
     
-    })
+    
     for c in detail_cols:
         if c not in inc.columns:
             inc[c] = None
@@ -3113,6 +3113,7 @@ with tab_dom:
         st.info("현재 활성 화면은 해외 탭입니다. 전환 버튼을 눌러 활성화하세요.")
     else:
         render_domestic()
+
 
 
 
