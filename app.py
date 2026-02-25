@@ -3081,19 +3081,7 @@ def render_overseas():
             out_result = st.session_state.get("result_df_adjusted", result_df).copy()
             out_log = st.session_state.get("log_df_edited", log_df).copy()
 
-        bio = io.BytesIO()
-        with pd.ExcelWriter(bio, engine="openpyxl") as writer:
-            out_result.to_excel(writer, index=False, sheet_name="boq_with_price")
-            out_log.to_excel(writer, index=False, sheet_name="calculation_log")
-            rep_sum = st.session_state.get("report_summary_df", pd.DataFrame())
-            rep_det = st.session_state.get("report_detail_df", pd.DataFrame())
-            if rep_sum is not None and not rep_sum.empty:
-                rep_sum.to_excel(writer, index=False, sheet_name="report_summary")
-            if rep_det is not None and not rep_det.empty:
-                rep_det.to_excel(writer, index=False, sheet_name="report_detail")
-        bio.seek(0)
-        st.download_button("⬇️ Excel 다운로드", data=bio.read(), file_name="result_unitrate.xlsx")
-
+        
 
 # ============================================================
 # ✅ 상단 탭(해외/국내) + 사이드바 중복 렌더 방지 로직
@@ -3119,6 +3107,7 @@ with tab_dom:
         st.info("현재 활성 화면은 해외 탭입니다. 전환 버튼을 눌러 활성화하세요.")
     else:
         render_domestic()
+
 
 
 
