@@ -2241,7 +2241,7 @@ def render_domestic():
                         )
                     
                         # 3) 유사도 기준(현재 BOQ 전용: 사이드바 값과 분리)
-                        hyb_thr_tab2 = st.number_input(
+                        hyb_thr_tab2 = st.slider(
                             "매칭 유사도 기준값(현재 BOQ 전용, %)",
                             min_value=0,
                             max_value=100,
@@ -3263,6 +3263,7 @@ with tab_dom:
         st.info("현재 활성 화면은 해외 탭입니다. 전환 버튼을 눌러 활성화하세요.")
     else:
         render_domestic()
+
 
 
 
