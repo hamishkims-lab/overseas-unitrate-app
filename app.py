@@ -3034,11 +3034,32 @@ def render_overseas():
             else:
                 st.dataframe(base_result, use_container_width=True)
 
-            if st.button("📝 보고서 생성/갱신", key="btn_build_report"):
+            # ✅ (TAB3) 보고서 자동 생성/갱신 (변경 감지)
+            def _report_sig(log_df: pd.DataFrame, result_df: pd.DataFrame) -> str:
+                # Include/BOQ_ID/__adj_price만 바뀌어도 요약/상세가 바뀌므로 이 정도만 서명으로 사용
+                cols = [c for c in ["BOQ_ID", "Include", "__adj_price", "__hyb"] if c in log_df.columns]
+                base = log_df[cols].copy() if cols else log_df.copy()
+                s1 = file_fingerprint(base, cols) if cols else hashlib.md5(str(base.shape).encode()).hexdigest()
+            
+                s2 = ""
+                if result_df is not None and not result_df.empty:
+                    cols2 = [c for c in ["BOQ_ID", "Final Price"] if c in result_df.columns]
+                    if cols2:
+                        s2 = file_fingerprint(result_df[cols2].copy(), cols2)
+                    else:
+                        s2 = hashlib.md5(str(result_df.shape).encode()).hexdigest()
+            
+                return hashlib.md5((s1 + "|" + s2).encode("utf-8")).hexdigest()
+            
+            cur_rep_sig = _report_sig(log_for_report, base_result)
+            prev_rep_sig = st.session_state.get("report_sig", None)
+            
+            if (prev_rep_sig != cur_rep_sig) or ("report_summary_df" not in st.session_state) or ("report_detail_df" not in st.session_state):
                 summary_df, detail_df = build_report_tables(log_for_report, base_result)
                 st.session_state["report_summary_df"] = summary_df
                 st.session_state["report_detail_df"] = detail_df
-
+                st.session_state["report_sig"] = cur_rep_sig
+            
             summary_df = st.session_state.get("report_summary_df", pd.DataFrame())
             detail_df = st.session_state.get("report_detail_df", pd.DataFrame())
 
@@ -3098,6 +3119,7 @@ with tab_dom:
         st.info("현재 활성 화면은 해외 탭입니다. 전환 버튼을 눌러 활성화하세요.")
     else:
         render_domestic()
+
 
 
 
