@@ -2240,19 +2240,15 @@ def render_domestic():
                             key="dom_f_sub",
                         )
                     
-                        # 3) 유사도 필터(범위)
-                        hyb_min_default = float(st.session_state.get("dom_f_hyb_min", 0.0))
-                        hyb_max_default = float(st.session_state.get("dom_f_hyb_max", 100.0))
-                        hyb_min, hyb_max = st.slider(
-                            "매칭 유사도 (%)",
-                            min_value=0.0,
-                            max_value=100.0,
-                            value=(hyb_min_default, hyb_max_default),
-                            step=1.0,
-                            key="dom_f_hyb_range",
+                        # 3) 유사도 기준(현재 BOQ 전용: 사이드바 값과 분리)
+                        hyb_thr_tab2 = st.number_input(
+                            "매칭 유사도 기준값(현재 BOQ 전용, %)",
+                            min_value=0,
+                            max_value=100,
+                            value=int(st.session_state.get("dom_sim_threshold_tab2", st.session_state.get("dom_sim_threshold", 65))),
+                            step=5,
+                            key="dom_sim_threshold_tab2",
                         )
-                        st.session_state["dom_f_hyb_min"] = hyb_min
-                        st.session_state["dom_f_hyb_max"] = hyb_max
                     
                         # 4) 상/하위 컷 비율(현재 BOQ 전용)
                         cut_pct = st.slider(
@@ -2282,7 +2278,12 @@ def render_domestic():
                     if sel_sub:
                         mask &= log_view_full["세부분류"].astype(str).isin([str(x) for x in sel_sub])
                     
-                    mask &= log_view_full["__hyb_num"].between(float(hyb_min), float(hyb_max))
+                    thr = float(st.session_state.get(
+                        "dom_sim_threshold_tab2",
+                        st.session_state.get("dom_sim_threshold", 65)
+                    ))
+                    
+                    mask &= (log_view_full["__hyb_num"] >= hyb_thr_tab2)
                     
                     # 표시용(필터 적용된 후보만 보여줌)
                     log_view_full_filtered = log_view_full.loc[mask].copy()
@@ -3262,6 +3263,7 @@ with tab_dom:
         st.info("현재 활성 화면은 해외 탭입니다. 전환 버튼을 눌러 활성화하세요.")
     else:
         render_domestic()
+
 
 
 
