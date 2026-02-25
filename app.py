@@ -2477,6 +2477,10 @@ def render_domestic():
             if st_sites.empty:
                 st.info("표시할 현장이 없습니다.")
             else:
+                # ✅ 인덱스를 1부터 시작하도록 변경
+                st_sites = st_sites.reset_index(drop=True)
+                st_sites.index = st_sites.index + 1
+            
                 st.dataframe(st_sites, use_container_width=True)
     
             # 3) 단가 추출 근거(조건)
@@ -3172,8 +3176,12 @@ def render_overseas():
                 _sel_sites = []
             st_sites = build_site_context_table(cost_db, _sel_sites)
             if st_sites.empty:
-                st.info("선택된 현장이 없습니다(또는 현장 필터 미사용).")
+                st.info("표시할 현장이 없습니다.")
             else:
+                # ✅ 인덱스를 1부터 시작하도록 변경
+                st_sites = st_sites.reset_index(drop=True)
+                st_sites.index = st_sites.index + 1
+            
                 st.dataframe(st_sites, use_container_width=True)
 
             st.markdown("### 3) 단가 추출 근거(조건)")
@@ -3303,6 +3311,7 @@ with tab_dom:
         st.info("현재 활성 화면은 해외 탭입니다. 전환 버튼을 눌러 활성화하세요.")
     else:
         render_domestic()
+
 
 
 
