@@ -3200,7 +3200,59 @@ def render_overseas():
             out_result = st.session_state.get("result_df_adjusted", result_df).copy()
             out_log = st.session_state.get("log_df_edited", log_df).copy()
 
-        
+            # =========================
+            # (TAB3) ✅ Excel 다운로드(근거보고서)
+            # =========================
+            st.markdown("---")
+            st.markdown("### ⬇️ Excel 다운로드")
+            
+            # 결과/로그: 최신(편집 반영) 우선
+            out_result = st.session_state.get(
+                "result_df_adjusted",
+                st.session_state.get("result_df_base", pd.DataFrame())
+            ).copy()
+            
+            out_log = st.session_state.get(
+                "log_df_edited",
+                st.session_state.get("log_df_base", pd.DataFrame())
+            ).copy()
+            
+            # 보고서 테이블: 자동 갱신을 쓰고 있다면 session_state에서 가져오기
+            rep_sum = st.session_state.get("report_summary_df", pd.DataFrame()).copy()
+            rep_det = st.session_state.get("report_detail_df", pd.DataFrame()).copy()
+            
+            # (선택) 보고서가 아직 비어있으면 즉시 생성
+            if (rep_sum is None or rep_sum.empty) or (rep_det is None or rep_det.empty):
+                try:
+                    rep_sum2, rep_det2 = build_report_tables(out_log, out_result)
+                    if rep_sum is None or rep_sum.empty:
+                        rep_sum = rep_sum2
+                        st.session_state["report_summary_df"] = rep_sum2
+                    if rep_det is None or rep_det.empty:
+                        rep_det = rep_det2
+                        st.session_state["report_detail_df"] = rep_det2
+                except Exception:
+                    pass
+            
+            bio = io.BytesIO()
+            with pd.ExcelWriter(bio, engine="openpyxl") as writer:
+                if out_result is not None and not out_result.empty:
+                    out_result.to_excel(writer, index=False, sheet_name="boq_with_price")
+                if out_log is not None and not out_log.empty:
+                    out_log.to_excel(writer, index=False, sheet_name="calculation_log")
+                if rep_sum is not None and not rep_sum.empty:
+                    rep_sum.to_excel(writer, index=False, sheet_name="report_summary")
+                if rep_det is not None and not rep_det.empty:
+                    rep_det.to_excel(writer, index=False, sheet_name="report_detail")
+            
+            bio.seek(0)
+            
+            st.download_button(
+                "⬇️ Excel 다운로드(근거보고서 포함)",
+                data=bio.read(),
+                file_name="result_unitrate_with_report.xlsx",
+                key="overseas_tab3_download_btn",
+            )
 
 # ============================================================
 # ✅ 상단 탭(해외/국내) + 사이드바 중복 렌더 방지 로직
@@ -3226,6 +3278,7 @@ with tab_dom:
         st.info("현재 활성 화면은 해외 탭입니다. 전환 버튼을 눌러 활성화하세요.")
     else:
         render_domestic()
+
 
 
 
