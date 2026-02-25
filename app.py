@@ -2410,7 +2410,6 @@ def render_domestic():
         if not st.session_state.get("dom_has_results", False):
             st.info("산출 실행 후 보고서/다운로드가 가능합니다.")
         else:
-            st.markdown("## 📝 근거 보고서(국내)")
     
             base_result = st.session_state.get(
                 "dom_result_df_adjusted",
@@ -2504,11 +2503,11 @@ def render_domestic():
             else:
                 st.dataframe(base_result, use_container_width=True)
     
-            # 6~7 테이블 생성/갱신
-            if st.button("📝 보고서 생성/갱신(국내)", key="btn_build_report_kr"):
-                summary_df, detail_df = build_report_tables_domestic(log_for_report, base_result)
-                st.session_state["dom_report_summary_df"] = summary_df
-                st.session_state["dom_report_detail_df"] = detail_df
+            # 6~7 테이블 자동 생성/갱신 (버튼 제거)
+            # - tab3를 열면 항상 최신 log_for_report/base_result 기반으로 갱신
+            summary_df, detail_df = build_report_tables_domestic(log_for_report, base_result)
+            st.session_state["dom_report_summary_df"] = summary_df
+            st.session_state["dom_report_detail_df"] = detail_df
     
             summary_df = st.session_state.get("dom_report_summary_df", pd.DataFrame())
             detail_df = st.session_state.get("dom_report_detail_df", pd.DataFrame())
@@ -3311,6 +3310,7 @@ with tab_dom:
         st.info("현재 활성 화면은 해외 탭입니다. 전환 버튼을 눌러 활성화하세요.")
     else:
         render_domestic()
+
 
 
 
