@@ -1077,16 +1077,7 @@ def build_report_tables(log_df: pd.DataFrame, result_df: pd.DataFrame):
         "현장코드", "현장명", "협력사코드", "협력사명",
         "AI_모드", "AI_추천사유",
     ]
-    detail_df = inc[detail_cols].copy()
-
-    # ✅ 여기서 열 제목 변경
-    detail_df = detail_df.rename(columns={
-        "__adj_price": "산출단가",
-        "__cpi_ratio": "CPI 지수",
-        "__latest_ym": "적용년월",
-        "__fx_ratio": "적용환율",
-        "__fac_ratio": "Location Factor",
-        "__hyb": "유사도"
+    
     })
     for c in detail_cols:
         if c not in inc.columns:
@@ -3122,6 +3113,7 @@ with tab_dom:
         st.info("현재 활성 화면은 해외 탭입니다. 전환 버튼을 눌러 활성화하세요.")
     else:
         render_domestic()
+
 
 
 
