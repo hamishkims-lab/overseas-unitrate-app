@@ -3204,54 +3204,38 @@ def render_overseas():
             # (TAB3) ✅ Excel 다운로드(근거보고서)
             # =========================
             st.markdown("---")
-            st.markdown("### ⬇️ Excel 다운로드")
+            st.markdown("### ⬇️ Excel 다운로드(근거보고서 기준)")
             
-            # 결과/로그: 최신(편집 반영) 우선
-            out_result = st.session_state.get(
-                "result_df_adjusted",
-                st.session_state.get("result_df_base", pd.DataFrame())
-            ).copy()
-            
-            out_log = st.session_state.get(
-                "log_df_edited",
-                st.session_state.get("log_df_base", pd.DataFrame())
-            ).copy()
-            
-            # 보고서 테이블: 자동 갱신을 쓰고 있다면 session_state에서 가져오기
+            # 1) 보고서(표시용으로 이미 rename/정렬된 결과)를 그대로 사용
             rep_sum = st.session_state.get("report_summary_df", pd.DataFrame()).copy()
             rep_det = st.session_state.get("report_detail_df", pd.DataFrame()).copy()
             
-            # (선택) 보고서가 아직 비어있으면 즉시 생성
-            if (rep_sum is None or rep_sum.empty) or (rep_det is None or rep_det.empty):
-                try:
-                    rep_sum2, rep_det2 = build_report_tables(out_log, out_result)
-                    if rep_sum is None or rep_sum.empty:
-                        rep_sum = rep_sum2
-                        st.session_state["report_summary_df"] = rep_sum2
-                    if rep_det is None or rep_det.empty:
-                        rep_det = rep_det2
-                        st.session_state["report_detail_df"] = rep_det2
-                except Exception:
-                    pass
+            # 2) 혹시 아직 생성 전이면(안전장치) 즉시 생성
+            if rep_sum.empty or rep_det.empty:
+                base_result = st.session_state.get("result_df_adjusted", st.session_state.get("result_df_base", pd.DataFrame()))
+                log_for_report = st.session_state.get("log_df_edited", st.session_state.get("log_df_base", pd.DataFrame()))
+                rep_sum, rep_det = build_report_tables(log_for_report, base_result)
+                st.session_state["report_summary_df"] = rep_sum
+                st.session_state["report_detail_df"] = rep_det
+            
+            # 3) 결과/로그도 “표시용(열 이름 바뀐 것)”을 쓰고 싶으면 여기서 rename해서 맞추면 되지만,
+            #    질문 요지(근거보고서 기반)라서 report_summary/report_detail만 기준으로 저장합니다.
             
             bio = io.BytesIO()
             with pd.ExcelWriter(bio, engine="openpyxl") as writer:
-                if out_result is not None and not out_result.empty:
-                    out_result.to_excel(writer, index=False, sheet_name="boq_with_price")
-                if out_log is not None and not out_log.empty:
-                    out_log.to_excel(writer, index=False, sheet_name="calculation_log")
-                if rep_sum is not None and not rep_sum.empty:
+                # ✅ 근거보고서 기준으로 저장 (열이름/순서 그대로)
+                if not rep_sum.empty:
                     rep_sum.to_excel(writer, index=False, sheet_name="report_summary")
-                if rep_det is not None and not rep_det.empty:
+                if not rep_det.empty:
                     rep_det.to_excel(writer, index=False, sheet_name="report_detail")
             
             bio.seek(0)
             
             st.download_button(
-                "⬇️ Excel 다운로드(근거보고서 포함)",
+                "⬇️ 리포트 다운로드(근거보고서 기준)",
                 data=bio.read(),
-                file_name="result_unitrate_with_report.xlsx",
-                key="overseas_tab3_download_btn",
+                file_name="report_overseas.xlsx",
+                key="download_report_overseas",
             )
 
 # ============================================================
@@ -3278,6 +3262,7 @@ with tab_dom:
         st.info("현재 활성 화면은 해외 탭입니다. 전환 버튼을 눌러 활성화하세요.")
     else:
         render_domestic()
+
 
 
 
