@@ -1295,6 +1295,40 @@ def build_report_tables_domestic(log_df: pd.DataFrame, result_df: pd.DataFrame):
             inc[c] = None
     detail_df = inc[detail_cols].copy()
 
+    # ✅ (표시용) 열 제목 변경
+    detail_rename = {
+        "BOQ_ID": "BOQ 번호",
+        "BOQ_명칭": "BOQ 명칭",
+        "BOQ_규격": "BOQ 규격",
+        "BOQ_단위": "BOQ 단위",
+    
+        "실행명칭": "실행명칭",
+        "규격": "규격",
+        "단위": "단위",
+    
+        "__adj_price": "산출단가",
+        "__hyb": "유사도(%)",
+    
+        "계약월": "계약월",
+        "보정단가": "보정단가",
+        "계약단가": "계약단가",
+    
+        "현장코드": "현장코드",
+        "현장명": "현장명",
+        "현장특성": "현장특성",
+    
+        "업체코드": "업체코드",
+        "업체명": "업체명",
+    
+        "공종Code분류": "공종분류",
+        "세부분류": "세부분류",
+    
+        "AI_모드": "AI 모드",
+        "AI_추천사유": "AI 추천사유",
+    }
+    
+    detail_df = detail_df.rename(columns=detail_rename)
+
     # -------------------------
     # (2) 요약(summary)
     # -------------------------
@@ -3310,6 +3344,7 @@ with tab_dom:
         st.info("현재 활성 화면은 해외 탭입니다. 전환 버튼을 눌러 활성화하세요.")
     else:
         render_domestic()
+
 
 
 
