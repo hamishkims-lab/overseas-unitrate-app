@@ -2992,8 +2992,7 @@ def render_overseas():
             st.dataframe(show_df, use_container_width=True)
 
         with tab3:
-            st.markdown("## 📝 근거 보고서")
-
+          
             base_result = st.session_state.get("result_df_adjusted", st.session_state.get("result_df_base", pd.DataFrame()))
             log_for_report = st.session_state.get("log_df_edited", st.session_state.get("log_df_base", pd.DataFrame()))
 
@@ -3107,6 +3106,7 @@ with tab_dom:
         st.info("현재 활성 화면은 해외 탭입니다. 전환 버튼을 눌러 활성화하세요.")
     else:
         render_domestic()
+
 
 
 
