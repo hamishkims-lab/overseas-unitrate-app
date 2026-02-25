@@ -1065,9 +1065,14 @@ def build_report_tables(log_df: pd.DataFrame, result_df: pd.DataFrame):
 
     detail_cols = [
         "BOQ_ID", "BOQ_내역", "BOQ_Unit",
-        "내역", "Unit", "Unit Price", "통화", "계약년월",
-        "__adj_price", "산출통화",
-        "__cpi_ratio", "__latest_ym", "__fx_ratio", "__fac_ratio", "__hyb",
+        "Unit Price", "통화", "계약년월",
+        "__adj_price": "산출단가",
+        "산출통화",
+        "__cpi_ratio": "CPI 지수",
+        "__latest_ym": "적용년월", 
+        "__fx_ratio": "적용환율", 
+        "__fac_ratio": "Location Factor",
+        "__hyb": "유사도",
         "공종코드", "공종명",
         "현장코드", "현장명", "협력사코드", "협력사명",
         "AI_모드", "AI_추천사유",
@@ -3106,6 +3111,7 @@ with tab_dom:
         st.info("현재 활성 화면은 해외 탭입니다. 전환 버튼을 눌러 활성화하세요.")
     else:
         render_domestic()
+
 
 
 
