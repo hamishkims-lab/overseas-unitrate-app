@@ -1054,6 +1054,114 @@ def apply_agent_to_all_boqs(
 # =========================
 # 📝 근거 보고서 생성(요약/상세)
 # =========================
+
+REPORT_SUMMARY_RENAME = {
+    "BOQ_내역": "BOQ 내역",
+    "BOQ_Unit": "단위",
+    "후보수": "후보수",
+    "포함수": "포함수",
+    "포함국가": "포함국가",
+    "포함현장수": "현장수",
+    "포함업체수": "업체수",
+    "산출단가평균": "산출단가(평균)",
+    "산출단가표준편차": "표준편차",
+    "산출단가최저": "최저",
+    "산출단가최고": "최고",
+    "최빈현장": "최빈현장",
+    "최빈업체": "최빈업체",
+    "리스크": "리스크",
+    "Final Price": "Final Price",
+    "산출근거": "산출근거",
+    "근거공종(최빈)": "근거공종(최빈)",
+}
+
+REPORT_SUMMARY_ORDER = [
+    "BOQ_ID",
+    "BOQ 내역",
+    "단위",
+    "Final Price",
+    "산출근거",
+    "근거공종(최빈)",
+    "후보수",
+    "포함수",
+    "포함국가",
+    "현장수",
+    "업체수",
+    "산출단가(평균)",
+    "표준편차",
+    "최저",
+    "최고",
+    "최빈현장",
+    "최빈업체",
+    "리스크",
+]
+
+REPORT_DETAIL_RENAME = {
+    # BOQ
+    "BOQ_내역": "BOQ 내역",
+    "BOQ_Unit": "단위",
+
+    # 가격/보정/유사도
+    "Unit Price": "원단가",
+    "통화": "원통화",
+    "계약년월": "계약년월",
+    "__adj_price": "산출단가",
+    "산출통화": "산출통화",
+    "__cpi_ratio": "CPI 지수",
+    "__latest_ym": "적용년월",
+    "__fx_ratio": "적용환율",
+    "__fac_ratio": "Location Factor",
+    "__hyb": "유사도",
+
+    # 코드/현장/업체
+    "공종코드": "공종코드",
+    "공종명": "공종명",
+    "현장코드": "현장코드",
+    "현장명": "현장명",
+    "협력사코드": "협력사코드",
+    "협력사명": "협력사명",
+
+    # AI
+    "AI_모드": "AI 모드",
+    "AI_추천사유": "AI 추천사유",
+}
+
+# 상세는 "원하는 것만 남기는" 방식이 가장 깔끔합니다.
+REPORT_DETAIL_COLS = [
+    "BOQ_ID", "BOQ_내역", "BOQ_Unit",
+    "Unit Price", "통화", "계약년월",
+    "__adj_price", "산출통화",
+    "__cpi_ratio", "__latest_ym", "__fx_ratio", "__fac_ratio", "__hyb",
+    "공종코드", "공종명",
+    "현장코드", "현장명",
+    "협력사코드", "협력사명",
+    "AI_모드", "AI_추천사유",
+]
+
+REPORT_DETAIL_ORDER = [
+    "BOQ_ID",
+    "BOQ 내역",
+    "단위",
+    "원단가",
+    "원통화",
+    "계약년월",
+    "산출단가",
+    "산출통화",
+    "CPI 지수",
+    "적용년월",
+    "적용환율",
+    "Location Factor",
+    "유사도",
+    "공종코드",
+    "공종명",
+    "현장코드",
+    "현장명",
+    "협력사코드",
+    "협력사명",
+    "AI 모드",
+    "AI 추천사유",
+]
+
 def build_report_tables(log_df: pd.DataFrame, result_df: pd.DataFrame):
     if log_df is None or log_df.empty:
         return pd.DataFrame(), pd.DataFrame()
@@ -1063,27 +1171,24 @@ def build_report_tables(log_df: pd.DataFrame, result_df: pd.DataFrame):
 
     inc = df[df["Include"] == True].copy()
 
-    detail_cols = [
-        "BOQ_ID", "BOQ_내역", "BOQ_Unit",
-        "Unit Price", "통화", "계약년월",
-        "__adj_price",
-        "산출통화",
-        "__cpi_ratio",
-        "__latest_ym",
-        "__fx_ratio",
-        "__fac_ratio",
-        "__hyb",
-        "공종코드", "공종명",
-        "현장코드", "현장명", "협력사코드", "협력사명",
-        "AI_모드", "AI_추천사유",
-    ]
-    
-    
-    for c in detail_cols:
+    # =========================
+    # (1) 상세(detail)
+    # =========================
+    for c in REPORT_DETAIL_COLS:
         if c not in inc.columns:
             inc[c] = None
-    detail_df = inc[detail_cols].copy()
 
+    detail_df = inc[REPORT_DETAIL_COLS].copy()
+    detail_df = detail_df.rename(columns=REPORT_DETAIL_RENAME)
+
+    # 정렬(존재하는 컬럼만)
+    exist_detail = [c for c in REPORT_DETAIL_ORDER if c in detail_df.columns]
+    remain_detail = [c for c in detail_df.columns if c not in exist_detail]
+    detail_df = detail_df[exist_detail + remain_detail].copy()
+
+    # =========================
+    # (2) 요약(summary)
+    # =========================
     rows = []
     for boq_id, g in df.groupby("BOQ_ID"):
         g_inc = g[g["Include"] == True].copy()
@@ -1142,11 +1247,19 @@ def build_report_tables(log_df: pd.DataFrame, result_df: pd.DataFrame):
 
     summary_df = pd.DataFrame(rows).sort_values("BOQ_ID").reset_index(drop=True)
 
+    # result_df의 일부 컬럼 병합
     if result_df is not None and not result_df.empty and "BOQ_ID" in result_df.columns:
         tmp = result_df.copy()
         tmp["BOQ_ID"] = tmp["BOQ_ID"].astype(int)
         keep = [c for c in ["BOQ_ID", "Final Price", "산출근거", "근거공종(최빈)"] if c in tmp.columns]
-        summary_df = summary_df.merge(tmp[keep], on="BOQ_ID", how="left")
+        if keep:
+            summary_df = summary_df.merge(tmp[keep], on="BOQ_ID", how="left")
+
+    # 요약 rename + 정렬
+    summary_df = summary_df.rename(columns=REPORT_SUMMARY_RENAME)
+    exist_sum = [c for c in REPORT_SUMMARY_ORDER if c in summary_df.columns]
+    remain_sum = [c for c in summary_df.columns if c not in exist_sum]
+    summary_df = summary_df[exist_sum + remain_sum].copy()
 
     return summary_df, detail_df
 
@@ -3113,6 +3226,7 @@ with tab_dom:
         st.info("현재 활성 화면은 해외 탭입니다. 전환 버튼을 눌러 활성화하세요.")
     else:
         render_domestic()
+
 
 
 
