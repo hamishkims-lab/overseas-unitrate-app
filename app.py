@@ -2432,10 +2432,50 @@ def render_domestic():
     
             # 2) 실적 현장 리스트
             st.markdown("### 2) 실적 현장 리스트")
-            _sel_sites = st.session_state.get("dom_selected_site_codes", [])
-            st_sites = build_site_context_table(cost_db_kr, _sel_sites)
+            
+            # (1) 현재 사이드바의 현장특성 필터를 동일하게 적용해서 "가능 현장" 풀을 만든다
+            _sel_feat = st.session_state.get("dom_sel_feat", [])
+            kr_view = cost_db_kr.copy()
+            
+            if "현장특성" not in kr_view.columns:
+                kr_view["현장특성"] = ""
+            
+            if _sel_feat:
+                kr_view = kr_view[kr_view["현장특성"].astype(str).isin([str(x) for x in _sel_feat])].copy()
+            
+            # (2) 가능 현장 목록(=사이드바에 표시되는 '가능 현장 n개'의 근거)
+            if "현장코드" not in kr_view.columns:
+                kr_view["현장코드"] = ""
+            if "현장명" not in kr_view.columns:
+                kr_view["현장명"] = ""
+            
+            site_pool = kr_view[["현장코드", "현장명"]].copy()
+            site_pool = site_pool.dropna(subset=["현장코드"])
+            site_pool["현장코드"] = site_pool["현장코드"].apply(norm_site_code)
+            site_pool["현장명"] = site_pool["현장명"].astype(str).fillna("").str.strip()
+            site_pool.loc[site_pool["현장명"].isin(["", "nan", "None"]), "현장명"] = "(현장명없음)"
+            site_pool = site_pool.drop_duplicates(subset=["현장코드"]).reset_index(drop=True)
+            
+            all_codes = site_pool["현장코드"].tolist()
+            
+            # (3) 사용자가 '국내 실적현장'을 선택했는지 확인
+            selected_codes = st.session_state.get("dom_selected_site_codes", [])
+            selected_codes = [norm_site_code(x) for x in (selected_codes or []) if norm_site_code(x)]
+            
+            # (4) 선택이 없으면: 가능한 전체(all_codes) 표시
+            #     선택이 있으면: 선택한 현장만 표시
+            if len(selected_codes) == 0:
+                show_codes = all_codes
+                st.caption(f"선택된 현장이 없어 가능한 전체 현장 {len(show_codes)}개를 표시합니다.")
+            else:
+                # 혹시 선택값에 풀에 없는 코드가 섞이면 제거
+                show_codes = [c for c in selected_codes if c in set(all_codes)]
+                st.caption(f"선택된 현장 {len(show_codes)}개만 표시합니다.")
+            
+            st_sites = build_site_context_table(site_pool, show_codes)
+            
             if st_sites.empty:
-                st.info("선택된 현장이 없습니다.")
+                st.info("표시할 현장이 없습니다.")
             else:
                 st.dataframe(st_sites, use_container_width=True)
     
@@ -3263,6 +3303,7 @@ with tab_dom:
         st.info("현재 활성 화면은 해외 탭입니다. 전환 버튼을 눌러 활성화하세요.")
     else:
         render_domestic()
+
 
 
 
