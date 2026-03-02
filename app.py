@@ -3013,43 +3013,7 @@ def render_overseas():
                 st.session_state["log_df_edited"] = log_df.copy()
 
             log_all = st.session_state["log_df_edited"]
-            # --- log_all 안전 가드 (BOQ_ID KeyError 방지) -----------------
-            log_all = st.session_state.get("log_df_edited", None)
-            
-            # 1) 타입 방어: DataFrame 아니면 강제로 DataFrame
-            if not isinstance(log_all, pd.DataFrame):
-                try:
-                    log_all = pd.DataFrame(log_all)
-                except Exception:
-                    log_all = pd.DataFrame()
-            
-            # 2) 흔한 alias 복구: BOQ_ID가 다른 이름으로 들어온 경우
-            if "BOQ_ID" not in log_all.columns:
-                alias_map = {
-                    "BOQ ID": "BOQ_ID",
-                    "BOQId": "BOQ_ID",
-                    "BOQ번호": "BOQ_ID",
-                    "BOQ 번호": "BOQ_ID",
-                    "boq_id": "BOQ_ID",
-                }
-                for a, b in alias_map.items():
-                    if a in log_all.columns:
-                        log_all = log_all.rename(columns={a: b})
-            
-            # 3) 컬럼이 깨졌으면(base 로그로) 자동 복구
-            if "BOQ_ID" not in log_all.columns:
-                base = st.session_state.get("log_df_base", None)
-                if isinstance(base, pd.DataFrame) and ("BOQ_ID" in base.columns):
-                    st.session_state["log_df_edited"] = base.copy()
-                    log_all = st.session_state["log_df_edited"]
-                    st.warning("로그 컬럼이 깨져서 log_df_base로 복구했습니다. (편집값은 초기화됨)")
-                else:
-                    st.error("로그 데이터에 BOQ_ID 컬럼이 없습니다. 산출을 다시 실행해 주세요.")
-                    st.stop()
-            
-            # 4) 복구된 log_all을 세션에 다시 반영(중요)
-            st.session_state["log_df_edited"] = log_all
-            # --------------------------------------------------------------
+          
             boq_ids = sorted(log_all["BOQ_ID"].dropna().astype(int).unique().tolist())
 
             base_for_label = st.session_state.get("result_df_base", pd.DataFrame()).copy()
@@ -3397,6 +3361,7 @@ with tab_dom:
         st.info("현재 활성 화면은 해외 탭입니다. 전환 버튼을 눌러 활성화하세요.")
     else:
         render_domestic()
+
 
 
 
