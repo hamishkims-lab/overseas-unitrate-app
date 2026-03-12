@@ -597,6 +597,8 @@ def fast_recompute_from_pool(
     pool: pd.DataFrame,
     exchange: pd.DataFrame,
     factor: pd.DataFrame,
+    price_index: pd.DataFrame,   # 🔴 추가
+    ppp: pd.DataFrame,           # 🔴 추가
     sim_threshold: float,
     cut_ratio: float,
     target_currency: str,
@@ -1861,6 +1863,7 @@ feature_master = apply_feature_column_alias(feature_master)
 
 ppp = ppp.copy()
 ppp["Currency"] = ppp["Currency"].astype(str).str.upper().str.strip()
+ppp.columns = ppp.columns.astype(str)   # 🔴 반드시 추가
 
 # 연도 컬럼 정리 (문자열 → int)
 year_cols = [c for c in ppp.columns if str(c).isdigit()]
@@ -3050,6 +3053,8 @@ def render_overseas():
                 pool=pool,
                 exchange=exchange,
                 factor=factor,
+                price_index=price_index,   # 🔴 추가
+                ppp=ppp,                   # 🔴 추가
                 sim_threshold=sim_threshold,
                 cut_ratio=cut_ratio,
                 target_currency=target_currency,
@@ -3303,7 +3308,6 @@ def render_overseas():
                     "계약년월": st.column_config.TextColumn("계약년월"),
                     "__adj_price": st.column_config.NumberColumn("산출단가(산출통화 기준)", format="%.4f"),
                     "산출통화": st.column_config.TextColumn("산출통화"),
-                    "__cpi_ratio": st.column_config.NumberColumn("물가보정계수(CPI)", format="%.6f"),
                     "__cpi_ratio": st.column_config.NumberColumn("물가보정계수(산출국가)", format="%.6f"),
                     "__cpi_target_ratio": st.column_config.NumberColumn("물가보정계수(대상국가)", format="%.6f"),
                     "__ppp_ratio": st.column_config.NumberColumn("PPP 지수", format="%.6f"),
@@ -3501,6 +3505,7 @@ with tab_dom:
         st.info("현재 활성 화면은 해외 탭입니다. 전환 버튼을 눌러 활성화하세요.")
     else:
         render_domestic()
+
 
 
 
