@@ -773,11 +773,25 @@ def fast_recompute_from_pool(
         "Include", "DefaultInclude",
         "공종코드", "공종명",
         "내역", "Unit",
-        "Unit Price", "통화", "계약년월",
-        "__adj_price", "산출통화",
-        "__cpi_ratio", "__latest_ym",
-        "__fx_ratio", "__fac_ratio",
+        "Unit Price",
+        "통화", "통화_std",
+        "계약년월",
+    
+        "__cpi_ratio",            # 산출국가 CPI
+        "__cpi_target_ratio",     # 대상국가 CPI
+        "__ppp_ratio",            # PPP 지수
+    
+        "__fx_ratio",
+        "__fac_ratio",
+    
+        "__adj_loc",              # Location 적용 단가
+        "__adj_ppp",              # PPP 적용 단가
+        "__adj_price",            # 최종 산출단가
+    
+        "산출통화",
+        "__latest_ym",
         "__hyb",
+    
         "현장코드", "현장명",
         "협력사코드", "협력사명",
     ]
@@ -2154,6 +2168,14 @@ def render_domestic():
     
                 # 현재 BOQ 후보만 보기
                 log_view_full = log_all[log_all["BOQ_ID"].astype(int) == int(sel_id)].copy()
+                st.write(
+                    log_view_full[[
+                        "통화_std",
+                        "__cpi_ratio",
+                        "__cpi_target_ratio",
+                        "__ppp_ratio"
+                    ]].head(10)
+                )
                 if log_view_full.empty:
                     st.info("해당 BOQ 후보가 없습니다.")
                 else:
@@ -3518,6 +3540,7 @@ with tab_dom:
         st.info("현재 활성 화면은 해외 탭입니다. 전환 버튼을 눌러 활성화하세요.")
     else:
         render_domestic()
+
 
 
 
