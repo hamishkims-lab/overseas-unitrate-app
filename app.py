@@ -3324,22 +3324,22 @@ def render_overseas():
                     "Include": st.column_config.CheckboxColumn("포함", help="평균단가 산출 포함/제외"),
                     "DefaultInclude": st.column_config.CheckboxColumn("기본포함", help="초기 자동 포함 여부(컷 로직)"),
                     "내역": st.column_config.TextColumn("내역", width="large"),
-                    "Unit": st.column_config.TextColumn("단위(Unit)"),
-                    "Unit Price": st.column_config.NumberColumn("원단가", format="%.4f"),
-                    "통화": st.column_config.TextColumn("원통화"),
-                    "계약년월": st.column_config.TextColumn("계약년월"),
-                    "__adj_price": st.column_config.NumberColumn("산출단가(산출통화 기준)", format="%.4f"),
-                    "산출통화": st.column_config.TextColumn("산출통화"),
-                    "__cpi_ratio": st.column_config.NumberColumn("물가보정계수(산출국가)", format="%.6f"),
-                    "__cpi_target_ratio": st.column_config.NumberColumn("물가보정계수(대상국가)", format="%.6f"),
-                    "__ppp_ratio": st.column_config.NumberColumn("PPP 지수", format="%.6f"),
-                    "__adj_loc": st.column_config.NumberColumn("산출단가(Location 적용)", format="%.4f"),
-                    "__adj_ppp": st.column_config.NumberColumn("산출단가(PPP 적용)", format="%.4f"),
-                    "__adj_price": st.column_config.NumberColumn("최종 산출단가", format="%.4f"),
-                    "__latest_ym": st.column_config.TextColumn("물가지수 최신월"),
-                    "__fx_ratio": st.column_config.NumberColumn("환율보정계수", format="%.6f"),
-                    "__fac_ratio": st.column_config.NumberColumn("국가보정계수(Factor)", format="%.6f"),
                     "__hyb": st.column_config.NumberColumn("유사도점수", format="%.2f"),
+                    "Unit": st.column_config.TextColumn("단위(Unit)"),
+                    "Unit Price": st.column_config.NumberColumn("실적단가", format="%.2f"),
+                    "통화": st.column_config.TextColumn("실통화"),
+                    "계약년월": st.column_config.TextColumn("실계약년월"),
+                    "산출통화": st.column_config.TextColumn("산출통화"),
+                    "__cpi_ratio": st.column_config.NumberColumn("CPI(실적국가)", format="%.2f"),
+                    "__fac_ratio": st.column_config.NumberColumn("Location Factor)", format="%.2f"),
+                    "__fx_ratio": st.column_config.NumberColumn("환율", format="%.2f"),
+                    "__adj_loc": st.column_config.NumberColumn("산출단가(Location 적용)", format="%.2f"),
+                    "__ppp_ratio": st.column_config.NumberColumn("PPP 지수", format="%.2f"),
+                    "__cpi_target_ratio": st.column_config.NumberColumn("CPI(대상국가)", format="%.2f"),                
+                    "__adj_ppp": st.column_config.NumberColumn("산출단가(PPP 적용)", format="%.2f"),
+                    "__adj_price": st.column_config.NumberColumn("산출단가(조합)", format="%.2f"),
+                    "__latest_ym": st.column_config.TextColumn("물가지수 최신월"),
+                    
                     "공종코드": st.column_config.TextColumn("공종코드"),
                     "공종명": st.column_config.TextColumn("공종명"),
                     "현장코드": st.column_config.TextColumn("현장코드"),
@@ -3540,6 +3540,7 @@ with tab_dom:
         st.info("현재 활성 화면은 해외 탭입니다. 전환 버튼을 눌러 활성화하세요.")
     else:
         render_domestic()
+
 
 
 
