@@ -3069,9 +3069,7 @@ def render_overseas():
         st.session_state.pop("result_df_adjusted", None)
         st.session_state["has_results"] = True
         st.session_state["last_run_sig"] = run_sig
-        st.session_state["adjust_method"] = adjust_method
-        st.session_state["loc_weight"] = loc_weight
-        st.session_state["ppp_weight"] = ppp_weight
+
 
     run_btn = st.sidebar.button("🚀 산출 실행")
     current_sig = make_params_signature()
@@ -3481,6 +3479,7 @@ with tab_dom:
         st.info("현재 활성 화면은 해외 탭입니다. 전환 버튼을 눌러 활성화하세요.")
     else:
         render_domestic()
+
 
 
 
