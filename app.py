@@ -3213,7 +3213,7 @@ def render_overseas():
                     st.rerun()
                 else:
                     st.warning("되돌릴 백업이 없습니다(또는 후보행이 변경됨).")
-            st.write(df[["통화_std","__cpi_target_ratio","__ppp_ratio"]].head())
+            
             if btn_ai_one:
                 st.session_state["_include_backup"][int(sel_id)] = st.session_state["log_df_edited"].loc[log_view_full.index, "Include"].copy()
                 updated, summary = apply_agent_to_log(
@@ -3331,6 +3331,7 @@ def render_overseas():
 
             st.session_state["log_df_edited"].loc[log_view_full.index, "Include"] = edited_view["Include"].values
             st.session_state["result_df_adjusted"] = recompute_result_from_log(st.session_state["log_df_edited"])
+            st.write(df[["통화_std","__cpi_target_ratio","__ppp_ratio"]].head())
 
         with tab1:
             show_df = st.session_state.get("result_df_adjusted", result_df).copy()
@@ -3505,6 +3506,7 @@ with tab_dom:
         st.info("현재 활성 화면은 해외 탭입니다. 전환 버튼을 눌러 활성화하세요.")
     else:
         render_domestic()
+
 
 
 
