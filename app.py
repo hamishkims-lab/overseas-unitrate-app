@@ -2465,18 +2465,10 @@ def render_domestic():
                         "Include", "DefaultInclude",
                         "내역", "Unit",
                         "Unit Price", "통화", "계약년월",
-                    
-                        "__cpi_ratio",            # 🔹 물가보정계수(산출국가)
-                        "__cpi_target_ratio",     # 🔹 물가보정계수(대상국가)
-                        "__ppp_ratio",            # 🔹 PPP 지수
-                    
+
                         "__fx_ratio",
                         "__fac_ratio",
-                    
-                        "__adj_loc",              # 🔹 Location 적용 단가
-                        "__adj_ppp",              # 🔹 PPP 적용 단가
-                        "__adj_price",            # 🔹 최종 산출단가
-                    
+
                         "산출통화",
                         "__hyb",
                     
@@ -3271,11 +3263,21 @@ def render_overseas():
                 "Include", "DefaultInclude",
                 "내역", "Unit",
                 "Unit Price", "통화", "계약년월",
-                "__adj_price", "산출통화",
-                "__cpi_ratio", "__latest_ym",
+            
+                "__cpi_ratio",            # 물가보정계수(산출국가)
+                "__cpi_target_ratio",     # 물가보정계수(대상국가)
+                "__ppp_ratio",            # PPP 지수
+            
                 "__fx_ratio",
                 "__fac_ratio",
+            
+                "__adj_loc",              # Location 적용 단가
+                "__adj_ppp",              # PPP 적용 단가
+                "__adj_price",            # 최종 산출단가
+            
+                "산출통화",
                 "__hyb",
+            
                 "공종코드", "공종명",
                 "현장코드", "현장명",
                 "협력사코드", "협력사명",
@@ -3499,6 +3501,7 @@ with tab_dom:
         st.info("현재 활성 화면은 해외 탭입니다. 전환 버튼을 눌러 활성화하세요.")
     else:
         render_domestic()
+
 
 
 
