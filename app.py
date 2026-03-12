@@ -1282,239 +1282,104 @@ REPORT_DETAIL_ORDER = [
 ]
 
 def build_report_tables(log_df: pd.DataFrame, result_df: pd.DataFrame):
+
     if log_df is None or log_df.empty:
         return pd.DataFrame(), pd.DataFrame()
 
     df = log_df.copy()
     df["BOQ_ID"] = df["BOQ_ID"].astype(int)
 
-    inc = df[df["Include"] == True].copy()
+    # =========================
+    # 1️⃣ 상세 (TAB2 구조 그대로)
+    # =========================
+    detail_df = df.copy()
 
     # =========================
-    # (1) 상세(detail)
-    # =========================
-    for c in REPORT_DETAIL_COLS:
-        if c not in inc.columns:
-            inc[c] = None
-
-    detail_df = inc[REPORT_DETAIL_COLS].copy()
-    detail_df = detail_df.rename(columns=REPORT_DETAIL_RENAME)
-
-    # 정렬(존재하는 컬럼만)
-    exist_detail = [c for c in REPORT_DETAIL_ORDER if c in detail_df.columns]
-    remain_detail = [c for c in detail_df.columns if c not in exist_detail]
-    detail_df = detail_df[exist_detail + remain_detail].copy()
-
-    # =========================
-    # (2) 요약(summary)
+    # 2️⃣ 요약(summary)
     # =========================
     rows = []
+
     for boq_id, g in df.groupby("BOQ_ID"):
+
         g_inc = g[g["Include"] == True].copy()
         total_n = len(g)
         inc_n = len(g_inc)
 
-        adj = pd.to_numeric(g_inc.get("__adj_price", np.nan), errors="coerce")
-        mean = float(adj.mean()) if inc_n else np.nan
-        std = float(adj.std(ddof=0)) if inc_n else np.nan
-        vmin = float(adj.min()) if inc_n else np.nan
-        vmax = float(adj.max()) if inc_n else np.nan
+        adj = pd.to_numeric(g_inc["__adj_price"], errors="coerce")
 
-        countries = sorted(g_inc["통화"].astype(str).str.upper().unique().tolist()) if inc_n else []
-        sites = g_inc["현장코드"].astype(str).nunique() if inc_n and "현장코드" in g_inc.columns else 0
-        vendors = g_inc["협력사코드"].astype(str).nunique() if inc_n and "협력사코드" in g_inc.columns else 0
+        mean = float(adj.mean()) if inc_n else None
+        std = float(adj.std(ddof=0)) if inc_n else None
+        vmin = float(adj.min()) if inc_n else None
+        vmax = float(adj.max()) if inc_n else None
 
-        top_site = ""
-        top_vendor = ""
-        if inc_n and "현장코드" in g_inc.columns:
-            vc = g_inc["현장코드"].astype(str).value_counts()
-            top_site = f"{vc.index[0]} ({int(vc.iloc[0])}/{inc_n})" if len(vc) else ""
-        if inc_n and "협력사코드" in g_inc.columns:
-            vc2 = g_inc["협력사코드"].astype(str).value_counts()
-            top_vendor = f"{vc2.index[0]} ({int(vc2.iloc[0])}/{inc_n})" if len(vc2) else ""
+        currencies = sorted(g_inc["통화_std"].unique().tolist()) if inc_n else []
+        sites = g_inc["현장코드"].nunique() if inc_n else 0
+        vendors = g_inc["협력사코드"].nunique() if inc_n else 0
 
         risk = []
         if inc_n == 0:
             risk.append("포함후보없음")
-        if inc_n and pd.notna(vmax) and pd.notna(vmin) and vmin > 0 and (vmax / vmin > 3):
+        if inc_n and vmin and vmax and vmin > 0 and vmax / vmin > 3:
             risk.append("단가편차큼(>3배)")
-        if inc_n and pd.notna(std) and pd.notna(mean) and mean != 0 and (std / mean > 0.5):
+        if inc_n and mean and std and mean != 0 and std / mean > 0.5:
             risk.append("변동성큼(CV>0.5)")
-        if inc_n and sites == 1 and inc_n >= 3:
-            risk.append("현장편향(1개현장)")
-        if inc_n and vendors == 1 and inc_n >= 3:
-            risk.append("업체편향(1개업체)")
 
         one = g.iloc[0]
+
         rows.append({
             "BOQ_ID": int(boq_id),
-            "BOQ_내역": one.get("BOQ_내역", ""),
-            "BOQ_Unit": one.get("BOQ_Unit", ""),
-            "후보수": int(total_n),
-            "포함수": int(inc_n),
-            "포함국가": ", ".join(countries),
-            "포함현장수": int(sites),
-            "포함업체수": int(vendors),
-            "산출단가평균": mean,
-            "산출단가표준편차": std,
-            "산출단가최저": vmin,
-            "산출단가최고": vmax,
-            "최빈현장": top_site,
-            "최빈업체": top_vendor,
+            "내역": one.get("BOQ_내역", ""),
+            "Unit": one.get("BOQ_Unit", ""),
+
+            "후보수": total_n,
+            "포함수": inc_n,
+            "포함국가": ", ".join(currencies),
+            "현장수": sites,
+            "업체수": vendors,
+
+            "평균": mean,
+            "표준편차": std,
+            "최저": vmin,
+            "최고": vmax,
             "리스크": ", ".join(risk),
         })
 
     summary_df = pd.DataFrame(rows).sort_values("BOQ_ID").reset_index(drop=True)
 
-    # result_df의 일부 컬럼 병합
-    if result_df is not None and not result_df.empty and "BOQ_ID" in result_df.columns:
+    # 🔵 BOQ 결과 병합 (3단가 구조 포함)
+    if result_df is not None and not result_df.empty:
         tmp = result_df.copy()
         tmp["BOQ_ID"] = tmp["BOQ_ID"].astype(int)
-        keep = [c for c in ["BOQ_ID", "Final Price", "산출근거", "근거공종(최빈)"] if c in tmp.columns]
-        if keep:
-            summary_df = summary_df.merge(tmp[keep], on="BOQ_ID", how="left")
 
-    # 요약 rename + 정렬
-    summary_df = summary_df.rename(columns=REPORT_SUMMARY_RENAME)
-    exist_sum = [c for c in REPORT_SUMMARY_ORDER if c in summary_df.columns]
-    remain_sum = [c for c in summary_df.columns if c not in exist_sum]
-    summary_df = summary_df[exist_sum + remain_sum].copy()
+        summary_df = summary_df.merge(
+            tmp,
+            on="BOQ_ID",
+            how="left"
+        )
 
-    return summary_df, detail_df
-
-def build_report_tables_domestic(log_df: pd.DataFrame, result_df: pd.DataFrame):
-    """
-    국내 근거 보고서 테이블 생성(요약/상세)
-    - 해외 TAB3 형식과 동일한 섹션 구성을 만들기 위한 summary/detail 2개 테이블 반환
-    """
-    if log_df is None or log_df.empty:
-        return pd.DataFrame(), pd.DataFrame()
-
-    df = log_df.copy()
-    df["BOQ_ID"] = df["BOQ_ID"].astype(int)
-
-    # Include=True 상세 후보
-    inc = df[df["Include"] == True].copy()
-
-    # -------------------------
-    # (1) 상세(detail)
-    # -------------------------
-    detail_cols = [
-        "BOQ_ID", "BOQ_명칭", "BOQ_규격", "BOQ_단위",
-        "실행명칭", "규격", "단위",
-        "__adj_price", "__hyb",
-        "계약월", "보정단가", "계약단가",
-        "현장코드", "현장명", "현장특성",
-        "업체코드", "업체명",
-        "공종Code분류", "세부분류",
-        "AI_모드", "AI_추천사유",
+    ordered_cols = [
+        "BOQ_ID",
+        "내역",
+        "Unit",
+        "산출단가(Location 적용)",
+        "산출단가(PPP 적용)",
+        "산출단가(조합)",
+        "산출통화",
+        "산출근거",
+        "근거공종(최빈)",
+        "후보수",
+        "포함수",
+        "포함국가",
+        "현장수",
+        "업체수",
+        "평균",
+        "표준편차",
+        "최저",
+        "최고",
+        "리스크",
     ]
-    for c in detail_cols:
-        if c not in inc.columns:
-            inc[c] = None
-    detail_df = inc[detail_cols].copy()
 
-    # ✅ (표시용) 열 제목 변경
-    detail_rename = {
-        "BOQ_ID": "BOQ 번호",
-        "BOQ_명칭": "BOQ 명칭",
-        "BOQ_규격": "BOQ 규격",
-        "BOQ_단위": "BOQ 단위",
-    
-        "실행명칭": "실행명칭",
-        "규격": "규격",
-        "단위": "단위",
-    
-        "__adj_price": "산출단가",
-        "__hyb": "유사도(%)",
-    
-        "계약월": "계약월",
-        "보정단가": "보정단가",
-        "계약단가": "계약단가",
-    
-        "현장코드": "현장코드",
-        "현장명": "현장명",
-        "현장특성": "현장특성",
-    
-        "업체코드": "업체코드",
-        "업체명": "업체명",
-    
-        "공종Code분류": "공종분류",
-        "세부분류": "세부분류",
-    
-        "AI_모드": "AI 모드",
-        "AI_추천사유": "AI 추천사유",
-    }
-    
-    detail_df = detail_df.rename(columns=detail_rename)
-
-    # -------------------------
-    # (2) 요약(summary)
-    # -------------------------
-    rows = []
-    for boq_id, g in df.groupby("BOQ_ID"):
-        g_inc = g[g["Include"] == True].copy()
-        total_n = len(g)
-        inc_n = len(g_inc)
-
-        adj = pd.to_numeric(g_inc.get("__adj_price", np.nan), errors="coerce")
-        mean = float(adj.mean()) if inc_n else np.nan
-        std = float(adj.std(ddof=0)) if inc_n else np.nan
-        vmin = float(adj.min()) if inc_n else np.nan
-        vmax = float(adj.max()) if inc_n else np.nan
-
-        sites = g_inc["현장코드"].astype(str).nunique() if inc_n and "현장코드" in g_inc.columns else 0
-        vendors = g_inc["업체코드"].astype(str).nunique() if inc_n and "업체코드" in g_inc.columns else 0
-
-        top_site = ""
-        top_vendor = ""
-        if inc_n and "현장코드" in g_inc.columns:
-            vc = g_inc["현장코드"].astype(str).value_counts()
-            top_site = f"{vc.index[0]} ({int(vc.iloc[0])}/{inc_n})" if len(vc) else ""
-        if inc_n and "업체코드" in g_inc.columns:
-            vc2 = g_inc["업체코드"].astype(str).value_counts()
-            top_vendor = f"{vc2.index[0]} ({int(vc2.iloc[0])}/{inc_n})" if len(vc2) else ""
-
-        risk = []
-        if inc_n == 0:
-            risk.append("포함후보없음")
-        if inc_n and pd.notna(vmax) and pd.notna(vmin) and vmin > 0 and (vmax / vmin > 3):
-            risk.append("단가편차큼(>3배)")
-        if inc_n and pd.notna(std) and pd.notna(mean) and mean != 0 and (std / mean > 0.5):
-            risk.append("변동성큼(CV>0.5)")
-        if inc_n and sites == 1 and inc_n >= 3:
-            risk.append("현장편향(1개현장)")
-        if inc_n and vendors == 1 and inc_n >= 3:
-            risk.append("업체편향(1개업체)")
-
-        one = g.iloc[0]
-        rows.append({
-            "BOQ_ID": int(boq_id),
-            "BOQ_명칭": one.get("BOQ_명칭", ""),
-            "BOQ_규격": one.get("BOQ_규격", ""),
-            "BOQ_단위": one.get("BOQ_단위", ""),
-            "후보수": int(total_n),
-            "포함수": int(inc_n),
-            "포함현장수": int(sites),
-            "포함업체수": int(vendors),
-            "산출단가평균": mean,
-            "산출단가표준편차": std,
-            "산출단가최저": vmin,
-            "산출단가최고": vmax,
-            "최빈현장": top_site,
-            "최빈업체": top_vendor,
-            "리스크": ", ".join(risk),
-        })
-
-    summary_df = pd.DataFrame(rows).sort_values("BOQ_ID").reset_index(drop=True)
-
-    # 결과(result_df)의 Final Price/산출근거 병합(있으면)
-    if result_df is not None and not result_df.empty and "BOQ_ID" in result_df.columns:
-        tmp = result_df.copy()
-        tmp["BOQ_ID"] = tmp["BOQ_ID"].astype(int)
-        keep = [c for c in ["BOQ_ID", "Final Price", "산출근거"] if c in tmp.columns]
-        if keep:
-            summary_df = summary_df.merge(tmp[keep], on="BOQ_ID", how="left")
+    summary_df = summary_df[[c for c in ordered_cols if c in summary_df.columns]]
 
     return summary_df, detail_df
 
@@ -3635,6 +3500,7 @@ with tab_dom:
         st.info("현재 활성 화면은 해외 탭입니다. 전환 버튼을 눌러 활성화하세요.")
     else:
         render_domestic()
+
 
 
 
