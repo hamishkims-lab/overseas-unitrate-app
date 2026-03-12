@@ -3383,7 +3383,54 @@ def render_overseas():
 
             st.session_state["log_df_edited"].loc[log_view_full.index, "Include"] = edited_view["Include"].values
             st.session_state["result_df_adjusted"] = recompute_result_from_log(st.session_state["log_df_edited"])
-        
+            # =========================
+            # (TAB2) 📦 BOQ결과 + 보고서 통합 다운로드
+            # =========================
+            st.markdown("---")
+            st.markdown("### ⬇️ BOQ 결과 + 근거보고서 통합 다운로드")
+            
+            # 1️⃣ 현재 BOQ 결과 (adjusted 우선)
+            boq_result_df = st.session_state.get(
+                "result_df_adjusted",
+                st.session_state.get("result_df_base", pd.DataFrame())
+            ).copy()
+            
+            # 2️⃣ 보고서 데이터
+            report_summary_df = st.session_state.get("report_summary_df", pd.DataFrame()).copy()
+            report_detail_df = st.session_state.get("report_detail_df", pd.DataFrame()).copy()
+            
+            if boq_result_df.empty:
+                st.info("다운로드할 BOQ 결과가 없습니다.")
+            else:
+                # BOQ_ID 정렬
+                if "BOQ_ID" in boq_result_df.columns:
+                    boq_result_df["BOQ_ID"] = boq_result_df["BOQ_ID"].astype(int)
+                    boq_result_df = boq_result_df.sort_values("BOQ_ID").reset_index(drop=True)
+            
+                # 보고서가 아직 생성되지 않았다면 생성
+                if report_summary_df.empty or report_detail_df.empty:
+                    base_result = boq_result_df.copy()
+                    log_for_report = st.session_state.get(
+                        "log_df_edited",
+                        st.session_state.get("log_df_base", pd.DataFrame())
+                    )
+                    report_summary_df, report_detail_df = build_report_tables(log_for_report, base_result)
+            
+                # 3️⃣ Excel 생성
+                bio = io.BytesIO()
+                with pd.ExcelWriter(bio, engine="openpyxl") as writer:
+                    boq_result_df.to_excel(writer, index=False, sheet_name="BOQ_결과")
+                    report_summary_df.to_excel(writer, index=False, sheet_name="report_summary")
+                    report_detail_df.to_excel(writer, index=False, sheet_name="report_detail")
+            
+                bio.seek(0)
+            
+                st.download_button(
+                    "⬇️ BOQ 결과 + 보고서 다운로드",
+                    data=bio.read(),
+                    file_name="overseas_boq_report_full.xlsx",
+                    key="download_overseas_full_package",
+                )
 
         with tab1:
             show_df = st.session_state.get("result_df_adjusted", result_df).copy()
@@ -3558,6 +3605,7 @@ with tab_dom:
         st.info("현재 활성 화면은 해외 탭입니다. 전환 버튼을 눌러 활성화하세요.")
     else:
         render_domestic()
+
 
 
 
