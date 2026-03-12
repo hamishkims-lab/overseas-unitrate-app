@@ -3149,35 +3149,54 @@ def render_overseas():
         log_df = st.session_state["log_df_base"]
 
         def recompute_result_from_log(edited_log: pd.DataFrame) -> pd.DataFrame:
-            base = st.session_state["result_df_base"].copy()
-
-            out_prices = []
+            results = []
+            loc_w = st.session_state.get("loc_weight_slider", 50) / 100.0
+            ppp_w = 1.0 - loc_w
+            target_currency = st.session_state.get("target_currency", "")
+        
             for boq_id, g in edited_log.groupby("BOQ_ID"):
-                g2 = g[g["Include"] == True].copy()
-                if g2.empty:
-                    out_prices.append((int(boq_id), None, target_currency, "매칭 후보 없음(또는 전부 제외)", ""))
-                    continue
-
-                final_price = float(pd.to_numeric(g2["__adj_price"], errors="coerce").mean())
-
-                currencies = sorted(g2["통화"].astype(str).str.upper().unique().tolist())
-                reason_text = f"{len(currencies)}개국({', '.join(currencies)}) {len(g2)}개 내역 근거"
-
-                vc = g2["공종코드"].astype(str).value_counts()
-                top_code = vc.index[0] if len(vc) else ""
-                top_cnt = int(vc.iloc[0]) if len(vc) else 0
-                top_work = f"{top_code} ({top_cnt}/{len(g2)})" if top_code else ""
-
-                out_prices.append((int(boq_id), f"{final_price:,.2f}", target_currency, reason_text, top_work))
-
-            upd = pd.DataFrame(out_prices, columns=["BOQ_ID", "Final Price", "산출통화", "산출근거", "근거공종(최빈)"])
-
-            base = base.drop(
-                columns=[c for c in ["Final Price", "산출통화", "산출근거", "근거공종(최빈)"] if c in base.columns],
-                errors="ignore"
-            )
-            base = base.merge(upd, on="BOQ_ID", how="left")
-            return base
+                inc = g[g["Include"] == True].copy()
+                one = g.iloc[0]
+        
+                if inc.empty:
+                    final_loc = None
+                    final_ppp = None
+                    final_mix = None
+                    reason_text = "매칭 후보 없음(또는 전부 제외)"
+                    top_work = ""
+                else:
+                    final_loc = float(pd.to_numeric(inc["__adj_loc"], errors="coerce").mean())
+                    final_ppp = float(pd.to_numeric(inc["__adj_ppp"], errors="coerce").mean())
+        
+                    final_mix = float(
+                        (
+                            loc_w * pd.to_numeric(inc["__adj_loc"], errors="coerce")
+                            + ppp_w * pd.to_numeric(inc["__adj_ppp"], errors="coerce")
+                        ).mean()
+                    )
+        
+                    currencies = sorted(inc["통화_std"].unique().tolist())
+                    reason_text = f"{len(currencies)}개국({', '.join(currencies)}) {len(inc)}개 내역 근거"
+        
+                    vc = inc["공종코드"].astype(str).value_counts()
+                    top_code = vc.index[0] if len(vc) else ""
+                    top_cnt = int(vc.iloc[0]) if len(vc) else 0
+                    top_work = f"{top_code} ({top_cnt}/{len(inc)})" if top_code else ""
+        
+                results.append({
+                    "BOQ_ID": int(boq_id),
+                    "내역": one.get("BOQ_내역", ""),
+                    "Unit": one.get("BOQ_Unit", ""),
+                    "산출단가(Location 적용)": f"{final_loc:,.2f}" if final_loc is not None else None,
+                    "산출단가(PPP 적용)": f"{final_ppp:,.2f}" if final_ppp is not None else None,
+                    "산출단가(조합)": f"{final_mix:,.2f}" if final_mix is not None else None,
+                    "산출단가(선택)": f"{final_mix:,.2f}" if final_mix is not None else None,
+                    "산출통화": target_currency,
+                    "산출근거": reason_text,
+                    "근거공종(최빈)": top_work,
+                })
+        
+            return pd.DataFrame(results).sort_values("BOQ_ID").reset_index(drop=True)
 
         tab1, tab2, tab3 = st.tabs(["📄 BOQ 결과", "🧾 산출 근거(편집 가능)", "📝 근거 보고서"])
 
@@ -3539,6 +3558,7 @@ with tab_dom:
         st.info("현재 활성 화면은 해외 탭입니다. 전환 버튼을 눌러 활성화하세요.")
     else:
         render_domestic()
+
 
 
 
