@@ -699,8 +699,8 @@ def fast_recompute_from_pool(
     
     # 최종 선택
     method = st.session_state.get("adjust_method", "Location Factor")
-    loc_w = st.session_state.get("loc_weight", 1.0)
-    ppp_w = st.session_state.get("ppp_weight", 0.0)
+    loc_w = st.session_state.get("loc_weight_slider", 50) / 100.0
+    ppp_w = 1.0 - loc_w
     
     if method == "Location Factor":
         df["__adj_price"] = df["__adj_loc"]
@@ -3499,6 +3499,7 @@ with tab_dom:
         st.info("현재 활성 화면은 해외 탭입니다. 전환 버튼을 눌러 활성화하세요.")
     else:
         render_domestic()
+
 
 
 
