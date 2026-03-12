@@ -737,34 +737,58 @@ def fast_recompute_from_pool(
 
     # 5) BOQ 결과(result_df)
     results = []
+    
+    method = st.session_state.get("adjust_method", "Location Factor")
+    loc_w = st.session_state.get("loc_weight_slider", 50) / 100.0
+    ppp_w = 1.0 - loc_w
+    
     for boq_id, sub in df.groupby("BOQ_ID"):
         inc = sub[sub["Include"] == True]
-
+    
         if inc.empty:
-            final_price = None
+            final_loc = None
+            final_ppp = None
+            final_mix = None
             reason_text = "매칭 후보 없음(또는 전부 제외)"
             top_work = ""
         else:
-            final_price = float(pd.to_numeric(inc["__adj_price"], errors="coerce").mean())
+            # Location 평균
+            final_loc = float(pd.to_numeric(inc["__adj_loc"], errors="coerce").mean())
+    
+            # PPP 평균
+            final_ppp = float(pd.to_numeric(inc["__adj_ppp"], errors="coerce").mean())
+    
+            # 혼합 평균
+            final_mix = float(
+                (loc_w * pd.to_numeric(inc["__adj_loc"], errors="coerce")
+                 + ppp_w * pd.to_numeric(inc["__adj_ppp"], errors="coerce")
+                ).mean()
+            )
+    
             currencies2 = sorted(inc["통화_std"].unique().tolist())
             reason_text = f"{len(currencies2)}개국({', '.join(currencies2)}) {len(inc)}개 내역 근거"
-
+    
             vc = inc["공종코드"].astype(str).value_counts()
             top_code = vc.index[0] if len(vc) else ""
             top_cnt = int(vc.iloc[0]) if len(vc) else 0
             top_work = f"{top_code} ({top_cnt}/{len(inc)})" if top_code else ""
-
+    
         one = sub.iloc[0]
+    
         results.append({
             "BOQ_ID": int(boq_id),
             "내역": one.get("BOQ_내역", ""),
             "Unit": one.get("BOQ_Unit", ""),
-            "Final Price": f"{final_price:,.2f}" if final_price is not None else None,
+    
+            "Final Price (Location)": f"{final_loc:,.2f}" if final_loc is not None else None,
+            "Final Price (PPP)": f"{final_ppp:,.2f}" if final_ppp is not None else None,
+            "Final Price (혼합)": f"{final_mix:,.2f}" if final_mix is not None else None,
+    
             "산출통화": target_currency,
             "산출근거": reason_text,
             "근거공종(최빈)": top_work,
         })
-
+    
     result_df = pd.DataFrame(results).sort_values("BOQ_ID").reset_index(drop=True)
 
     # 6) 산출 로그(log_df)
@@ -3515,6 +3539,7 @@ with tab_dom:
         st.info("현재 활성 화면은 해외 탭입니다. 전환 버튼을 눌러 활성화하세요.")
     else:
         render_domestic()
+
 
 
 
