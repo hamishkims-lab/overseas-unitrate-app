@@ -3420,6 +3420,17 @@ def render_overseas():
                 st.metric("상/하위 컷 비율(%)", f"{float(cut_ratio) * 100 :.0f}")
             with c3:
                 st.metric("산출통화", str(target_currency))
+            # 🔵 국가보정방식 표시
+            adjust_method = st.session_state.get("adjust_method", "Location Factor")
+            
+            if adjust_method == "혼합 방식":
+                loc_w = st.session_state.get("loc_weight_slider", 50)
+                method_text = f"혼합 ({loc_w}% / {100-loc_w}%)"
+            else:
+                method_text = adjust_method
+            
+            with c4:
+                st.metric("국가보정방식", method_text)
 
             st.markdown("### 4) AI 적용 시 최종 기준")
             st.write(get_ai_effective_rule_text())
@@ -3539,6 +3550,7 @@ with tab_dom:
         st.info("현재 활성 화면은 해외 탭입니다. 전환 버튼을 눌러 활성화하세요.")
     else:
         render_domestic()
+
 
 
 
