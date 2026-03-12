@@ -3331,6 +3331,18 @@ def render_overseas():
 
             st.session_state["log_df_edited"].loc[log_view_full.index, "Include"] = edited_view["Include"].values
             st.session_state["result_df_adjusted"] = recompute_result_from_log(st.session_state["log_df_edited"])
+
+            # 🔍 디버그용 (임시 확인)
+            st.markdown("### 🔎 PPP / 대상국가 CPI 확인")
+            
+            st.write(
+                log_view_full[[
+                    "통화_std",
+                    "__cpi_ratio",
+                    "__cpi_target_ratio",
+                    "__ppp_ratio"
+                ]].head(10)
+            )
         
 
         with tab1:
@@ -3506,6 +3518,7 @@ with tab_dom:
         st.info("현재 활성 화면은 해외 탭입니다. 전환 버튼을 눌러 활성화하세요.")
     else:
         render_domestic()
+
 
 
 
