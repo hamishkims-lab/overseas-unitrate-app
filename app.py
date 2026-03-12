@@ -630,10 +630,87 @@ def fast_recompute_from_pool(
     df["__fac_ratio"] = df["통화_std"].map(fac_map).fillna(1.0)
     df["산출통화"] = target_currency
 
+    # -----------------------------------
+    # 🔵 여기부터 추가 (Target CPI)
+    # -----------------------------------
+    df["__contract_ym"] = df["계약년월"].apply(to_year_month_string)
+    
+    target_cpi_list = []
+    
+    for _, r in df.iterrows():
+        contract_ym = r.get("__contract_ym", None)
+        cpi_ratio_target, _, _, _ = get_cpi_ratio(
+            price_index,
+            target_currency,
+            contract_ym
+        )
+        target_cpi_list.append(cpi_ratio_target)
+    
+    df["__cpi_target_ratio"] = pd.to_numeric(target_cpi_list, errors="coerce").fillna(1.0)
+
+    # -----------------------------------
+    # 🔵 PPP Ratio 계산 (Target CPI 아래)
+    # -----------------------------------
+    ppp_ratio_list = []
+    
+    for _, r in df.iterrows():
+        source_cur = r["통화_std"]
+    
+        try:
+            contract_year = pd.to_datetime(r["계약년월"]).year
+        except:
+            contract_year = None
+    
+        if contract_year and str(contract_year) in ppp.columns:
+            ppp_source = ppp.loc[ppp["Currency"] == source_cur, str(contract_year)].values
+            ppp_target = ppp.loc[ppp["Currency"] == target_currency, str(contract_year)].values
+    
+            if len(ppp_source) and len(ppp_target) and float(ppp_source[0]) != 0:
+                ratio = float(ppp_target[0]) / float(ppp_source[0])
+            else:
+                ratio = 1.0
+        else:
+            ratio = 1.0
+    
+        ppp_ratio_list.append(ratio)
+    
+    df["__ppp_ratio"] = ppp_ratio_list
+
     # 3) __adj_price 계산
     unit_price = pd.to_numeric(df["Unit Price"], errors="coerce").fillna(0.0)
-    cpi_ratio = pd.to_numeric(df["__cpi_ratio"], errors="coerce").fillna(1.0)
-    df["__adj_price"] = unit_price * cpi_ratio * df["__fx_ratio"] * df["__fac_ratio"]
+    cpi_source = pd.to_numeric(df["__cpi_ratio"], errors="coerce").fillna(1.0)
+    
+    # Location 계산
+    df["__adj_loc"] = (
+        unit_price
+        * cpi_source
+        * df["__fx_ratio"]
+        * df["__fac_ratio"]
+    )
+    
+    # PPP 계산
+    df["__adj_ppp"] = (
+        unit_price
+        * df["__ppp_ratio"]
+        * df["__cpi_target_ratio"]
+    )
+    
+    # 최종 선택
+    method = st.session_state.get("adjust_method", "Location Factor")
+    loc_w = st.session_state.get("loc_weight", 1.0)
+    ppp_w = st.session_state.get("ppp_weight", 0.0)
+    
+    if method == "Location Factor":
+        df["__adj_price"] = df["__adj_loc"]
+    
+    elif method == "PPP Factor":
+        df["__adj_price"] = df["__adj_ppp"]
+    
+    elif method == "혼합 방식":
+        df["__adj_price"] = (
+            loc_w * df["__adj_loc"]
+            + ppp_w * df["__adj_ppp"]
+        )
 
     # 4) BOQ별 컷 + Include/DefaultInclude 설정
     df["Include"] = False
@@ -3402,6 +3479,7 @@ with tab_dom:
         st.info("현재 활성 화면은 해외 탭입니다. 전환 버튼을 눌러 활성화하세요.")
     else:
         render_domestic()
+
 
 
 
