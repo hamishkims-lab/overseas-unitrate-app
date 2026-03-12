@@ -2463,12 +2463,26 @@ def render_domestic():
                     # --- 화면에 보여줄 컬럼(국내) ---
                     display_cols = [
                         "Include", "DefaultInclude",
-                        "실행명칭", "규격", "단위", "수량",
-                        "보정단가", "계약단가", "계약월",
-                        "__adj_loc", "__adj_ppp", "__adj_price", "__hyb",
-                        "현장코드", "현장명", "현장특성",
-                        "업체코드", "업체명",
-                        "공종Code분류", "세부분류",
+                        "내역", "Unit",
+                        "Unit Price", "통화", "계약년월",
+                    
+                        "__cpi_ratio",            # 🔹 물가보정계수(산출국가)
+                        "__cpi_target_ratio",     # 🔹 물가보정계수(대상국가)
+                        "__ppp_ratio",            # 🔹 PPP 지수
+                    
+                        "__fx_ratio",
+                        "__fac_ratio",
+                    
+                        "__adj_loc",              # 🔹 Location 적용 단가
+                        "__adj_ppp",              # 🔹 PPP 적용 단가
+                        "__adj_price",            # 🔹 최종 산출단가
+                    
+                        "산출통화",
+                        "__hyb",
+                    
+                        "공종코드", "공종명",
+                        "현장코드", "현장명",
+                        "협력사코드", "협력사명",
                     ]
                     for c in display_cols:
                         if c not in log_view_full.columns:
@@ -3288,6 +3302,12 @@ def render_overseas():
                     "__adj_price": st.column_config.NumberColumn("산출단가(산출통화 기준)", format="%.4f"),
                     "산출통화": st.column_config.TextColumn("산출통화"),
                     "__cpi_ratio": st.column_config.NumberColumn("물가보정계수(CPI)", format="%.6f"),
+                    "__cpi_ratio": st.column_config.NumberColumn("물가보정계수(산출국가)", format="%.6f"),
+                    "__cpi_target_ratio": st.column_config.NumberColumn("물가보정계수(대상국가)", format="%.6f"),
+                    "__ppp_ratio": st.column_config.NumberColumn("PPP 지수", format="%.6f"),
+                    "__adj_loc": st.column_config.NumberColumn("산출단가(Location 적용)", format="%.4f"),
+                    "__adj_ppp": st.column_config.NumberColumn("산출단가(PPP 적용)", format="%.4f"),
+                    "__adj_price": st.column_config.NumberColumn("최종 산출단가", format="%.4f"),
                     "__latest_ym": st.column_config.TextColumn("물가지수 최신월"),
                     "__fx_ratio": st.column_config.NumberColumn("환율보정계수", format="%.6f"),
                     "__fac_ratio": st.column_config.NumberColumn("국가보정계수(Factor)", format="%.6f"),
@@ -3479,6 +3499,7 @@ with tab_dom:
         st.info("현재 활성 화면은 해외 탭입니다. 전환 버튼을 눌러 활성화하세요.")
     else:
         render_domestic()
+
 
 
 
