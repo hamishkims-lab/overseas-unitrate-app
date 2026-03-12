@@ -3413,7 +3413,7 @@ def render_overseas():
                 st.dataframe(st_sites, use_container_width=True)
 
             st.markdown("### 3) 단가 추출 근거(조건)")
-            c1, c2, c3 = st.columns(3)
+            c1, c2, c3 = st.columns(4)
             with c1:
                 st.metric("매칭 유사도, (%)", f"{float(sim_threshold):.0f}")
             with c2:
@@ -3550,6 +3550,7 @@ with tab_dom:
         st.info("현재 활성 화면은 해외 탭입니다. 전환 버튼을 눌러 활성화하세요.")
     else:
         render_domestic()
+
 
 
 
