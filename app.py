@@ -1292,7 +1292,46 @@ def build_report_tables(log_df: pd.DataFrame, result_df: pd.DataFrame):
     # =========================
     # 1️⃣ 상세 (TAB2 구조 그대로)
     # =========================
-    detail_df = df.copy()
+    g_inc_all = df[df["Include"] == True].copy()
+
+    detail_cols = [
+        "Include", "DefaultInclude", "내역",
+        "__hyb", "Unit", "Unit Price",
+        "통화", "계약년월", "산출통화",
+        "__cpi_ratio", "__fac_ratio", "__fx_ratio",
+        "__adj_loc", "__ppp_ratio", "__cpi_target_ratio",
+        "__adj_ppp", "__adj_price", "__latest_ym",
+        "공종코드", "공종명",
+        "현장코드", "현장명",
+        "협력사코드", "협력사명",
+    ]
+    
+    for c in detail_cols:
+        if c not in g_inc_all.columns:
+            g_inc_all[c] = None
+    
+    detail_df = g_inc_all[detail_cols].copy()
+    
+    rename_map = {
+        "Include": "포함",
+        "DefaultInclude": "기본포함",
+        "__hyb": "유사도점수",
+        "Unit": "단위(Unit)",
+        "Unit Price": "실적단가",
+        "통화": "실통화",
+        "계약년월": "실계약년월",
+        "__cpi_ratio": "CPI(실적국가)",
+        "__fac_ratio": "Location Factor",
+        "__fx_ratio": "환율",
+        "__adj_loc": "산출단가(Location 적용)",
+        "__ppp_ratio": "PPP 지수",
+        "__cpi_target_ratio": "CPI(대상국가)",
+        "__adj_ppp": "산출단가(PPP 적용)",
+        "__adj_price": "산출단가(조합)",
+        "__latest_ym": "물가지수 최신월",
+    }
+    
+    detail_df = detail_df.rename(columns=rename_map)
 
     # =========================
     # 2️⃣ 요약(summary)
@@ -3500,6 +3539,7 @@ with tab_dom:
         st.info("현재 활성 화면은 해외 탭입니다. 전환 버튼을 눌러 활성화하세요.")
     else:
         render_domestic()
+
 
 
 
