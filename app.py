@@ -3308,6 +3308,12 @@ def render_overseas():
                 "공종코드", "공종명",
                 "현장코드", "현장명",
                 "협력사코드", "협력사명",
+                "Include", "DefaultInclude", "내역",
+                "__hyb", "Unit", "Unit Price",
+                "통화", "계약년월", "산출통화", "__cpi_ratio", "__fac_ratio", "__fx_ratio",
+                "__adj_loc", "__ppp_ratio", "__cpi_target_ratio", "__adj_ppp",
+                "__adj_price", "__latest_ym", "공종코드",
+                "공종명", "현장코드", "현장명", "협력사코드", "협력사명",
             ]
 
             for c in display_cols:
@@ -3331,7 +3337,7 @@ def render_overseas():
                     "계약년월": st.column_config.TextColumn("실계약년월"),
                     "산출통화": st.column_config.TextColumn("산출통화"),
                     "__cpi_ratio": st.column_config.NumberColumn("CPI(실적국가)", format="%.2f"),
-                    "__fac_ratio": st.column_config.NumberColumn("Location Factor)", format="%.2f"),
+                    "__fac_ratio": st.column_config.NumberColumn("Location Factor", format="%.2f"),
                     "__fx_ratio": st.column_config.NumberColumn("환율", format="%.2f"),
                     "__adj_loc": st.column_config.NumberColumn("산출단가(Location 적용)", format="%.2f"),
                     "__ppp_ratio": st.column_config.NumberColumn("PPP 지수", format="%.2f"),
@@ -3540,6 +3546,7 @@ with tab_dom:
         st.info("현재 활성 화면은 해외 탭입니다. 전환 버튼을 눌러 활성화하세요.")
     else:
         render_domestic()
+
 
 
 
