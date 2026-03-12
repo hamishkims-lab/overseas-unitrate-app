@@ -2465,7 +2465,7 @@ def render_domestic():
                         "Include", "DefaultInclude",
                         "실행명칭", "규격", "단위", "수량",
                         "보정단가", "계약단가", "계약월",
-                        "__adj_price", "__hyb",
+                        "__adj_loc", "__adj_ppp", "__adj_price", "__hyb",
                         "현장코드", "현장명", "현장특성",
                         "업체코드", "업체명",
                         "공종Code분류", "세부분류",
@@ -3479,6 +3479,7 @@ with tab_dom:
         st.info("현재 활성 화면은 해외 탭입니다. 전환 버튼을 눌러 활성화하세요.")
     else:
         render_domestic()
+
 
 
 
