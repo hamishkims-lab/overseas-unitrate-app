@@ -1685,9 +1685,10 @@ def load_overseas_data():
     price_index = load_excel_from_repo("price_index.xlsx")
     exchange = load_excel_from_repo("exchange.xlsx")
     factor = load_excel_from_repo("Factor.xlsx")
+    ppp = load_excel_from_repo("PPP Factor.xlsx")
     project_feature_long = load_excel_from_repo("project_feature_long.xlsx")
     feature_master = load_excel_from_repo("feature_master_FID.xlsx")
-    return cost_db, price_index, exchange, factor, project_feature_long, feature_master
+    return cost_db, price_index, exchange, factor, ppp, project_feature_long, feature_master
 
 @st.cache_data(show_spinner=False)
 def load_domestic_data():
@@ -1765,7 +1766,7 @@ def apply_feature_column_alias(df: pd.DataFrame) -> pd.DataFrame:
 # =========================
 # ✅ 데이터 로드 + 표준화/alias 적용 (함수 정의 이후에 1회만)
 # =========================
-cost_db, price_index, exchange, factor, project_feature_long, feature_master = load_overseas_data()
+cost_db, price_index, exchange, factor, ppp, project_feature_long, feature_master = load_overseas_data()
 cost_db_kr = load_domestic_data()
 
 # (권장) DB도 표준화
@@ -1779,7 +1780,12 @@ feature_master = standardize_columns(feature_master)
 project_feature_long = apply_feature_column_alias(project_feature_long)
 feature_master = apply_feature_column_alias(feature_master)
 
+ppp = ppp.copy()
+ppp["Currency"] = ppp["Currency"].astype(str).str.upper().str.strip()
 
+# 연도 컬럼 정리 (문자열 → int)
+year_cols = [c for c in ppp.columns if str(c).isdigit()]
+ppp_years = sorted([int(c) for c in year_cols])
 
 # =========================
 # Session init
@@ -2832,6 +2838,38 @@ def render_overseas():
     sidebar_hr(thick=True, mt=10, mb=8)
 
     # =========================
+    # 보정 방식 선택 (여기에 추가)
+    # =========================
+    st.sidebar.markdown("<div class='sb-title'>💱 보정 방식</div>", unsafe_allow_html=True)
+    st.sidebar.markdown("<hr class='sb-hr'/>", unsafe_allow_html=True)
+    
+    adjust_method = st.sidebar.radio(
+        "보정 방식 선택",
+        options=["Location Factor", "PPP Factor", "혼합 방식"],
+        index=0,
+        key="adjust_method",
+    )
+    
+    # 기본값
+    ppp_weight = 0.0
+    loc_weight = 1.0
+    
+    # 혼합 선택 시
+    if adjust_method == "혼합 방식":
+        loc_weight = st.sidebar.slider(
+            "Location 비율 (%)",
+            min_value=0,
+            max_value=100,
+            value=50,
+            step=5,
+            key="loc_weight_slider",
+        ) / 100.0
+    
+        ppp_weight = 1.0 - loc_weight
+    
+        st.sidebar.caption(f"PPP 비율: {int(ppp_weight * 100)}%")
+
+    # =========================
     # Run / Auto Recompute
     # =========================
     auto_recompute = True  # UI는 숨기지만 기능은 항상 ON
@@ -2952,6 +2990,9 @@ def render_overseas():
         st.session_state.pop("result_df_adjusted", None)
         st.session_state["has_results"] = True
         st.session_state["last_run_sig"] = run_sig
+        st.session_state["adjust_method"] = adjust_method
+        st.session_state["loc_weight"] = loc_weight
+        st.session_state["ppp_weight"] = ppp_weight
 
     run_btn = st.sidebar.button("🚀 산출 실행")
     current_sig = make_params_signature()
@@ -3361,6 +3402,7 @@ with tab_dom:
         st.info("현재 활성 화면은 해외 탭입니다. 전환 버튼을 눌러 활성화하세요.")
     else:
         render_domestic()
+
 
 
 
