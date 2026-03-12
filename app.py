@@ -3274,78 +3274,7 @@ def render_overseas():
                 if backup is not None and len(backup) == len(log_view_full.index):
                     st.session_state["log_df_edited"].loc[log_view_full.index, "Include"] = backup.values
                     st.session_state["result_df_adjusted"] = recompute_result_from_log(st.session_state["log_df_edited"])
-                    # =========================
-                    # report_detail → TAB2 화면 구조 그대로 생성
-                    # =========================
                     
-                    log_all = st.session_state.get(
-                        "log_df_edited",
-                        st.session_state.get("log_df_base", pd.DataFrame())
-                    ).copy()
-                    
-                    # TAB2에서 사용한 컬럼 순서 그대로
-                    detail_cols = [
-                        "Include", "DefaultInclude", "내역",
-                        "__hyb", "Unit", "Unit Price",
-                        "통화", "계약년월", "산출통화",
-                        "__cpi_ratio", "__fac_ratio", "__fx_ratio",
-                        "__adj_loc", "__ppp_ratio", "__cpi_target_ratio",
-                        "__adj_ppp", "__adj_price", "__latest_ym",
-                        "공종코드", "공종명",
-                        "현장코드", "현장명",
-                        "협력사코드", "협력사명",
-                    ]
-                    
-                    for c in detail_cols:
-                        if c not in log_all.columns:
-                            log_all[c] = None
-                    
-                    report_detail_df = log_all[detail_cols].copy()
-                    
-                    # 화면과 동일한 컬럼명으로 rename
-                    rename_map = {
-                        "Include": "포함",
-                        "DefaultInclude": "기본포함",
-                        "내역": "내역",
-                        "__hyb": "유사도점수",
-                        "Unit": "단위(Unit)",
-                        "Unit Price": "실적단가",
-                        "통화": "실통화",
-                        "계약년월": "실계약년월",
-                        "산출통화": "산출통화",
-                        "__cpi_ratio": "CPI(실적국가)",
-                        "__fac_ratio": "Location Factor",
-                        "__fx_ratio": "환율",
-                        "__adj_loc": "산출단가(Location 적용)",
-                        "__ppp_ratio": "PPP 지수",
-                        "__cpi_target_ratio": "CPI(대상국가)",
-                        "__adj_ppp": "산출단가(PPP 적용)",
-                        "__adj_price": "산출단가(조합)",
-                        "__latest_ym": "물가지수 최신월",
-                        "공종코드": "공종코드",
-                        "공종명": "공종명",
-                        "현장코드": "현장코드",
-                        "현장명": "현장명",
-                        "협력사코드": "협력사코드",
-                        "협력사명": "협력사명",
-                    }
-                    
-                    report_detail_df = report_detail_df.rename(columns=rename_map)
-                    if not boq_result_df.empty:
-                        bio = io.BytesIO()
-                        with pd.ExcelWriter(bio, engine="openpyxl") as writer:
-                            boq_result_df.to_excel(writer, index=False, sheet_name="BOQ_결과")
-                            report_summary_df.to_excel(writer, index=False, sheet_name="report_summary")
-                            report_detail_df.to_excel(writer, index=False, sheet_name="report_detail")
-                    
-                        bio.seek(0)
-                    
-                        st.download_button(
-                            "⬇️ BOQ 결과 + 보고서 다운로드",
-                            data=bio.read(),
-                            file_name="overseas_boq_report_full.xlsx",
-                            key="download_overseas_full_package",
-                        )
 
                     st.success("되돌리기 완료(현재 BOQ)")
                     st.rerun()
@@ -3460,36 +3389,64 @@ def render_overseas():
             # (TAB2) 📦 BOQ결과 + 보고서 통합 다운로드
             # =========================
             st.markdown("---")
-            st.markdown("### ⬇️ BOQ 결과 + 근거보고서 통합 다운로드")
+            st.markdown("### ⬇️ BOQ 결과 + 근거보고서 다운로드")
             
-            # 1️⃣ 현재 BOQ 결과 (adjusted 우선)
             boq_result_df = st.session_state.get(
                 "result_df_adjusted",
                 st.session_state.get("result_df_base", pd.DataFrame())
             ).copy()
             
-            # 2️⃣ 보고서 데이터
-            report_summary_df = st.session_state.get("report_summary_df", pd.DataFrame()).copy()
-            report_detail_df = st.session_state.get("report_detail_df", pd.DataFrame()).copy()
+            log_all = st.session_state.get(
+                "log_df_edited",
+                st.session_state.get("log_df_base", pd.DataFrame())
+            ).copy()
             
             if boq_result_df.empty:
                 st.info("다운로드할 BOQ 결과가 없습니다.")
             else:
-                # BOQ_ID 정렬
-                if "BOQ_ID" in boq_result_df.columns:
-                    boq_result_df["BOQ_ID"] = boq_result_df["BOQ_ID"].astype(int)
-                    boq_result_df = boq_result_df.sort_values("BOQ_ID").reset_index(drop=True)
+                # report_summary 생성
+                report_summary_df, _ = build_report_tables(log_all, boq_result_df)
             
-                # 보고서가 아직 생성되지 않았다면 생성
-                if report_summary_df.empty or report_detail_df.empty:
-                    base_result = boq_result_df.copy()
-                    log_for_report = st.session_state.get(
-                        "log_df_edited",
-                        st.session_state.get("log_df_base", pd.DataFrame())
-                    )
-                    report_summary_df, report_detail_df = build_report_tables(log_for_report, base_result)
+                # report_detail → TAB2 화면 구조 그대로
+                detail_cols = [
+                    "Include", "DefaultInclude", "내역",
+                    "__hyb", "Unit", "Unit Price",
+                    "통화", "계약년월", "산출통화",
+                    "__cpi_ratio", "__fac_ratio", "__fx_ratio",
+                    "__adj_loc", "__ppp_ratio", "__cpi_target_ratio",
+                    "__adj_ppp", "__adj_price", "__latest_ym",
+                    "공종코드", "공종명",
+                    "현장코드", "현장명",
+                    "협력사코드", "협력사명",
+                ]
             
-                # 3️⃣ Excel 생성
+                for c in detail_cols:
+                    if c not in log_all.columns:
+                        log_all[c] = None
+            
+                report_detail_df = log_all[detail_cols].copy()
+            
+                rename_map = {
+                    "Include": "포함",
+                    "DefaultInclude": "기본포함",
+                    "__hyb": "유사도점수",
+                    "Unit": "단위(Unit)",
+                    "Unit Price": "실적단가",
+                    "통화": "실통화",
+                    "계약년월": "실계약년월",
+                    "__cpi_ratio": "CPI(실적국가)",
+                    "__fac_ratio": "Location Factor",
+                    "__fx_ratio": "환율",
+                    "__adj_loc": "산출단가(Location 적용)",
+                    "__ppp_ratio": "PPP 지수",
+                    "__cpi_target_ratio": "CPI(대상국가)",
+                    "__adj_ppp": "산출단가(PPP 적용)",
+                    "__adj_price": "산출단가(조합)",
+                    "__latest_ym": "물가지수 최신월",
+                }
+            
+                report_detail_df = report_detail_df.rename(columns=rename_map)
+            
                 bio = io.BytesIO()
                 with pd.ExcelWriter(bio, engine="openpyxl") as writer:
                     boq_result_df.to_excel(writer, index=False, sheet_name="BOQ_결과")
@@ -3678,6 +3635,7 @@ with tab_dom:
         st.info("현재 활성 화면은 해외 탭입니다. 전환 버튼을 눌러 활성화하세요.")
     else:
         render_domestic()
+
 
 
 
