@@ -780,9 +780,9 @@ def fast_recompute_from_pool(
             "내역": one.get("BOQ_내역", ""),
             "Unit": one.get("BOQ_Unit", ""),
     
-            "Final Price (Location)": f"{final_loc:,.2f}" if final_loc is not None else None,
-            "Final Price (PPP)": f"{final_ppp:,.2f}" if final_ppp is not None else None,
-            "Final Price (혼합)": f"{final_mix:,.2f}" if final_mix is not None else None,
+            "산출단가(Location 적용)": f"{final_loc:,.2f}" if final_loc is not None else None,
+            "산출단가(PPP 적용)": f"{final_ppp:,.2f}" if final_ppp is not None else None,
+            "산출단가(조합)": f"{final_mix:,.2f}" if final_mix is not None else None,
     
             "산출통화": target_currency,
             "산출근거": reason_text,
@@ -3539,6 +3539,7 @@ with tab_dom:
         st.info("현재 활성 화면은 해외 탭입니다. 전환 버튼을 눌러 활성화하세요.")
     else:
         render_domestic()
+
 
 
 
