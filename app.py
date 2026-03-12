@@ -646,7 +646,8 @@ def fast_recompute_from_pool(
         )
         target_cpi_list.append(cpi_ratio_target)
     
-    df["__cpi_target_ratio"] = pd.to_numeric(target_cpi_list, errors="coerce").fillna(1.0)
+    df["__cpi_target_ratio"] = pd.Series(target_cpi_list, index=df.index)
+    df["__cpi_target_ratio"] = pd.to_numeric(df["__cpi_target_ratio"], errors="coerce").fillna(1.0)
 
     # -----------------------------------
     # 🔵 PPP Ratio 계산 (Target CPI 아래)
@@ -674,7 +675,8 @@ def fast_recompute_from_pool(
     
         ppp_ratio_list.append(ratio)
     
-    df["__ppp_ratio"] = ppp_ratio_list
+    df["__ppp_ratio"] = pd.Series(ppp_ratio_list, index=df.index)
+    df["__ppp_ratio"] = pd.to_numeric(df["__ppp_ratio"], errors="coerce").fillna(1.0)
 
     # 3) __adj_price 계산
     unit_price = pd.to_numeric(df["Unit Price"], errors="coerce").fillna(0.0)
@@ -3479,6 +3481,7 @@ with tab_dom:
         st.info("현재 활성 화면은 해외 탭입니다. 전환 버튼을 눌러 활성화하세요.")
     else:
         render_domestic()
+
 
 
 
