@@ -2576,7 +2576,7 @@ def render_domestic():
     
             # 6~7 테이블 자동 생성/갱신 (버튼 제거)
             # - tab3를 열면 항상 최신 log_for_report/base_result 기반으로 갱신
-            summary_df, detail_df = build_report_tables_domestic(log_for_report, base_result)
+            summary_df, detail_df = build_report_tables(log_for_report, base_result)
             st.session_state["dom_report_summary_df"] = summary_df
             st.session_state["dom_report_detail_df"] = detail_df
     
@@ -2620,7 +2620,7 @@ def render_domestic():
                     st.session_state.get("dom_log_df_base", pd.DataFrame())
                 )
             
-                rep_sum, rep_det = build_report_tables_domestic(log_for_report, base_result)
+                rep_sum, rep_det = build_report_tables(log_for_report, base_result)
                 st.session_state["dom_report_summary_df"] = rep_sum
                 st.session_state["dom_report_detail_df"] = rep_det
             
