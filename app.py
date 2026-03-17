@@ -1281,7 +1281,7 @@ REPORT_DETAIL_ORDER = [
     "AI 추천사유",
 ]
 
-def build_report_tables(log_df: pd.DataFrame, result_df: pd.DataFrame):
+def build_report_tables_domestic(log_df: pd.DataFrame, result_df: pd.DataFrame):
 
     if log_df is None or log_df.empty:
         return pd.DataFrame(), pd.DataFrame()
@@ -1289,49 +1289,67 @@ def build_report_tables(log_df: pd.DataFrame, result_df: pd.DataFrame):
     df = log_df.copy()
     df["BOQ_ID"] = df["BOQ_ID"].astype(int)
 
-    # =========================
-    # 1️⃣ 상세 (TAB2 구조 그대로)
-    # =========================
     g_inc_all = df[df["Include"] == True].copy()
 
     detail_cols = [
-        "Include", "DefaultInclude", "내역",
-        "__hyb", "Unit", "Unit Price",
-        "통화", "계약년월", "산출통화",
-        "__cpi_ratio", "__fac_ratio", "__fx_ratio",
-        "__adj_loc", "__ppp_ratio", "__cpi_target_ratio",
-        "__adj_ppp", "__adj_price", "__latest_ym",
-        "공종코드", "공종명",
-        "현장코드", "현장명",
-        "협력사코드", "협력사명",
+        "실행명칭","규격","단위",
+        "__hyb",
+        "계약단가","보정단가",
+        "__adj_price",
+        "현장코드","현장명",
+        "업체코드","업체명",
+        "공종Code분류","세부분류",
+        "Include"
     ]
-    
+
     for c in detail_cols:
         if c not in g_inc_all.columns:
             g_inc_all[c] = None
-    
+
     detail_df = g_inc_all[detail_cols].copy()
-    
-    rename_map = {
-        "Include": "포함",
-        "DefaultInclude": "기본포함",
-        "__hyb": "유사도점수",
-        "Unit": "단위(Unit)",
-        "Unit Price": "실적단가",
-        "통화": "실통화",
-        "계약년월": "실계약년월",
-        "__cpi_ratio": "CPI(실적국가)",
-        "__fac_ratio": "Location Factor",
-        "__fx_ratio": "환율",
-        "__adj_loc": "산출단가(Location 적용)",
-        "__ppp_ratio": "PPP 지수",
-        "__cpi_target_ratio": "CPI(대상국가)",
-        "__adj_ppp": "산출단가(PPP 적용)",
-        "__adj_price": "산출단가(조합)",
-        "__latest_ym": "물가지수 최신월",
-    }
-    
-    detail_df = detail_df.rename(columns=rename_map)
+
+    rows = []
+
+    for boq_id, g in df.groupby("BOQ_ID"):
+
+        g_inc = g[g["Include"] == True]
+        total_n = len(g)
+        inc_n = len(g_inc)
+
+        adj = pd.to_numeric(g_inc["__adj_price"], errors="coerce")
+
+        mean = float(adj.mean()) if inc_n else None
+        std = float(adj.std(ddof=0)) if inc_n else None
+        vmin = float(adj.min()) if inc_n else None
+        vmax = float(adj.max()) if inc_n else None
+
+        sites = g_inc["현장코드"].nunique() if inc_n else 0
+        vendors = g_inc["업체코드"].nunique() if inc_n else 0
+
+        one = g.iloc[0]
+
+        rows.append({
+            "BOQ_ID": int(boq_id),
+            "명칭": one.get("BOQ_명칭",""),
+            "규격": one.get("BOQ_규격",""),
+            "단위": one.get("BOQ_단위",""),
+            "수량": one.get("BOQ_수량",""),
+            "후보수": total_n,
+            "포함수": inc_n,
+            "현장수": sites,
+            "업체수": vendors,
+            "평균": mean,
+            "표준편차": std,
+            "최저": vmin,
+            "최고": vmax
+        })
+
+    summary_df = pd.DataFrame(rows).sort_values("BOQ_ID")
+
+    if result_df is not None and not result_df.empty:
+        summary_df = summary_df.merge(result_df, on="BOQ_ID", how="left")
+
+    return summary_df, detail_df
 
     # =========================
     # 2️⃣ 요약(summary)
@@ -2576,7 +2594,7 @@ def render_domestic():
     
             # 6~7 테이블 자동 생성/갱신 (버튼 제거)
             # - tab3를 열면 항상 최신 log_for_report/base_result 기반으로 갱신
-            summary_df, detail_df = build_report_tables(log_for_report, base_result)
+            summary_df, detail_df = build_report_tables_domestic(log_for_report, base_result)
             st.session_state["dom_report_summary_df"] = summary_df
             st.session_state["dom_report_detail_df"] = detail_df
     
@@ -2620,7 +2638,7 @@ def render_domestic():
                     st.session_state.get("dom_log_df_base", pd.DataFrame())
                 )
             
-                rep_sum, rep_det = build_report_tables(log_for_report, base_result)
+                rep_sum, rep_det = build_report_tables_domestic(log_for_report, base_result)
                 st.session_state["dom_report_summary_df"] = rep_sum
                 st.session_state["dom_report_detail_df"] = rep_det
             
