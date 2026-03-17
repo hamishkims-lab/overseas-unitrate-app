@@ -1422,6 +1422,151 @@ def build_report_tables(log_df: pd.DataFrame, result_df: pd.DataFrame):
 
     return summary_df, detail_df
 
+# =========================
+# 🇰🇷 국내 보고서 생성
+# =========================
+def build_report_tables_domestic(log_df: pd.DataFrame, result_df: pd.DataFrame):
+
+    if log_df is None or log_df.empty:
+        return pd.DataFrame(), pd.DataFrame()
+
+    df = log_df.copy()
+
+    df["BOQ_ID"] = pd.to_numeric(df["BOQ_ID"], errors="coerce")
+    df = df[df["BOQ_ID"].notna()].copy()
+    df["BOQ_ID"] = df["BOQ_ID"].astype(int)
+
+    # =========================
+    # 상세(detail)
+    # =========================
+    g_inc_all = df[df["Include"] == True].copy()
+
+    detail_cols = [
+        "Include","DefaultInclude",
+        "BOQ_명칭","BOQ_규격","BOQ_단위",
+        "실행명칭","규격","단위","수량",
+        "계약단가","보정단가","계약월",
+        "__adj_price","__hyb",
+        "현장코드","현장명","현장특성",
+        "업체코드","업체명",
+        "공종Code분류","세부분류",
+    ]
+
+    for c in detail_cols:
+        if c not in g_inc_all.columns:
+            g_inc_all[c] = None
+
+    detail_df = g_inc_all[detail_cols].copy()
+
+    detail_df = detail_df.rename(columns={
+        "Include":"포함",
+        "DefaultInclude":"기본포함",
+        "BOQ_명칭":"BOQ 명칭",
+        "BOQ_규격":"BOQ 규격",
+        "BOQ_단위":"BOQ 단위",
+        "실행명칭":"실행명칭",
+        "규격":"규격",
+        "단위":"단위",
+        "수량":"수량",
+        "계약단가":"계약단가",
+        "보정단가":"보정단가",
+        "계약월":"계약월",
+        "__adj_price":"산출단가",
+        "__hyb":"유사도",
+        "현장코드":"현장코드",
+        "현장명":"현장명",
+        "현장특성":"현장특성",
+        "업체코드":"업체코드",
+        "업체명":"업체명",
+        "공종Code분류":"공종Code분류",
+        "세부분류":"세부분류",
+    })
+
+    # =========================
+    # 요약(summary)
+    # =========================
+    rows = []
+
+    for boq_id, g in df.groupby("BOQ_ID"):
+
+        g_inc = g[g["Include"] == True].copy()
+
+        total_n = len(g)
+        inc_n = len(g_inc)
+
+        adj = pd.to_numeric(g_inc["__adj_price"], errors="coerce")
+
+        mean = float(adj.mean()) if inc_n else None
+        std = float(adj.std(ddof=0)) if inc_n else None
+        vmin = float(adj.min()) if inc_n else None
+        vmax = float(adj.max()) if inc_n else None
+
+        sites = g_inc["현장코드"].nunique() if ("현장코드" in g_inc.columns and inc_n) else 0
+        vendors = g_inc["업체코드"].nunique() if ("업체코드" in g_inc.columns and inc_n) else 0
+
+        risk = []
+
+        if inc_n == 0:
+            risk.append("포함후보없음")
+
+        if inc_n and vmin and vmax and vmin > 0 and vmax / vmin > 3:
+            risk.append("단가편차큼(>3배)")
+
+        if inc_n and mean and std and mean != 0 and std / mean > 0.5:
+            risk.append("변동성큼(CV>0.5)")
+
+        one = g.iloc[0]
+
+        rows.append({
+            "BOQ_ID": int(boq_id),
+            "명칭": one.get("BOQ_명칭",""),
+            "규격": one.get("BOQ_규격",""),
+            "단위": one.get("BOQ_단위",""),
+            "후보수": total_n,
+            "포함수": inc_n,
+            "현장수": sites,
+            "업체수": vendors,
+            "평균": mean,
+            "표준편차": std,
+            "최저": vmin,
+            "최고": vmax,
+            "리스크": ", ".join(risk),
+        })
+
+    summary_df = pd.DataFrame(rows).sort_values("BOQ_ID").reset_index(drop=True)
+
+    if result_df is not None and not result_df.empty:
+
+        tmp = result_df.copy()
+
+        tmp["BOQ_ID"] = pd.to_numeric(tmp["BOQ_ID"], errors="coerce")
+        tmp = tmp[tmp["BOQ_ID"].notna()].copy()
+        tmp["BOQ_ID"] = tmp["BOQ_ID"].astype(int)
+
+        summary_df = summary_df.merge(tmp, on="BOQ_ID", how="left")
+
+    ordered_cols = [
+        "BOQ_ID",
+        "명칭",
+        "규격",
+        "단위",
+        "Final Price",
+        "산출근거",
+        "후보수",
+        "포함수",
+        "현장수",
+        "업체수",
+        "평균",
+        "표준편차",
+        "최저",
+        "최고",
+        "리스크",
+    ]
+
+    summary_df = summary_df[[c for c in ordered_cols if c in summary_df.columns]]
+
+    return summary_df, detail_df
+
 
 # =========================
 # 🤖 AI 최종 적용 기준 기록/표시용 (TAB3에서 사용)
@@ -2408,19 +2553,13 @@ def render_domestic():
     
                     # --- 화면에 보여줄 컬럼(국내) ---
                     display_cols = [
-                        "Include", "DefaultInclude",
-                        "내역", "Unit",
-                        "Unit Price", "통화", "계약년월",
-
-                        "__fx_ratio",
-                        "__fac_ratio",
-
-                        "산출통화",
-                        "__hyb",
-                    
-                        "공종코드", "공종명",
-                        "현장코드", "현장명",
-                        "협력사코드", "협력사명",
+                        "Include","DefaultInclude",
+                        "실행명칭","규격","단위","수량",
+                        "계약단가","보정단가","계약월",
+                        "__adj_price","__hyb",
+                        "공종Code분류","세부분류",
+                        "현장코드","현장명","현장특성",
+                        "업체코드","업체명",
                     ]
                     for c in display_cols:
                         if c not in log_view_full.columns:
@@ -2576,7 +2715,7 @@ def render_domestic():
     
             # 6~7 테이블 자동 생성/갱신 (버튼 제거)
             # - tab3를 열면 항상 최신 log_for_report/base_result 기반으로 갱신
-            summary_df, detail_df = build_report_tables(log_for_report, base_result)
+            summary_df, detail_df = build_report_tables_domestic(log_for_report, base_result)
             st.session_state["dom_report_summary_df"] = summary_df
             st.session_state["dom_report_detail_df"] = detail_df
     
@@ -2620,7 +2759,7 @@ def render_domestic():
                     st.session_state.get("dom_log_df_base", pd.DataFrame())
                 )
             
-                rep_sum, rep_det = build_report_tables(log_for_report, base_result)
+                rep_sum, rep_det = build_report_tables_domestic(log_for_report, base_result)
                 st.session_state["dom_report_summary_df"] = rep_sum
                 st.session_state["dom_report_detail_df"] = rep_det
             
