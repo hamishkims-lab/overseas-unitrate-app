@@ -2096,14 +2096,7 @@ def render_domestic():
     
                 # 현재 BOQ 후보만 보기
                 log_view_full = log_all[log_all["BOQ_ID"].astype(int) == int(sel_id)].copy()
-                st.write(
-                    log_view_full[[
-                        "통화_std",
-                        "__cpi_ratio",
-                        "__cpi_target_ratio",
-                        "__ppp_ratio"
-                    ]].head(10)
-                )
+
                 if log_view_full.empty:
                     st.info("해당 BOQ 후보가 없습니다.")
                 else:
