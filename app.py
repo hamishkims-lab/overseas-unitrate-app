@@ -1281,66 +1281,94 @@ REPORT_DETAIL_ORDER = [
     "AI 추천사유",
 ]
 
-def build_report_tables(log_df: pd.DataFrame, result_df: pd.DataFrame):
-
+def build_report_tables_domestic(log_df: pd.DataFrame, result_df: pd.DataFrame):
+    """
+    국내 보고서용
+    - summary: BOQ별 평균/후보수/포함수/현장수/업체수/최저/최고 등
+    - detail : Include=True 후보 상세
+    """
     if log_df is None or log_df.empty:
         return pd.DataFrame(), pd.DataFrame()
 
     df = log_df.copy()
+    df["BOQ_ID"] = pd.to_numeric(df["BOQ_ID"], errors="coerce")
+    df = df[df["BOQ_ID"].notna()].copy()
     df["BOQ_ID"] = df["BOQ_ID"].astype(int)
 
     # =========================
-    # 1️⃣ 상세 (TAB2 구조 그대로)
+    # 1) 상세(detail) : Include=True만
     # =========================
     g_inc_all = df[df["Include"] == True].copy()
 
     detail_cols = [
-        "Include", "DefaultInclude", "내역",
-        "__hyb", "Unit", "Unit Price",
-        "통화", "계약년월", "산출통화",
-        "__cpi_ratio", "__fac_ratio", "__fx_ratio",
-        "__adj_loc", "__ppp_ratio", "__cpi_target_ratio",
-        "__adj_ppp", "__adj_price", "__latest_ym",
-        "공종코드", "공종명",
-        "현장코드", "현장명",
-        "협력사코드", "협력사명",
+        "BOQ_ID",
+        "BOQ_명칭", "BOQ_규격", "BOQ_단위", "BOQ_수량", "BOQ_단가",
+        "실행명칭", "규격", "단위", "수량",
+        "계약단가", "보정단가", "계약월",
+        "__adj_price", "__hyb",
+        "현장코드", "현장명", "현장특성",
+        "업체코드", "업체명",
+        "공종Code분류", "세부분류",
+        "Include", "DefaultInclude",
+        "AI_모드", "AI_추천사유",
     ]
-    
     for c in detail_cols:
         if c not in g_inc_all.columns:
             g_inc_all[c] = None
-    
+
     detail_df = g_inc_all[detail_cols].copy()
-    
-    rename_map = {
+
+    detail_rename = {
+        "BOQ_ID": "BOQ_ID",
+        "BOQ_명칭": "BOQ 명칭",
+        "BOQ_규격": "BOQ 규격",
+        "BOQ_단위": "BOQ 단위",
+        "BOQ_수량": "BOQ 수량",
+        "BOQ_단가": "BOQ 단가",
+        "실행명칭": "실행명칭",
+        "규격": "규격",
+        "단위": "단위",
+        "수량": "수량",
+        "계약단가": "계약단가",
+        "보정단가": "보정단가",
+        "계약월": "계약월",
+        "__adj_price": "산출단가",
+        "__hyb": "유사도",
+        "현장코드": "현장코드",
+        "현장명": "현장명",
+        "현장특성": "현장특성",
+        "업체코드": "업체코드",
+        "업체명": "업체명",
+        "공종Code분류": "공종분류",
+        "세부분류": "세부분류",
         "Include": "포함",
         "DefaultInclude": "기본포함",
-        "__hyb": "유사도점수",
-        "Unit": "단위(Unit)",
-        "Unit Price": "실적단가",
-        "통화": "실통화",
-        "계약년월": "실계약년월",
-        "__cpi_ratio": "CPI(실적국가)",
-        "__fac_ratio": "Location Factor",
-        "__fx_ratio": "환율",
-        "__adj_loc": "산출단가(Location 적용)",
-        "__ppp_ratio": "PPP 지수",
-        "__cpi_target_ratio": "CPI(대상국가)",
-        "__adj_ppp": "산출단가(PPP 적용)",
-        "__adj_price": "산출단가(조합)",
-        "__latest_ym": "물가지수 최신월",
+        "AI_모드": "AI 모드",
+        "AI_추천사유": "AI 추천사유",
     }
-    
-    detail_df = detail_df.rename(columns=rename_map)
+    detail_df = detail_df.rename(columns=detail_rename)
+
+    detail_order = [
+        "BOQ_ID",
+        "BOQ 명칭", "BOQ 규격", "BOQ 단위", "BOQ 수량", "BOQ 단가",
+        "실행명칭", "규격", "단위", "수량",
+        "계약단가", "보정단가", "계약월",
+        "산출단가", "유사도",
+        "현장코드", "현장명", "현장특성",
+        "업체코드", "업체명",
+        "공종분류", "세부분류",
+        "포함", "기본포함",
+        "AI 모드", "AI 추천사유",
+    ]
+    detail_df = detail_df[[c for c in detail_order if c in detail_df.columns]]
 
     # =========================
-    # 2️⃣ 요약(summary)
+    # 2) 요약(summary)
     # =========================
     rows = []
-
     for boq_id, g in df.groupby("BOQ_ID"):
-
         g_inc = g[g["Include"] == True].copy()
+
         total_n = len(g)
         inc_n = len(g_inc)
 
@@ -1351,73 +1379,71 @@ def build_report_tables(log_df: pd.DataFrame, result_df: pd.DataFrame):
         vmin = float(adj.min()) if inc_n else None
         vmax = float(adj.max()) if inc_n else None
 
-        currencies = sorted(g_inc["통화_std"].unique().tolist()) if inc_n else []
-        sites = g_inc["현장코드"].nunique() if inc_n else 0
-        vendors = g_inc["협력사코드"].nunique() if inc_n else 0
+        site_cnt = g_inc["현장코드"].nunique() if ("현장코드" in g_inc.columns and inc_n) else 0
+        vendor_cnt = g_inc["업체코드"].nunique() if ("업체코드" in g_inc.columns and inc_n) else 0
+
+        top_site = ""
+        if inc_n and "현장명" in g_inc.columns:
+            vc_site = g_inc["현장명"].astype(str).value_counts()
+            if len(vc_site):
+                top_site = str(vc_site.index[0])
+
+        top_vendor = ""
+        if inc_n and "업체명" in g_inc.columns:
+            vc_vendor = g_inc["업체명"].astype(str).value_counts()
+            if len(vc_vendor):
+                top_vendor = str(vc_vendor.index[0])
 
         risk = []
         if inc_n == 0:
             risk.append("포함후보없음")
-        if inc_n and vmin and vmax and vmin > 0 and vmax / vmin > 3:
+        if inc_n and vmin is not None and vmax is not None and vmin > 0 and (vmax / vmin) > 3:
             risk.append("단가편차큼(>3배)")
-        if inc_n and mean and std and mean != 0 and std / mean > 0.5:
+        if inc_n and mean not in [None, 0] and std is not None and (std / mean) > 0.5:
             risk.append("변동성큼(CV>0.5)")
 
         one = g.iloc[0]
 
         rows.append({
             "BOQ_ID": int(boq_id),
-            "내역": one.get("BOQ_내역", ""),
-            "Unit": one.get("BOQ_Unit", ""),
-
+            "명칭": one.get("BOQ_명칭", ""),
+            "규격": one.get("BOQ_규격", ""),
+            "단위": one.get("BOQ_단위", ""),
+            "수량": one.get("BOQ_수량", ""),
             "후보수": total_n,
             "포함수": inc_n,
-            "포함국가": ", ".join(currencies),
-            "현장수": sites,
-            "업체수": vendors,
-
+            "현장수": site_cnt,
+            "업체수": vendor_cnt,
             "평균": mean,
             "표준편차": std,
             "최저": vmin,
             "최고": vmax,
+            "최빈현장": top_site,
+            "최빈업체": top_vendor,
             "리스크": ", ".join(risk),
         })
 
     summary_df = pd.DataFrame(rows).sort_values("BOQ_ID").reset_index(drop=True)
 
-    # 🔵 BOQ 결과 병합 (3단가 구조 포함)
+    # 결과표 병합
     if result_df is not None and not result_df.empty:
         tmp = result_df.copy()
+        tmp["BOQ_ID"] = pd.to_numeric(tmp["BOQ_ID"], errors="coerce")
+        tmp = tmp[tmp["BOQ_ID"].notna()].copy()
         tmp["BOQ_ID"] = tmp["BOQ_ID"].astype(int)
 
-        summary_df = summary_df.merge(
-            tmp,
-            on="BOQ_ID",
-            how="left"
-        )
+        summary_df = summary_df.merge(tmp, on="BOQ_ID", how="left")
 
     ordered_cols = [
         "BOQ_ID",
-        "내역",
-        "Unit",
-        "산출단가(Location 적용)",
-        "산출단가(PPP 적용)",
-        "산출단가(조합)",
-        "산출통화",
-        "산출근거",
-        "근거공종(최빈)",
-        "후보수",
-        "포함수",
-        "포함국가",
-        "현장수",
-        "업체수",
-        "평균",
-        "표준편차",
-        "최저",
-        "최고",
+        "명칭", "규격", "단위", "수량",
+        "Final Price", "산출근거",
+        "후보수", "포함수",
+        "현장수", "업체수",
+        "평균", "표준편차", "최저", "최고",
+        "최빈현장", "최빈업체",
         "리스크",
     ]
-
     summary_df = summary_df[[c for c in ordered_cols if c in summary_df.columns]]
 
     return summary_df, detail_df
@@ -2409,23 +2435,17 @@ def render_domestic():
                     # --- 화면에 보여줄 컬럼(국내) ---
                     display_cols = [
                         "Include", "DefaultInclude",
-                        "내역", "Unit",
-                        "Unit Price", "통화", "계약년월",
-
-                        "__fx_ratio",
-                        "__fac_ratio",
-
-                        "산출통화",
-                        "__hyb",
-                    
-                        "공종코드", "공종명",
-                        "현장코드", "현장명",
-                        "협력사코드", "협력사명",
+                        "실행명칭", "규격", "단위", "수량",
+                        "계약단가", "보정단가", "계약월",
+                        "__adj_price", "__hyb",
+                        "현장코드", "현장명", "현장특성",
+                        "업체코드", "업체명",
+                        "공종Code분류", "세부분류",
                     ]
                     for c in display_cols:
                         if c not in log_view_full.columns:
                             log_view_full[c] = None
-    
+                    
                     log_view = log_view_full[display_cols].copy()
     
                     edited_view = st.data_editor(
@@ -2433,12 +2453,24 @@ def render_domestic():
                         use_container_width=True,
                         hide_index=True,
                         column_config={
-                            "Include": st.column_config.CheckboxColumn("포함", help="평균단가 산출 포함/제외"),
-                            "DefaultInclude": st.column_config.CheckboxColumn("기본포함", help="초기 자동 포함 여부(컷 로직)"),
+                            "Include": st.column_config.CheckboxColumn("포함"),
+                            "DefaultInclude": st.column_config.CheckboxColumn("기본포함"),
+                            "실행명칭": st.column_config.TextColumn("실행명칭", width="large"),
+                            "규격": st.column_config.TextColumn("규격"),
+                            "단위": st.column_config.TextColumn("단위"),
+                            "수량": st.column_config.NumberColumn("수량", format="%.2f"),
+                            "계약단가": st.column_config.NumberColumn("계약단가", format="%.2f"),
+                            "보정단가": st.column_config.NumberColumn("보정단가", format="%.2f"),
+                            "계약월": st.column_config.TextColumn("계약월"),
                             "__adj_price": st.column_config.NumberColumn("산출단가", format="%.2f"),
                             "__hyb": st.column_config.NumberColumn("유사도", format="%.2f"),
-                            "보정단가": st.column_config.NumberColumn("보정단가", format="%.2f"),
-                            "계약단가": st.column_config.NumberColumn("계약단가", format="%.2f"),
+                            "현장코드": st.column_config.TextColumn("현장코드"),
+                            "현장명": st.column_config.TextColumn("현장명"),
+                            "현장특성": st.column_config.TextColumn("현장특성"),
+                            "업체코드": st.column_config.TextColumn("업체코드"),
+                            "업체명": st.column_config.TextColumn("업체명"),
+                            "공종Code분류": st.column_config.TextColumn("공종분류"),
+                            "세부분류": st.column_config.TextColumn("세부분류"),
                         },
                         disabled=[c for c in log_view.columns if c not in ["Include"]],
                         key="dom_log_editor_oneboq",
