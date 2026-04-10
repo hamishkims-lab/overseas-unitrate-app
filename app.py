@@ -294,12 +294,18 @@ def to_year_month_string(x) -> Optional[str]:
 
 
 def robust_parse_contract_month(series: pd.Series) -> pd.Series:
-    dt = pd.to_datetime(series, errors="coerce", infer_datetime_format=True)
+    s = series.astype(str).str.strip()
+
+    # 1차: 일반 datetime 파싱
+    dt = pd.to_datetime(s, errors="coerce")
+
+    # 2차: 숫자만 추출해서 YYYYMM 처리
     mask = dt.isna()
     if mask.any():
-        cleaned = series[mask].astype(str).str.replace(r"[^0-9]", "", regex=True).str.slice(0, 6)
-        dt2 = pd.to_datetime(cleaned, format="%Y%m", errors="coerce")
+        s2 = s[mask].str.replace(r"[^0-9]", "", regex=True).str.slice(0, 6)
+        dt2 = pd.to_datetime(s2, format="%Y%m", errors="coerce")
         dt.loc[mask] = dt2
+
     return dt.dt.to_period("M").dt.to_timestamp()
 
 
