@@ -311,12 +311,20 @@ def robust_parse_contract_month(series: pd.Series) -> pd.Series:
 
 def file_fingerprint(df: pd.DataFrame, cols: list) -> str:
     hasher = hashlib.md5()
-    sample = df[cols].astype(str).agg("|".join, axis=1)
+
+    sample = (
+        df[cols]
+        .fillna("")
+        .apply(lambda row: "|".join(map(str, row.tolist())), axis=1)
+    )
+
     head = "|".join(sample.head(1000).tolist())
     tail = "|".join(sample.tail(1000).tolist())
+
     hasher.update(str(df.shape).encode())
     hasher.update(head.encode())
     hasher.update(tail.encode())
+
     return hasher.hexdigest()
 
 
